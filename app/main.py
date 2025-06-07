@@ -17,10 +17,8 @@ app = FastAPI(
 )
 
 
-# Store active sessions
-active_sessions: Dict[str, Any] = {}
 
-@app.get("/")
+@app.get("/" , tags=["root"])
 async def root():
     test = embedding_query("I want to buy a white shirt")
     return {"message": "Welcome to the Clothing Recommendation API" , "test": test}
