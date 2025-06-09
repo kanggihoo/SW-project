@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clothing Recommendation WebSocket Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .chat-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .control-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .connect-btn {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .disconnect-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .send-btn {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 20px;
+        }
+
+        .bot-message {
+            background-color: #f5f5f5;
+            margin-right: 20px;
+        }
+
+        .status {
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <h1>Clothing Recommendation Chat</h1>
+        <div class="control-container">
+            <button id="connectBtn" class="connect-btn" onclick="handleConnection()">Connect</button>
+            <button id="disconnectBtn" class="disconnect-btn" onclick="disconnect()" disabled>Disconnect</button>
+        </div>
+        <div class="message-container" id="messageContainer"></div>
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Type your message here..." disabled>
+            <button id="sendBtn" class="send-btn" onclick="sendMessage()" disabled>Send</button>
+        </div>
+        <div class="status" id="connectionStatus">Disconnected</div>
+    </div>
+
+    <script>
+        let ws = null;
+        const messageContainer = document.getElementById('messageContainer');
+        const messageInput = document.getElementById('messageInput');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+
+        function handleConnection() {
+            if (!ws || ws.readyState === WebSocket.CLOSED) {
+                connect();
+            }
+        }
+
+        function connect() {
+            try {
+                ws = new WebSocket('ws://localhost:8000/ws');
+
+                ws.onopen = () => {
+                    connectionStatus.textContent = 'Connected';
+                    connectionStatus.style.color = 'green';
+                    addMessage('System: Connected to server', 'status');
+
+                    // Update UI elements
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    messageInput.disabled = false;
+                    sendBtn.disabled = false;
+                };
+                // 데이터 수신 처리 
+                ws.onmessage = (event) => {
+                    const receivedData = JSON.parse(event.data);
+                    console.log('Received:', receivedData); // For debugging
+
+                    if (receivedData.status === 'streaming_chunk') {
+                        // Find the last bot message and append the chunk
+                        let lastBotMessage = messageContainer.querySelector('.bot-message:last-child .content');
+                        if (lastBotMessage) {
+                            lastBotMessage.textContent += receivedData.content;
+                            console.log("Updated message content:", lastBotMessage.textContent);
+                        } else {
+                            // If it's the first chunk, create the message element
+                            addMessage(`Bot (${receivedData.node}): `, 'bot-message', receivedData.content);
+                        }
+                    } else if (receivedData.status === 'node_complete') {
+                        // When a node is complete, we might get a full response object.
+                        const nodeOutput = receivedData.response;
+                        let displayContent = '';
+
+                        if (nodeOutput && nodeOutput.final_recommendation) {
+                            // The streaming is finished, the last message is now complete.
+                            // We don't need to do much here if we were appending chunks,
+                            // but we can log it or finalize the message.
+                            console.log("Final recommendation received.");
+                        } else {
+                            // For other nodes that complete without streaming.
+                            displayContent = JSON.stringify(nodeOutput);
+                            addMessage(`Bot (${receivedData.node}): ${displayContent}`, 'bot-message');
+                        }
+                    } else if (receivedData.status) {
+                        // Handle other status messages (e.g., finished, waiting_for_feedback)
+                        addMessage(`System Status: ${receivedData.response}`, 'status');
+                        if (receivedData.status === "finished") {
+                            messageInput.disabled = true;
+                            sendBtn.disabled = true;
+                        }
+                    } else if (receivedData.error) {
+                        // Handle error messages
+                        addMessage(`Error: ${receivedData.error}`, 'status error-message');
+                    }
+                };
+
+                ws.onclose = () => {
+                    handleDisconnect();
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    addMessage('System: Error occurred', 'status');
+                    handleDisconnect();
+                };
+            } catch (error) {
+                console.error('Connection error:', error);
+                addMessage('System: Failed to connect to server', 'status');
+                handleDisconnect();
+            }
+        }
+
+        function handleDisconnect() {
+            connectionStatus.textContent = 'Disconnected';
+            connectionStatus.style.color = 'red';
+            addMessage('System: Connection closed', 'status');
+
+            // Update UI elements
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('System: Not connected to server', 'status');
+                return;
+            }
+
+            const message = messageInput.value.trim();
+            // ws로 전송할 데이터 형식 정의 
+            if (message) {
+                const data = {
+                    message: message,
+                };
+                ws.send(JSON.stringify(data));
+                addMessage(`You: ${message}`, 'user-message');
+                messageInput.value = '';
+            }
+        }
+
+        function addMessage(message, className, initialContent = '') {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${className}`;
+
+            const textSpan = document.createElement('span');
+            textSpan.textContent = message;
+
+            const contentSpan = document.createElement('span');
+            contentSpan.className = 'content';
+            contentSpan.textContent = initialContent;
+
+            messageElement.appendChild(textSpan);
+            messageElement.appendChild(contentSpan);
+
+            messageContainer.appendChild(messageElement);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+
+        // Handle Enter key in input
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !messageInput.disabled) {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+
+</html>

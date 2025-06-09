@@ -4,11 +4,12 @@ from typing import Optional, Dict, Any
 import uuid
 from dotenv import load_dotenv
 
-from .graph import builder, ClothingRAGState
-from .utils import embedding_query 
+from .router import websocket
 
-# Load environment variables
 load_dotenv()
+# os.environ["LANGSMITH_TRACING"] = "true"
+# os.environ["LANGSMITH_PROJECT"] = "langgraph-test"
+
 
 app = FastAPI(
     title="Clothing Recommendation API",
@@ -16,11 +17,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.include_router(websocket.router)
 
 
 @app.get("/" , tags=["root"])
 async def root():
-    test = embedding_query("I want to buy a white shirt")
-    return {"message": "Welcome to the Clothing Recommendation API" , "test": test}
-
+    return {"message": "Welcome to the Clothing Recommendation API"}
 
