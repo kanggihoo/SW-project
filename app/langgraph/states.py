@@ -10,5 +10,5 @@ class ClothingRAGState(MessagesState):
     ranked_candidates: list[dict[str, Any]] | None
     final_recommendation: dict[str, Any] | None
     user_feedback: str | None # e.g., "rerank_cheaper", "rerank_review", "restart", "accept"
-    # error_message: Annotated[str, ""]
+    llm_output: str | None
     

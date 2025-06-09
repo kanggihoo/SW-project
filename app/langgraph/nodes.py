@@ -69,7 +69,7 @@ def rerank_candidates_node(state: ClothingRAGState) -> dict[str, Any]:
     reranked_items = rerank_items(items_with_metadata, external_info)    
     return {"ranked_candidates": reranked_items}
 
-async def select_final_item_node(state: ClothingRAGState , config: RunnableConfig) -> dict[str, Any]:
+async def select_final_item_node(state: ClothingRAGState , config: RunnableConfig):
     print("--- Node: select_final_item_node ---")
     ranked_candidates = state.get("ranked_candidates")[0]
     user_query = state.get("user_query")
@@ -92,18 +92,13 @@ async def select_final_item_node(state: ClothingRAGState , config: RunnableConfi
     elif model.startswith("gemini"):
         llm = ChatGoogleGenerativeAI(model=model , temperature=0)
     
-    chain = prompt | llm | StrOutputParser()
-    
-    final_response = ""
-    async for chunk in chain.astream({"user_query": user_query}):
-        # print(chunk, end="", flush=True)
-        # Yield each chunk as a partial update
-        yield {"llm_stream_chunk": chunk}
-        final_response += chunk
+    chain = prompt | llm 
+    stream = chain.astream({"user_query": user_query})
+    async for chunk in stream:
+        yield {"llm_output": chunk.content}
+        
 
-    print("\n--- End of LLM Stream ---")
-    # Yield the final complete message to update the state
-    yield {"final_recommendation": final_response}
+    
 
 # 사용자 피드백 수집 노드 
 def wait_for_user_feedback_node(state: ClothingRAGState) -> dict[str, Any]:

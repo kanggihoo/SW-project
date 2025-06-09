@@ -42,61 +42,75 @@ async def websocket_endpoint(websocket: WebSocket):
             if current_state is None or not current_state.next:
                 # Start a new graph run
                 input_data = {"user_query": user_message}
-            else:
+            else: # 인터럽트 걸린 경우 
                 # It's feedback, so update the state and continue the run
                 #FIXME :   이 부분에서 문제가 발생할 수 있음 (State 구조 변하는 순간)
                 await graph.aupdate_state(config, {"user_feedback": user_message})
                 # input_data is None to continue from the interrupted state
 
             # Stream the graph execution and send updates to the client
-            async for chunk in graph.astream(
+            recommendation = ""
+            async for stream_type , chunk in graph.astream(
                 input_data, 
                 config=config, 
-                stream_mode="updates", 
+                stream_mode=["updates","messages"], 
                 interrupt_before=["wait_for_user_feedback_node"]
             ):
-                # Send each chunk from the stream to the client
-                # The client will handle parsing the node and its output
-                for node_name, updated_state in chunk.items():
-                    if updated_state is not None:
-                        # Check if this is an intermediate LLM stream chunk
-                        if "llm_stream_chunk" in updated_state:
+                if stream_type == "messages":
+                    AIMessage_chunk , metadata = chunk
+                    message = AIMessage_chunk.content
+                    node_name = metadata["langgraph_node"]
+                    if message:
+                        await websocket.send_json({
+                            "status": "llm_stream_chunk",
+                            "node": node_name,
+                            "content": message
+                        })
+                        recommendation += message
+                elif stream_type == "updates":
+                    node_name = list(chunk.keys())[0]
+                    updated_state = chunk[node_name]
+                    if updated_state is not None and not isinstance(updated_state, tuple): # 특정 Node에서 State 변환가 없는 경우 None을 반환하는 경우 , interrupt가 발생됨을 알리는 {'__interrupt__': ()} 제외
+                        updated_state_name = list(updated_state.keys())[0]
+                        updated_state_value = updated_state[updated_state_name]
+                        
+                        # llm node의 맨 마지막 출력에는 stream이 결합된 하나의 문자열로 전송
+                        if node_name == "select_final_item_node" and updated_state_name == "llm_output" and recommendation:
                             print("--------------------------------")
-                            print("llm_stream_chunk")
-                            print(f"Node: {node_name}, State: {updated_state}")
+                            print(recommendation)
                             await websocket.send_json({
-                                "status": "streaming_chunk",
+                                "status": "final_recommendation",
                                 "node": node_name,
-                                "content": updated_state["llm_stream_chunk"]
+                                "response": recommendation
                             })
-                        # Check if this is the final output of the streaming node
-                        elif "final_recommendation" in updated_state:
-                             await websocket.send_json({
-                                "status": "node_complete",
-                                "node": node_name,
-                                "response": jsonable_encoder(updated_state)
-                            })
-                             print("--------------------------------")
-                             print("final_recommendation")
-                             print(f"Node: {node_name}, State: {updated_state}")
                         else:
-                            # This is a regular node's final output
-                            print(f"Node: {node_name}, State: {updated_state}")
-                            print()
                             await websocket.send_json({
-                                "status": "node_complete",
+                                "status": updated_state_name,
                                 "node": node_name,
-                                "response": jsonable_encoder(updated_state)
+                                "response": updated_state_value
                             })
+                else:
+                    ...    
+                            
 
             # After streaming, check if the graph is finished or waiting for feedback
             final_state = await graph.aget_state(config)
-            if not final_state or not final_state.next:
-                await websocket.send_json({"status": "finished", "response": "Conversation finished."})
+            if not final_state or not final_state.next: # 최종 상태가 없거나 다음 상태가 없는 경우(whiule 문 중단)
+                await websocket.send_json(
+                    {
+                        "status": "finished",
+                        "response": "Conversation finished.",
+                    }
+                )
                 #TODO : 음 여기서 break 하고 다시 client 측에서 disconnect 버튼 누르고 다시 연결 한 뒤 메세지 보내야 다시 동작.
                 break  # End the session
             else:
-                await websocket.send_json({"status": "waiting_for_feedback", "response": "Please provide feedback or your next query."})
+                await websocket.send_json(
+                    {
+                        "status": "waiting_for_feedback",
+                        "response": "Please provide feedback or your next query."
+                    }
+                )
 
     except WebSocketDisconnect:
         print(f"Client disconnected: {session_id}")

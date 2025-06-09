@@ -150,34 +150,48 @@
                     const receivedData = JSON.parse(event.data);
                     console.log('Received:', receivedData); // For debugging
 
-                    if (receivedData.status === 'streaming_chunk') {
+                    // llm 스트리밍 출력
+                    if (receivedData.status === 'llm_stream_chunk') {
                         // Find the last bot message and append the chunk
                         let lastBotMessage = messageContainer.querySelector('.bot-message:last-child .content');
                         if (lastBotMessage) {
                             lastBotMessage.textContent += receivedData.content;
-                            console.log("Updated message content:", lastBotMessage.textContent);
+                            <!-- console.log("Updated message content:", lastBotMessage.textContent); -->
                         } else {
                             // If it's the first chunk, create the message element
                             addMessage(`Bot (${receivedData.node}): `, 'bot-message', receivedData.content);
                         }
-                    } else if (receivedData.status === 'node_complete') {
+                        // llm의 최종 출력
+                    } else if (receivedData.status === 'final_recommendation') {
                         // When a node is complete, we might get a full response object.
                         const nodeOutput = receivedData.response;
                         let displayContent = '';
 
-                        if (nodeOutput && nodeOutput.final_recommendation) {
+                        if (nodeOutput) {
                             // The streaming is finished, the last message is now complete.
                             // We don't need to do much here if we were appending chunks,
                             // but we can log it or finalize the message.
-                            console.log("Final recommendation received.");
+                            console.log(`Final recommendation received. : ${nodeOutput}`);
+                            addMessage(`Bot (${receivedData.node}): ${nodeOutput}`, 'bot-message');
+
+                            // ???? 아거 뭐지 
                         } else {
                             // For other nodes that complete without streaming.
                             displayContent = JSON.stringify(nodeOutput);
                             addMessage(`Bot (${receivedData.node}): ${displayContent}`, 'bot-message');
                         }
+                        // 그 외의 모든 노드의 업데이트 상황 출력 
                     } else if (receivedData.status) {
-                        // Handle other status messages (e.g., finished, waiting_for_feedback)
-                        addMessage(`System Status: ${receivedData.response}`, 'status');
+                        if (Array.isArray(receivedData.response)) {
+                            // 리스트 형식 처리
+                            addMessage(`System Status: ${JSON.stringify(receivedData.response, null, 2)}`, 'status');
+                            console.log(`그 외의 모든 노드 업데이트 상황 : ${receivedData.node} , ${receivedData.status} , ${JSON.stringify(receivedData.response, null, 2)}`);
+                        } else if (typeof receivedData.response === 'string') {
+                            // 문자열 형식 처리
+                            addMessage(`System Status: ${receivedData.response}`, 'status');
+                            console.log(`그 외의 모든 노드 업데이트 상황 : ${receivedData.node} , ${receivedData.status} , ${receivedData.response}`);
+                        }
+                        // 채팅 종료 상황 출력 
                         if (receivedData.status === "finished") {
                             messageInput.disabled = true;
                             sendBtn.disabled = true;
