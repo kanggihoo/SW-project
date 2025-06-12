@@ -18,7 +18,7 @@ def router_function(state: ClothingRAGState) -> str:
     if user_feedback == "accept":
         return END
     else:
-        return "embed_query_node"
+        return user_feedback 
     
 def build_graph():
     builder = StateGraph(ClothingRAGState)
