@@ -25,7 +25,8 @@ def extract_text_from_image(image_path):
     
     # 프롬프트 구성
     prompt = [
-        SystemMessage(content="""You are a precise OCR assistant. Extract ONLY visible Korean or English text from the image.
+        SystemMessage(content=
+                      """You are a precise OCR assistant. Extract ONLY visible Korean or English text from the image.
         - If there is no text visible in the image, return an empty string.
         - Do not describe the image or add any additional information.
         - Only return the exact text found in the image.
