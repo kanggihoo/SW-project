@@ -128,18 +128,23 @@ def save_preprocessed_image(
 # --- 사용 예시 및 테스트 코드 ---
 if __name__ == "__main__":
     # 예시 이미지 경로들
+    from pathlib import Path
+    DATA_DIR = Path("/Users/kkh/Desktop/1005")
+    PRODUCT_ID = "674732"
+    IMAGE_PATH = DATA_DIR / PRODUCT_ID / "segment"
+    
     sample_images = [
-        "front_image.jpg",
-        "back_image.jpg", 
-        "model_wearing.jpg"
+        IMAGE_PATH / "0_1.jpg",
+        IMAGE_PATH / "0_2.jpg", 
+        IMAGE_PATH / "1_4.jpg"
     ]
     
     try:
-        # 1. 이미지 전처리 및 합치기
+        # 1. 이미지 전처리 및 합치기dma
         combined = preprocess_and_concat_images(
             sample_images, 
-            target_size=224, 
-            concat_direction='horizontal'
+            target_size=384, # (224,224) , (384,384) , (512,512) 
+            concat_direction='vertical'
         )
         print(f"합쳐진 이미지 크기: {combined.size}")
         

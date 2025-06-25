@@ -11,6 +11,7 @@ dependencies = [
     "langchain-openai>=0.3.21",
     "langfuse>=3.0.3",
     "langgraph>=0.4.8",
+    "pillow>=11.2.1",
     "pymongo>=4.13.2",
     "python-dotenv>=1.1.0",
     "uvicorn[standard]>=0.34.3",

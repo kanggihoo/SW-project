@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field, HttpUrl
 from enum import Enum
 
-from langchain_google_vertexai import ChatVertexAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 # 이미지 전처리 모듈 import
 from .image_preprocessing import preprocess_and_concat_images, pil_to_base64
@@ -121,8 +121,8 @@ parser = PydanticOutputParser(pydantic_object=MasterCaption)
 
 # VLM 모델 초기화 (Gemini 1.5 Pro Vision 모델 사용)
 # temperature=0으로 설정하여 더 일관성 있고 사실에 기반한 출력을 유도
-model = ChatVertexAI(
-    model_name="gemini-1.5-pro-vision-001",
+model = ChatGoogleGenerativeAI(
+    model="gemini-2.0-flash-001",
     temperature=0,
     # project="YOUR_GCP_PROJECT_ID" # 필요한 경우 프로젝트 ID 지정
 )
@@ -158,27 +158,27 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-def get_caption_from_image(image_path):
-    """이미지 경로를 받아 캡션 정보를 추출하는 메인 함수"""
-    try:
-        # 이미지를 Base64로 인코딩
-        base64_image = encode_image(image_path)
+# def get_caption_from_image(image_path):
+#     """이미지 경로를 받아 캡션 정보를 추출하는 메인 함수"""
+#     try:
+#         # 이미지를 Base64로 인코딩
+#         base64_image = encode_image(image_path)
         
-        # 체인 실행
-        print("VLM 모델을 호출하여 캡션 정보를 추출합니다...")
-        result = chain.invoke({
-            "image_data": base64_image,
-            "format_instructions": parser.get_format_instructions()
-        })
-        print("정보 추출이 완료되었습니다.")
-        return result
+#         # 체인 실행
+#         print("VLM 모델을 호출하여 캡션 정보를 추출합니다...")
+#         result = chain.invoke({
+#             "image_data": base64_image,
+#             "format_instructions": parser.get_format_instructions()
+#         })
+#         print("정보 추출이 완료되었습니다.")
+#         return result
         
-    except FileNotFoundError:
-        print(f"오류: 이미지 파일을 찾을 수 없습니다. 경로를 확인하세요: {image_path}")
-        return None
-    except Exception as e:
-        print(f"오류가 발생했습니다: {e}")
-        return None
+#     except FileNotFoundError:
+#         print(f"오류: 이미지 파일을 찾을 수 없습니다. 경로를 확인하세요: {image_path}")
+#         return None
+#     except Exception as e:
+#         print(f"오류가 발생했습니다: {e}")
+#         return None
 
 
 def get_caption_from_multiple_images(image_paths, target_size=224, concat_direction='horizontal'):
@@ -257,9 +257,9 @@ def get_caption_from_multiple_images(image_paths, target_size=224, concat_direct
 
 # --- 실행 예시 ---
 if __name__ == "__main__":
-    # 방법 1: 단일 복합 이미지 사용 (기존 방식)
-    single_image_path = "path/to/your/composite_image.jpg"
-    result1 = get_caption_from_image(single_image_path)
+    # # 방법 1: 단일 복합 이미지 사용 (기존 방식)
+    # single_image_path = "path/to/your/composite_image.jpg"
+    # result1 = get_caption_from_image(single_image_path)
     
     # 방법 2: 여러 개별 이미지를 합쳐서 사용 (신규 방식)
     multiple_images = [
@@ -267,6 +267,12 @@ if __name__ == "__main__":
         "path/to/back_image.jpg", 
         "path/to/model_wearing.jpg"
     ]
+    '''
+    여기서 모델 이미지만 존재할 수도 있고, 의류 이미지만 존재할 수도 있어서 
+    케이스 분리해서 prompt 메세지 변경해야하고, 상의, 하의에 따라서 다르게 작업하고 
+
+    
+    '''
     result2 = get_caption_from_multiple_images(
         multiple_images, 
         target_size=224, 
