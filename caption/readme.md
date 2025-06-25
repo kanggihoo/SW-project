@@ -52,9 +52,8 @@ Sheets로 내보내기
 
 VLM 추출 결과는 미래의 모든 검색 전략을 뒷받침할 수 있도록 구조화된 JSON 형태로 설계합니다. 스키마는 상품 그룹 전체에 적용되는 **공통 정보(`base_product_info`)**와 개별 색상별 **특화 정보(`variants`)**로 명확히 분리됩니다.
 
-JSON
-
-`{
+'JSON
+{
   "product_group_id": "P0001",
   "vlm_extraction_date": "2025-06-25",
 
@@ -120,7 +119,8 @@ JSON
       }
     }
   ]
-}`
+}
+`
 
 ---
 
