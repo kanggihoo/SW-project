@@ -1,12 +1,12 @@
 import base64
 import os
 from pprint import pprint
-from typing import List, Optional, Literal
+from typing import Annotated
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field 
 from enum import Enum
 
 from langchain_google_genai import ChatGoogleGenerativeAI

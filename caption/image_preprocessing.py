@@ -125,6 +125,37 @@ def save_preprocessed_image(
     print(f"전처리된 이미지가 저장되었습니다: {output_path}")
 
 
+def images_to_base64(
+    image_paths: List[str],
+    target_size: int = 224,
+    concat_direction: str = 'horizontal'
+) -> str:
+    """
+    여러 이미지를 전처리하고 합친 후 base64로 인코딩하는 함수
+    
+    Args:
+        image_paths: 이미지 파일 경로 리스트
+        target_size: 각 이미지의 목표 크기 (정사각형)
+        concat_direction: 'horizontal' 또는 'vertical'
+    
+    Returns:
+        base64로 인코딩된 문자열
+        
+    Raises:
+        FileNotFoundError: 이미지 파일을 찾을 수 없는 경우
+        ValueError: 잘못된 concat_direction 값인 경우
+    """
+    # 기존 함수를 이용해 이미지들을 전처리하고 합치기
+    combined_image = preprocess_and_concat_images(
+        image_paths, target_size, concat_direction
+    )
+    
+    # PIL 이미지를 base64로 변환
+    base64_string = pil_to_base64(combined_image)
+    
+    return base64_string
+
+
 # --- 사용 예시 및 테스트 코드 ---
 if __name__ == "__main__":
     # 예시 이미지 경로들
