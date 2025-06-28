@@ -5,7 +5,7 @@ from enum import Enum
 
 
 class PrimaryColor(str, Enum):
-    """대표 색상 (Level 1)"""
+    """대표 색상 타입"""
     WHITE = "화이트"
     GRAY = "그레이"
     BLACK = "블랙"
@@ -15,35 +15,29 @@ class PrimaryColor(str, Enum):
     ORANGE = "오렌지"
     GREEN = "그린"
     BLUE = "블루"
-    PURPLE = "퍼플/바이올렛"
+    PURPLE = "퍼플"
     BROWN = "브라운"
-    BEIGE = "베이지/크림"
+    BEIGE = "베이지"
     DENIM = "데님"
     METALLIC = "메탈릭"
     MULTICOLOR = "멀티컬러"
     OTHER = "기타"
-
-
-class ColorAttribute(str, Enum):
-    """색상 속성 태그 (Level 2)"""
-    # 명도
-    BRIGHT = "밝은"
-    DARK = "어두운"
-    DEEP = "딥"
     
-    # 채도
-    VIVID = "선명한"
-    MUTED = "흐릿한"
-    PALE = "페일"
-    GRAYISH = "그레이시"
-    
-    # 톤&느낌
-    PASTEL = "파스텔"
-    NEON = "네온"
-    WARM = "웜톤"
-    COOL = "쿨톤"
-    NEUTRAL = "뉴트럴"
-    SOFT = "소프트"
+class Brightness(str, Enum):
+    """명도 (5단계)"""
+    VERY_LIGHT = "아주 밝음"
+    LIGHT = "밝음"
+    MEDIUM = "중간 밝기"
+    DARK = "어두움"
+    VERY_DARK = "아주 어두움"
+
+class Saturation(str, Enum):
+    """채도 (5단계)"""
+    VERY_LOW = "아주 낮음"
+    LOW = "낮음"
+    MEDIUM = "중간 채도"
+    HIGH = "높음"
+    VERY_HIGH = "아주 높음"
 
 
 class Neckline(str, Enum):

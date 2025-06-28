@@ -1,19 +1,13 @@
 """
-상품 속성 관련 Pydantic 모델 정의 모듈
+상품 상의 속성 관련 Pydantic 모델 정의 모듈
 """
 
 from typing import Annotated
 from pydantic import BaseModel, Field
 from .base_types import (
     Neckline, SleeveLength,
-    FitType, StyleTag, TPOTag, PrimaryColor, ColorAttribute, PatternType, ClosureType
+    FitType, StyleTag, TPOTag, PatternType, ClosureType
 )
-
-class ColorInfo(BaseModel):
-    """색상 정보"""
-    name: Annotated[PrimaryColor, Field(..., description="색상명" )]
-    hex: Annotated[str, Field(..., description="색상 HEX 코드", pattern=r"^#[0-9A-Fa-f]{6}$")]
-    attributes: Annotated[list[ColorAttribute], Field(default=[], description="색상 속성 태그")]
 
 
 class PatternInfo(BaseModel):
@@ -72,7 +66,7 @@ class SubjectiveAttributes(BaseModel):
     """주관적 속성 Tags - 상의의 핏, 스타일, 착용 상황에 대한 주관적 평가 정보"""
     fit: Annotated[FitType, Field(
         ..., 
-        description="상의의 핏 타입을 하나만 선택 (슬림/레귤러/오버사이즈 중 선택)",
+        description="상의의 핏 타입을 하나만 선택",
         examples=["슬림 핏", "레귤러 핏/스탠다드 핏", "오버사이즈 핏"]
     )]
     style_tags: Annotated[list[StyleTag], Field(
@@ -121,9 +115,9 @@ class ImageCaptions(BaseModel):
         ..., 
         description="상의의 모든 디자인 디테일을 종합한 설명문. 색상, 소재, 장식 요소, 패턴, 여밈 방식 등을 포함한 설명문"
     )]
-    style_vibe_description: Annotated[str, Field(
+    style_description: Annotated[str, Field(
         ..., 
-        description="상의의 스타일과 분위기를 설명하는 텍스트. 색상 정보는 제외하고 디자인적 특성과 스타일적 느낌만 포함한 설명문"
+        description="상의의 스타일을 설명하는 텍스트. 색상 정보는 제외하고 디자인적 특성과 스타일적 느낌만 포함한 설명문"
     )]
     tpo_context_description: Annotated[str, Field(
         ..., 

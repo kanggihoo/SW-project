@@ -4,8 +4,8 @@
 
 from typing import Annotated
 from pydantic import BaseModel, Field
-from .product_attributes import  StructuredAttributes , ImageCaptions , ColorInfo
-
+from .top_product_attributes import  StructuredAttributes , ImageCaptions
+from .product_color_attributes import ColorInfo
 
 # class ProductMasterData(BaseModel):
 #     """상품 마스터 데이터 (전체 구조)"""
@@ -29,7 +29,7 @@ from .product_attributes import  StructuredAttributes , ImageCaptions , ColorInf
 
 
 # VLM 단계별 출력 모델들
-class DeepCaptioningOutput(BaseModel):
+class DeepCaptioningTopOutput(BaseModel):
     """상의의 모든 구조화된 속성과 이미지 캡션을 포함한 종합 분석 결과"""
     structured_attributes: Annotated[StructuredAttributes, Field(
         description="상의의 모든 구조화된 속성 정보. 공통 속성(소매길이, 넥라인), 정면/후면별 디자인 요소(패턴, 여밈), 주관적 속성(핏, 스타일, TPO)을 체계적으로 분류하여 저장"
@@ -40,16 +40,16 @@ class DeepCaptioningOutput(BaseModel):
 
 
 class SimpleAttributeOutput(BaseModel):
-    """단순 속성 추출 단계 출력 - 상의의 색상 정보만을 전문적으로 분석한 결과"""
-    color_info: Annotated[ColorInfo, Field(
-        description="상의의 색상 분석 결과. 대표 색상명, 정확한 HEX 코드, 색상 속성 태그(밝기/채도/톤감)를 포함한 완전한 색상 정보"
+    """단순 속성 추출 단계 출력 - 주어진 의류의 색상 정보만을 전문적으로 분석한 결과"""
+    color_info: Annotated[list[ColorInfo], Field(
+        description="의류의 색상 분석 결과. 대표 색상명, 정확한 HEX 코드, 색상 속성 태그(채도/명도)를 포함한 완전한 색상 정보"
     )]
 
 
 # class CombinedVLMOutput(BaseModel):
 #     """결합된 VLM 출력 (전체)"""
 #     product_group_id: str = Field(description="상품 그룹 식별자")
-#     deep_captioning_result: DeepCaptioningOutput = Field(
+#     deep_captioning_result: DeepCaptioningTopOutput = Field(
 #         description="딥 캡셔닝 결과"
 #     )
 #     simple_attribute_result: SimpleAttributeOutput = Field(
