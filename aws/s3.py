@@ -53,7 +53,7 @@ class S3Manager:
     
 
 if __name__ == "__main__":   
-    s3_manager = S3Manager()
+    s3_manager = S3Manager(region_name="ap-northeast-2", bucket_name="ai-dataset-curation")
     suceess = s3_manager.test_connection()
     if suceess:
         logger.info(f"S3 연결 성공: {s3_manager.bucket_name}")
