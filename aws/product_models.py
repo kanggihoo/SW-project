@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
+from PIL import Image
 
 @dataclass
 class ImageManager:
@@ -7,6 +8,8 @@ class ImageManager:
     type: str
     s3_key:str = field(default="")
     s3_url: str|None = None
+    pil_image: Image.Image|None = None
+    
     
 @dataclass
 class ProductManager:
