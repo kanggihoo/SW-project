@@ -6,7 +6,7 @@ from pathlib import Path
 import json
 from typing import Iterator , Any
 from pydantic import validate_call , Field
-from config import Config
+from .config import Config
 
 # logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

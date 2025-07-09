@@ -14,7 +14,6 @@ from .langchain_utils import (
     setup_gemini_model
 )
 from .models import DeepCaptioningTopOutput, SimpleAttributeOutput
-from .image_preprocessing import images_to_base64
 from .prompt import ColorCaptionPrompt, DeepImageCaptionPrompt
 
 def analyze_fashion_images_deep_captioning(
@@ -155,26 +154,21 @@ def main():
     load_dotenv()
     
     # LangSmith tracing 설정
-    setup_langsmith_tracing(
-        enable_tracing=True,  # 필요에 따라 False로 변경
-        project_name="fashion-caption-analysis"  # 원하는 프로젝트 이름으로 변경
-    )
+    # setup_langsmith_tracing(
+    #     enable_tracing=True,  # 필요에 따라 False로 변경
+    #     project_name="fashion-caption-analysis"  # 원하는 프로젝트 이름으로 변경
+    # )
     
     # """메인 실행 함수"""
     print("🚀 Langchain Gemini를 사용한 패션 이미지 분석 시작\n")
 
-    #--------------------------------------------------------
-    # 
-    # 샘플 이미지 경로 설정 (실제 경로로 변경 필요) => s3와 dynamoDB 연동 후 이미지 가져와야함. 
-    #
-    #--------------------------------------------------------
     
-    DATA_DIR = Path(__file__).parent / "data"
-    sample_images = [
-        DATA_DIR / "front.jpg",  # 정면 누끼 이미지
-        DATA_DIR / "back.jpg",   # 후면 누끼 이미지  
-        DATA_DIR / "model.jpg"   # 모델 착용 이미지
-    ]
+    # DATA_DIR = Path(__file__).parent / "data"
+    # sample_images = [
+    #     DATA_DIR / "front.jpg",  # 정면 누끼 이미지
+    #     DATA_DIR / "back.jpg",   # 후면 누끼 이미지  
+    #     DATA_DIR / "model.jpg"   # 모델 착용 이미지
+    # ]
     
     # # 실제 테스트용 이미지가 있는지 확인
     existing_images = []
@@ -220,22 +214,28 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # load_dotenv()
-    # setup_langsmith_tracing(
-    #     enable_tracing=True,  # 필요에 따라 False로 변경
-    #     project_name="fashion-caption-analysis"  # 원하는 프로젝트 이름으로 변경
-    # )
-    # # print(DeepCaptioningOutput)
-    # llm = ChatGoogleGenerativeAI(
-    #     model="gemini-2.0-flash-001",
-    #     temperature=0.1
-    # )
-    # from langchain_core.prompts import ChatPromptTemplate
-    # prompt = ChatPromptTemplate.from_messages([
-    #     ("system", "{schema}"),
-    #     ("user", "{input}")
-    # ])
-    # chain = prompt | llm
-    # print(chain.invoke({"schema":"your are ai assistant", "input": "Hello, how are you?"}))
+    # main()
+    import logging
+    from processing.image_processor import download_images_sync
+    from aws.aws_manager import AWSManager
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    
+    aws_manager = AWSManager()
+    pagenator = aws_manager.dynamodb_manager.get_product_pagenator(sub_category=1005 , condition={"curation_status":"COMPLETED"})
+    for page in pagenator:
+        items = page.get('Items')
+        logger.info(f"현재 총 제품 수 : {page.get('Count')}")
+        if items:
+            for item in items:
+                print(item.get('product_id') , item.get('sub_category') , item.get('main_category') , item.get('representative_assets') , item.get('text') )
+                images = aws_manager.get_product_images_from_paginator(item)
+                logger.info(f"이미지 정보 리스트 : {images}")   
+                download_images_sync(images)
+                print(images)
+                break
+        break
+    
+            
+
     
