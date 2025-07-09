@@ -365,21 +365,21 @@ class DynamoDBManager:
         return config
         
 
-if __name__ == "__main__":
-    dynamodb_manager = DynamoDBManager()
+# if __name__ == "__main__":
+#     dynamodb_manager = DynamoDBManager()
     
-    # 사용 예제
+#     # 사용 예제
     
     
-    # 2. 특정 product_id로 시작하는 제품들
-    print("=== product_id 조건 예제 ===")
-    condition = {
-        'curation_status': 'COMPLETED'
-    }
-    iterator = dynamodb_manager.get_product_pagenator(
-        sub_category=1005, 
-        condition=condition
-    )
+#     # 2. 특정 product_id로 시작하는 제품들
+#     print("=== product_id 조건 예제 ===")
+#     condition = {
+#         'curation_status': 'COMPLETED'
+#     }
+#     iterator = dynamodb_manager.get_product_pagenator(
+#         sub_category=1005, 
+#         condition=condition
+#     )
 
    
     

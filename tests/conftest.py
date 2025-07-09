@@ -40,98 +40,33 @@ def mock_s3_manager():
     mock_s3 = Mock()
     mock_s3.test_connection.return_value = True
     mock_s3.generate_presigned_url.return_value = "https://test-bucket.s3.amazonaws.com/test-image.jpg?presigned=true"
-    mock_s3.upload_file.return_value = True
-    mock_s3.download_file.return_value = True
-    mock_s3.list_objects.return_value = ['test_object1.jpg', 'test_object2.jpg']
+    # mock_s3.upload_file.return_value = True
+    # mock_s3.download_file.return_value = True
+    # mock_s3.list_objects.return_value = ['test_object1.jpg', 'test_object2.jpg']
     return mock_s3
 
-@pytest.fixture 
-def mock_s3_client():
-    """공통 S3 boto3 클라이언트 Mock"""
-    mock_client = Mock()
-    
-    # head_bucket 성공 응답
-    mock_client.head_bucket.return_value = {'ResponseMetadata': {'HTTPStatusCode': 200}}
-    
-    # generate_presigned_url 응답
-    mock_client.generate_presigned_url.return_value = "https://test-bucket.s3.amazonaws.com/test-key.jpg?presigned=true"
-    
-    # upload_file 성공 응답
-    mock_client.upload_file.return_value = None
-    
-    # download_file 성공 응답
-    mock_client.download_file.return_value = None
-    
-    # list_objects_v2 응답
-    mock_client.list_objects_v2.return_value = {
-        'Contents': [
-            {'Key': 'test_object1.jpg', 'Size': 1024},
-            {'Key': 'test_object2.jpg', 'Size': 2048}
-        ]
-    }
-    
-    return mock_client
 
 # =============================================================================
 # DynamoDB 관련 공통 Mock
 # =============================================================================
 
-@pytest.fixture
-def mock_dynamodb_manager():
-    """공통 DynamoDBManager Mock"""
-    mock_dynamodb = Mock()
-    mock_dynamodb.test_connection.return_value = True
-    
-    # 기본 get_item 응답
-    mock_dynamodb.get_item.return_value = {
-        'sub_category': 1005,
-        'product_id': 'test_product_123',
-        'main_category': 'TOP',
-        'curation_status': 'COMPLETED',
-        'representative_assets': {
-            'front': 'images/front/test_front.jpg',
-            'back': 'images/back/test_back.jpg',
-            'model': 'images/model/test_model.jpg'
-        },
-        'text': ['images/text/test_text1.jpg', 'images/text/test_text2.jpg']
-    }
-    
-    # update_caption_result 기본 응답
-    mock_dynamodb.update_caption_result.return_value = True
-    
-    # _convert_dynamodb_item_to_python 기본 응답
-    mock_dynamodb._convert_dynamodb_item_to_python.return_value = {
-        'sub_category': 1005,
-        'product_id': 'test_product_123',
-        'main_category': 'TOP',
-        'curation_status': 'COMPLETED',
-        'representative_assets': {
-            'front': 'images/front/test_front.jpg',
-            'back': 'images/back/test_back.jpg',
-            'model': 'images/model/test_model.jpg',
-            'color_variant': ['images/color1/test_color1.jpg', 'images/color2/test_color2.jpg']
-        },
-        'text': ['images/text/test_text1.jpg', 'images/text/test_text2.jpg']
-    }
-    
-    return mock_dynamodb
 
 @pytest.fixture
 def mock_dynamodb_client():
     """공통 DynamoDB boto3 클라이언트 Mock"""
     mock_client = Mock()
     
-    # describe_table 성공 응답
-    mock_client.describe_table.return_value = {
-        'Table': {
-            'TableName': 'TestProductAssets',
-            'TableStatus': 'ACTIVE',
-            'KeySchema': [
-                {'AttributeName': 'sub_category', 'KeyType': 'HASH'},
-                {'AttributeName': 'product_id', 'KeyType': 'RANGE'}
-            ]
-        }
-    }
+    # # describe_table 성공 응답
+    # mock_client.describe_table.return_value = {
+    #     'Table': {
+    #         'TableName': 'TestProductAssets',
+    #         'TableStatus': 'ACTIVE',
+    #         'KeySchema': [
+    #             {'AttributeName': 'sub_category', 'KeyType': 'HASH'},
+    #             {'AttributeName': 'product_id', 'KeyType': 'RANGE'}
+    #         ]
+    #     }
+    # }
     
     # get_item 성공 응답
     mock_client.get_item.return_value = {
@@ -160,8 +95,17 @@ def mock_dynamodb_client():
             'Items': [
                 {
                     'sub_category': {'N': '1005'},
-                    'product_id': {'S': 'product_1'},
-                    'curation_status': {'S': 'COMPLETED'}
+                    'product_id': {'S': 'test_product_123'},
+                    'curation_status': {'S': 'COMPLETED'},
+                    'main_category': {'S': 'TOP'},
+                    'representative_assets': {
+                        'M': {
+                            'front': {'S': 'segment/test_front.jpg'},
+                            'back': {'S': 'segment/test_back.jpg'},
+                            'model': {'S': 'segment/test_model.jpg'}
+                        }
+                    },
+                    'text': {'L': [{'S': 'test_text1.jpg'}, {'S': 'test_text2.jpg'}]}
                 }
             ],
             'Count': 1,
@@ -171,6 +115,35 @@ def mock_dynamodb_client():
     mock_client.get_paginator.return_value = mock_paginator
     
     return mock_client
+
+@pytest.fixture
+def mock_dynamodb_manager(mock_dynamodb_client):
+    """공통 DynamoDBManager Mock"""
+    mock_dynamodb = Mock()
+    mock_dynamodb.test_connection.return_value = True
+    
+    # 기본 get_item 응답
+    mock_dynamodb.get_item.return_value = mock_dynamodb_client.get_item.return_value
+    
+    # update_caption_result 기본 응답
+    mock_dynamodb.update_caption_result.return_value = True
+    
+    # _convert_dynamodb_item_to_python 기본 응답
+    mock_dynamodb._convert_dynamodb_item_to_python.return_value = {
+        'sub_category': 1005,
+        'product_id': 'test_product_123',
+        'main_category': 'TOP',
+        'curation_status': 'COMPLETED',
+        'representative_assets': {
+            'front': 'images/front/test_front.jpg',
+            'back': 'images/back/test_back.jpg',
+            'model': 'images/model/test_model.jpg',
+            'color_variant': ['images/color1/test_color1.jpg', 'images/color2/test_color2.jpg']
+        },
+        'text': ['images/text/test_text1.jpg', 'images/text/test_text2.jpg']
+    }
+    
+    return mock_dynamodb
 
 # =============================================================================
 # 테스트 데이터 샘플

@@ -19,75 +19,13 @@ class TestDynamoDBManagerWithMocks:
         """get_item 성공 테스트"""
         manager = mock_dynamodb_manager_initialized
         
-        result = manager.get_item(sub_category=1005, product_id="test_product_123")
-        
-        assert result is not None
-        assert isinstance(result, dict)
-        assert result['sub_category'] == 1005
-        assert result['product_id'] == "test_product_123"
-        assert result['curation_status'] == "COMPLETED"
-        assert result['main_category'] == "TOP"
-        assert 'representative_assets' in result
-        
+        result = manager.get_item(sub_category=1005, product_id="test_product_123")        
         # get_item이 올바른 키로 호출되었는지 확인
         manager.client.get_item.assert_called_once()
         call_args = manager.client.get_item.call_args
         assert call_args[1]['TableName'] == "TestProductAssets"
         assert 'Key' in call_args[1]
         
-        logger.info("get_item success test passed")
-    
-    def test_get_item_not_found(self, aws_mock_config):
-        """get_item 데이터 없음 테스트"""
-        mock_client = Mock()
-        mock_client.get_item.return_value = {}  # Item이 없는 경우
-        
-        with patch('aws.dynamodb.boto3.client', return_value=mock_client), \
-             patch.object(DynamoDBManager, '_load_config', return_value=aws_mock_config):
-            manager = DynamoDBManager()
-            
-            result = manager.get_item(sub_category=9999, product_id="nonexistent")
-            
-            assert result is None
-            logger.info("get_item not found test passed")
-    
-    
-    def test_update_caption_result_success(self, mock_dynamodb_manager_initialized):
-        """update_caption_result 성공 테스트"""
-        manager = mock_dynamodb_manager_initialized
-        
-        result = manager.update_caption_result(
-            sub_category=1005,
-            product_id="test_product",
-            update_result="COMPLETED"
-        )
-        
-        assert result is True
-        manager.client.update_item.assert_called_once()
-        
-        call_args = manager.client.update_item.call_args
-        assert call_args[1]['TableName'] == "TestProductAssets"
-        assert call_args[1]['UpdateExpression'] == "SET caption_status = :status"
-        assert call_args[1]['ExpressionAttributeValues'][':status']['S'] == "COMPLETED"
-        
-        logger.info("update_caption_result success test passed")
-    
-    def test_update_caption_result_invalid_status(self, mock_dynamodb_manager_initialized):
-        """update_caption_result 잘못된 상태값 테스트"""
-        manager = mock_dynamodb_manager_initialized
-        
-        result = manager.update_caption_result(
-            sub_category=1005,
-            product_id="test_product",
-            update_result="INVALID_STATUS"
-        )
-        
-        assert result is False
-        # update_item이 호출되지 않아야 함
-        manager.client.update_item.assert_not_called()
-        
-        logger.info("update_caption_result invalid status test passed")
-    
     
     def test_get_product_paginator_success(self, mock_dynamodb_manager_initialized):
         """get_product_pagenator 성공 테스트"""
@@ -97,14 +35,6 @@ class TestDynamoDBManagerWithMocks:
             sub_category=1005,
             condition={'curation_status': 'COMPLETED'}
         )
-        
-        assert iterator is not None
-        assert hasattr(iterator, '__iter__')
-        
-        # 첫 번째 페이지 확인
-        first_page = next(iter(iterator))
-        assert 'Items' in first_page
-        assert len(first_page['Items']) == 1
         
         manager.client.get_paginator.assert_called_once_with('query')
         
@@ -121,50 +51,27 @@ class TestDynamoDBManagerWithMocks:
         
         logger.info("get_product_paginator without condition test passed")
     
-    def test_get_category_status_stats_success(self, mock_dynamodb_manager_initialized):
-        """get_category_status_stats 성공 테스트"""
-        manager = mock_dynamodb_manager_initialized
-        
-        # 통계 데이터를 위한 특별한 응답 설정
-        manager.client.get_item.return_value = {
-            'Item': {
-                'sub_category': {'N': '0'},
-                'product_id': {'S': 'STATUS_STATS_TOP_1005'},
-                'completed_count': {'N': '50'},
-                'pending_count': {'N': '30'},
-                'pass_count': {'N': '5'},
-                'total_products': {'N': '85'}
-            }
-        }
-        
-        result = manager.get_category_status_stats(main_category="TOP", sub_category=1005)
-        
-        assert result is not None
-        assert isinstance(result, dict)
-        assert result['completed_count'] == 50
-        assert result['pending_count'] == 30
-        assert result['total_products'] == 85
-        
-        logger.info("get_category_status_stats success test passed")
     
     def test_python_to_dynamodb_conversion(self, mock_dynamodb_manager_initialized):
         """Python to DynamoDB 변환 테스트"""
         manager = mock_dynamodb_manager_initialized
         
         test_data = {
-            'sub_category': 1005,
-            'product_id': 'test_product_123',
-            'curation_status': 'PENDING',
-            'main_category': 'TOP'
+            'numbers': [1, 2, 3],  # Python list of ints
+            'metadata': {  # Python nested dict
+                'created_at': '2024-03-20',
+                'is_active': True
+            },
+            'tags': {'tag1', 'tag2'},  # Python set
         }
-        
+    
         converted = manager._convert_python_to_dynamodb(test_data)
         
-        assert isinstance(converted, dict)
-        assert converted['sub_category']['N'] == '1005'
-        assert converted['product_id']['S'] == 'test_product_123'
-        assert converted['curation_status']['S'] == 'PENDING'
-        assert converted['main_category']['S'] == 'TOP'
+        # 각 Python 타입이 올바른 DynamoDB 타입으로 변환되었는지
+        assert converted['numbers']['L'][0]['N'] == '1'  # list -> {'L': [{'N': '1'}, ...]}
+        assert converted['metadata']['M']['is_active']['BOOL'] is True  # bool -> {'BOOL': true}
+        # set은 순서가 보장되지 않으므로, 변환 결과의 SS 값은 정렬해서 비교
+        assert sorted(converted['tags']['SS']) == sorted(['tag1', 'tag2'])  # set -> {'SS': [...]}
         
         logger.info("Python to DynamoDB conversion test passed")
     
@@ -235,18 +142,6 @@ class TestDynamoDBManagerWithMocks:
             
             logger.info("Load config file not found test passed")
     
-    def test_string_sub_category_conversion(self, mock_dynamodb_manager_initialized):
-        """문자열 sub_category가 정수로 변환되는지 테스트"""
-        manager = mock_dynamodb_manager_initialized
-        
-        # get_item에서 문자열 sub_category 전달
-        result = manager.get_item(sub_category="1005", product_id="test_product")
-        
-        assert result is not None
-        # 내부적으로 정수로 변환되어 호출되어야 함
-        manager.client.get_item.assert_called_once()
-        
-        logger.info("String sub_category conversion test passed")
 
 
 

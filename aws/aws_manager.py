@@ -116,17 +116,23 @@ class AWSManager:
     def _parse_representative_assets(self, representative_assets:dict) -> tuple[bool, list[ImageManager]]:
         images = []
         success = True
-        for key, value in representative_assets.items():
-            
-            if isinstance(value, list) and len(value):
-                for img in value:
-                    images.append(ImageManager(folder_path=img, type=key))
-            elif isinstance(value, str) and key in ["model", "front", "back"]:
-                images.append(ImageManager(folder_path=value, type=key))
-            else:
-                logger.error(f"이미지 파일 형식이 올바르지 않습니다. key : {key} , value : {value}")
-                success = False
-                break
+        try:
+            assert len(set(key for key in representative_assets.keys() if key in ["model", "front", "back", "color_variant"]))==4, "representative_assets 형식이 올바르지 않습니다."
+            for key, value in representative_assets.items():
+                
+                if isinstance(value, list) and len(value):
+                    for img in value:
+                        images.append(ImageManager(folder_path=img, type=key))
+                elif isinstance(value, str) and key in ["model", "front", "back"]:
+                    images.append(ImageManager(folder_path=value, type=key))
+                else:
+                    logger.error(f"이미지 파일 형식이 올바르지 않습니다. key : {key} , value : {value}")
+                    success = False
+                    break
+        except Exception as e:
+            logger.error(f"이미지 파싱 중 오류 발생 : {e}")
+            success = False
+        
 
         return success, images
     
