@@ -1,16 +1,13 @@
 from pathlib import Path
 import json
 from typing import Annotated, Iterator, Any
+from dataclasses import dataclass, field
 from pydantic import Field
-from .dynamodb import DynamoDBManager
-from .s3 import S3Manager
 import logging
 
 from .config import Config
-import asyncio
-
-from dataclasses import dataclass, field
-from typing import Annotated
+from .s3 import S3Manager
+from .dynamodb import DynamoDBManager
 from .product_models import ImageManager, ProductManager
 
 logging.basicConfig(level=logging.INFO)

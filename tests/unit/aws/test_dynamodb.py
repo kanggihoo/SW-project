@@ -1,126 +1,23 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from aws.dynamodb import DynamoDBManager
-from aws.config import Config
 from pathlib import Path
-import json
+
 import logging
 from botocore.exceptions import ClientError
+from tests.conftest import mock_open_config
 
 # Set up logging for test debugging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@pytest.fixture
-def mock_config():
-    """Mock 설정 데이터를 제공하는 fixture"""
-    config = Config()
-    return {
-        "aws": {
-            "region_name": "ap-northeast-2"
-        },
-        "dynamodb": {
-            "table_name": "ProductAssets"
-        },
-        "DEFAULT_PROJECTION_FIELDS": config["DEFAULT_PROJECTION_FIELDS"],
-        "DEFAULT_PAGINATOR_CONFIG": config["DEFAULT_PAGINATOR_CONFIG"]
-    }
-
-@pytest.fixture
-def mock_dynamodb_client():
-    """Mock DynamoDB 클라이언트를 제공하는 fixture"""
-    mock_client = Mock()
-    
-    # describe_table 성공 응답 mock
-    mock_client.describe_table.return_value = {
-        'Table': {
-            'TableName': 'ProductAssets',
-            'TableStatus': 'ACTIVE',
-            'KeySchema': [
-                {'AttributeName': 'sub_category', 'KeyType': 'HASH'},
-                {'AttributeName': 'product_id', 'KeyType': 'RANGE'}
-            ]
-        }
-    }
-    
-    # get_item 성공 응답 mock
-    mock_client.get_item.return_value = {
-        'Item': {
-            'sub_category': {'N': '1005'},
-            'product_id': {'S': 'test_product_123'},
-            'curation_status': {'S': 'COMPLETED'},
-            'main_category': {'S': 'TOP'},
-            'representative_assets': {
-                'M': {
-                    'front': {'S': 'front_image.jpg'},
-                    'back': {'S': 'back_image.jpg'},
-                    'model': {'S': 'model_image.jpg'}
-                }
-            }
-        }
-    }
-    
-    # update_item 성공 응답 mock
-    mock_client.update_item.return_value = {'ResponseMetadata': {'HTTPStatusCode': 200}}
-    
-    # paginator mock
-    mock_paginator = Mock()
-    mock_paginator.paginate.return_value = iter([
-        {
-            'Items': [
-                {
-                    'sub_category': {'N': '1005'},
-                    'product_id': {'S': 'product_1'},
-                    'curation_status': {'S': 'COMPLETED'}
-                }
-            ],
-            'Count': 1,
-            'ScannedCount': 1
-        }
-    ])
-    mock_client.get_paginator.return_value = mock_paginator
-    
-    return mock_client
-
-@pytest.fixture
-def dynamodb_manager_with_mocks(mock_config, mock_dynamodb_client):
-    """Mock을 사용한 DynamoDBManager 인스턴스를 제공하는 fixture"""
-    with patch('aws.dynamodb.boto3.client', return_value=mock_dynamodb_client), \
-         patch.object(DynamoDBManager, '_load_config', return_value=mock_config):
-        manager = DynamoDBManager()
-        return manager
-
 class TestDynamoDBManagerWithMocks:
     """Mock을 사용한 DynamoDBManager 클래스 테스트"""
+
     
-    def test_initialization_with_mocks(self, dynamodb_manager_with_mocks):
-        """Mock을 사용한 DynamoDBManager 초기화 테스트"""
-        manager = dynamodb_manager_with_mocks
-        
-        assert manager is not None
-        assert manager.client is not None
-        assert manager.region_name == "ap-northeast-2"
-        assert manager.table_name == "ProductAssets"
-        assert hasattr(manager, 'config')
-        
-        logger.info("DynamoDB Manager successfully initialized with mocks")
-    
-    def test_test_connection_success(self, dynamodb_manager_with_mocks):
-        """연결 테스트 성공 시나리오"""
-        manager = dynamodb_manager_with_mocks
-        
-        result = manager.test_connection()
-        
-        assert result is True
-        assert hasattr(manager, 'table_info')
-        manager.client.describe_table.assert_called_once_with(TableName="ProductAssets")
-        
-        logger.info("Connection test successful with mock")
-    
-    
-    def test_get_item_success(self, dynamodb_manager_with_mocks):
+    def test_get_item_success(self, mock_dynamodb_manager_initialized):
         """get_item 성공 테스트"""
-        manager = dynamodb_manager_with_mocks
+        manager = mock_dynamodb_manager_initialized
         
         result = manager.get_item(sub_category=1005, product_id="test_product_123")
         
@@ -135,18 +32,18 @@ class TestDynamoDBManagerWithMocks:
         # get_item이 올바른 키로 호출되었는지 확인
         manager.client.get_item.assert_called_once()
         call_args = manager.client.get_item.call_args
-        assert call_args[1]['TableName'] == "ProductAssets"
+        assert call_args[1]['TableName'] == "TestProductAssets"
         assert 'Key' in call_args[1]
         
         logger.info("get_item success test passed")
     
-    def test_get_item_not_found(self, mock_config):
+    def test_get_item_not_found(self, aws_mock_config):
         """get_item 데이터 없음 테스트"""
         mock_client = Mock()
         mock_client.get_item.return_value = {}  # Item이 없는 경우
         
         with patch('aws.dynamodb.boto3.client', return_value=mock_client), \
-             patch.object(DynamoDBManager, '_load_config', return_value=mock_config):
+             patch.object(DynamoDBManager, '_load_config', return_value=aws_mock_config):
             manager = DynamoDBManager()
             
             result = manager.get_item(sub_category=9999, product_id="nonexistent")
@@ -155,9 +52,9 @@ class TestDynamoDBManagerWithMocks:
             logger.info("get_item not found test passed")
     
     
-    def test_update_caption_result_success(self, dynamodb_manager_with_mocks):
+    def test_update_caption_result_success(self, mock_dynamodb_manager_initialized):
         """update_caption_result 성공 테스트"""
-        manager = dynamodb_manager_with_mocks
+        manager = mock_dynamodb_manager_initialized
         
         result = manager.update_caption_result(
             sub_category=1005,
@@ -169,15 +66,15 @@ class TestDynamoDBManagerWithMocks:
         manager.client.update_item.assert_called_once()
         
         call_args = manager.client.update_item.call_args
-        assert call_args[1]['TableName'] == "ProductAssets"
+        assert call_args[1]['TableName'] == "TestProductAssets"
         assert call_args[1]['UpdateExpression'] == "SET caption_status = :status"
         assert call_args[1]['ExpressionAttributeValues'][':status']['S'] == "COMPLETED"
         
         logger.info("update_caption_result success test passed")
     
-    def test_update_caption_result_invalid_status(self, dynamodb_manager_with_mocks):
+    def test_update_caption_result_invalid_status(self, mock_dynamodb_manager_initialized):
         """update_caption_result 잘못된 상태값 테스트"""
-        manager = dynamodb_manager_with_mocks
+        manager = mock_dynamodb_manager_initialized
         
         result = manager.update_caption_result(
             sub_category=1005,
@@ -190,11 +87,11 @@ class TestDynamoDBManagerWithMocks:
         manager.client.update_item.assert_not_called()
         
         logger.info("update_caption_result invalid status test passed")
-
     
-    def test_get_product_paginator_success(self, dynamodb_manager_with_mocks):
+    
+    def test_get_product_paginator_success(self, mock_dynamodb_manager_initialized):
         """get_product_pagenator 성공 테스트"""
-        manager = dynamodb_manager_with_mocks
+        manager = mock_dynamodb_manager_initialized
         
         iterator = manager.get_product_pagenator(
             sub_category=1005,
@@ -212,11 +109,21 @@ class TestDynamoDBManagerWithMocks:
         manager.client.get_paginator.assert_called_once_with('query')
         
         logger.info("get_product_paginator success test passed")
-
     
-    def test_get_category_status_stats_success(self, dynamodb_manager_with_mocks):
+    def test_get_product_paginator_without_condition(self, mock_dynamodb_manager_initialized):
+        """get_product_pagenator 조건 없이 테스트"""
+        manager = mock_dynamodb_manager_initialized
+        
+        iterator = manager.get_product_pagenator(sub_category=1005)
+        
+        assert iterator is not None
+        manager.client.get_paginator.assert_called_once_with('query')
+        
+        logger.info("get_product_paginator without condition test passed")
+    
+    def test_get_category_status_stats_success(self, mock_dynamodb_manager_initialized):
         """get_category_status_stats 성공 테스트"""
-        manager = dynamodb_manager_with_mocks
+        manager = mock_dynamodb_manager_initialized
         
         # 통계 데이터를 위한 특별한 응답 설정
         manager.client.get_item.return_value = {
@@ -240,9 +147,9 @@ class TestDynamoDBManagerWithMocks:
         
         logger.info("get_category_status_stats success test passed")
     
-    def test_python_to_dynamodb_conversion(self, dynamodb_manager_with_mocks):
+    def test_python_to_dynamodb_conversion(self, mock_dynamodb_manager_initialized):
         """Python to DynamoDB 변환 테스트"""
-        manager = dynamodb_manager_with_mocks
+        manager = mock_dynamodb_manager_initialized
         
         test_data = {
             'sub_category': 1005,
@@ -261,9 +168,9 @@ class TestDynamoDBManagerWithMocks:
         
         logger.info("Python to DynamoDB conversion test passed")
     
-    def test_dynamodb_to_python_conversion(self, dynamodb_manager_with_mocks):
+    def test_dynamodb_to_python_conversion(self, mock_dynamodb_manager_initialized):
         """DynamoDB to Python 변환 테스트"""
-        manager = dynamodb_manager_with_mocks
+        manager = mock_dynamodb_manager_initialized
         
         dynamodb_data = {
             'sub_category': {'N': '1005'},
@@ -303,10 +210,34 @@ class TestDynamoDBManagerWithMocks:
         assert converted['metadata'] is None
         
         logger.info("DynamoDB to Python conversion test passed")
-
-    def test_string_sub_category_conversion(self, dynamodb_manager_with_mocks):
+    
+    def test_load_config_success(self, aws_mock_config):
+        """_load_config 성공 테스트"""
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('builtins.open', mock_open_config(aws_mock_config)):
+            
+            manager = DynamoDBManager.__new__(DynamoDBManager)
+            config = manager._load_config()
+            
+            assert config == aws_mock_config
+            assert 'aws' in config
+            assert 'dynamodb' in config
+            
+            logger.info("Load config success test passed")
+    
+    def test_load_config_file_not_found(self):
+        """_load_config 파일 없음 테스트"""
+        with patch('pathlib.Path.exists', return_value=False):
+            manager = DynamoDBManager.__new__(DynamoDBManager)
+            
+            with pytest.raises(FileNotFoundError):
+                manager._load_config()
+            
+            logger.info("Load config file not found test passed")
+    
+    def test_string_sub_category_conversion(self, mock_dynamodb_manager_initialized):
         """문자열 sub_category가 정수로 변환되는지 테스트"""
-        manager = dynamodb_manager_with_mocks
+        manager = mock_dynamodb_manager_initialized
         
         # get_item에서 문자열 sub_category 전달
         result = manager.get_item(sub_category="1005", product_id="test_product")
