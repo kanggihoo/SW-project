@@ -11,10 +11,9 @@ class S3Manager:
         self.region_name = region_name
         self.bucket_name = bucket_name
         self.initialize_client()
-
     def initialize_client(self):
         self.client = boto3.client('s3', region_name=self.region_name)
-        
+        logger.info(f"S3 클라이언트 초기화 완료: {self.bucket_name}")
     
     def test_connection(self) -> bool:
         try:
@@ -49,15 +48,5 @@ class S3Manager:
             logger.error(f"Presigned URL 생성 실패: {e}")
             return None
     
-    #TODO :  파일 업로드 , 파일 다운로드 객체 키 생성 , 
-    
-
-if __name__ == "__main__":   
-    s3_manager = S3Manager(region_name="ap-northeast-2", bucket_name="ai-dataset-curation")
-    suceess = s3_manager.test_connection()
-    if suceess:
-        logger.info(f"S3 연결 성공: {s3_manager.bucket_name}")
-    else:
-        logger.error(f"S3 연결 실패: {s3_manager.bucket_name}")
     
     

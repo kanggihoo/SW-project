@@ -23,3 +23,15 @@ dependencies = [
 dev = [
     "pytest>=8.4.1",
 ]
+
+[tool.pytest.ini_options]
+addopts = [
+    "-s",
+]
+pythonpath = [
+    "."
+]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:datetime.datetime.utcnow():DeprecationWarning"
+]
