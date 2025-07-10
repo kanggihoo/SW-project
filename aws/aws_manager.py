@@ -138,6 +138,7 @@ class AWSManager:
     def _parse_text_image(self, text:list[str]) -> tuple[bool, list[ImageManager]]:
         images = []
         for value in text:
+            value = "text/" + value
             images.append(ImageManager(folder_path=value, type="text"))
         return True , images
     
