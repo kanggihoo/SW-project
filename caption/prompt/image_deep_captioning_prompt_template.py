@@ -66,13 +66,13 @@ class DeepImageCaptionPrompt:
         ])
 
 
-    def create_image_captioning_chain(self , model):
-        """
-        이미지 캡셔닝을 위한 체인 생성
-        Returns:
-            체인 객체
-        """
-        return self.prompt | model
+    # def create_image_captioning_chain(self , model):
+    #     """
+    #     이미지 캡셔닝을 위한 체인 생성
+    #     Returns:
+    #         체인 객체
+    #     """
+    #     return self.prompt | model
 
     def get_chain_input(self, category: str, image_data: str) -> dict[str, Any]:
         """
