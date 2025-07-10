@@ -10,7 +10,6 @@ from .s3 import S3Manager
 from .dynamodb import DynamoDBManager
 from .product_models import ImageManager, ProductManager
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 config = Config()
    
@@ -150,20 +149,7 @@ class AWSManager:
         return True , images1 + images2
         
     
-if __name__ == "__main__":
-    aws_manager = AWSManager()
-    paginator = aws_manager.dynamodb_manager.get_product_pagenator(sub_category=1005, condition={"curation_status": "COMPLETED"})
-    if paginator is not None:
-        for page in paginator:
-            items = page.get('Items')
-            logger.info(f"현재 총 제품 수 : {page.get('Count')}")
-            if items:
-                for item in items:
-                    images = aws_manager.get_product_images_from_paginator(item)
-                    logger.info(f"이미지 정보 리스트 : {images}")
-                    break
-            break
-            
+
     
     
     
