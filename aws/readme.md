@@ -1,47 +1,47 @@
 📦 ProductAssets 테이블 구조
-ProductAssets 테이블은 상품 애셋 정보 관리, 큐레이션 상태 모니터링, 카테고리별 통계 집계, S3 연동 최적화를 위한 구조로 설계되었습니다.
+ProductAssets 테이블은 상품 애셋 정보 관리, 큐레이션 상태 모니터링, 카테고리별 통계 집계, S3 연동 최적화를 위한 구조로 설계되었습니다. 
 
 ## 🔑 기본 키 구조
 
 | 키        | 유형 | 필드명        | 타입 | 설명                                                                                   |
 | --------- | ---- | ------------- | ---- | -------------------------------------------------------------------------------------- |
-| 파티션 키 | (PK) | sub\*category | N    | 서브 카테고리 ID. 메타데이터 항목은 0으로 고정                                         |
-| 정렬 키   | (SK) | product_id    | S    | 고유한 상품 ID 또는 STATUS_STATS*{main*category}\*{sub_category} 형식의 메타 데이터 키 |
+| 파티션 키 | (PK) | sub_category | N    | 서브 카테고리 ID. 메타데이터 항목은 0으로 고정                                         |
+| 정렬 키   | (SK) | product_id    | S    | 고유한 상품 ID 또는 STATUS_STATS_{main_category}_{sub_category} 형식의 메타 데이터 키 |
 
 ## 🗃️ 주요 필드 설명
 
 | 필드명                             | 타입 | 설명                                                                                 |
 | ---------------------------------- | ---- | ------------------------------------------------------------------------------------ |
-| **representative_assets**          | M    | 대표 이미지(전면, 후면, 색상 변형 등). 단, curation_status가 PASS이면 해당 필드 없음 |
+| **representative_assets**          | M    | 선택된 대표 이미지. `curation_status`가 PASS이면 해당 필드 없음.<br> 예: `{"back": "segment/1_1.jpg", "front": "segment/1_2.jpg", "model": "summary/1_3.jpg", "color_variant": ["segment/1_0.jpg", "segment/1_4.jpg"]}` |
 | **curation_status**                | S    | 큐레이션 상태 (COMPLETED, PENDING, PASS)                                             |
 | **main_category**                  | S    | 메인 카테고리 정보                                                                   |
-| **detail, segment, summary, text** | L    | S3 객체 이름 리스트. DynamoDB에서 존재 여부 확인 후 S3 접근                          |
-| **recommendation_order**           | S    | 추천 순위 (7자리 제로 패딩: 예 0000001)                                              |
+| **detail, segment, summary, text** | L    | S3 객체 이름 리스트. DynamoDB에서 존재 여부 확인 후 S3 접근. <br>예: `["0_0.jpg", "0_1.jpg", "0_5.jpg"]` (빈 리스트 가능) |
+| **recommendation_order**           | S    | 추천 순위 (7자리 제로 패딩되어 있으며 유일성 보장을 위해 #product_id 와 결합: 예 0000001#1158247)                                              |
 | **created_at**                     | S    | 애셋 생성 시각                                                                       |
 | **completed_by**                   | S    | 큐레이션 완료자                                                                      |
 | **pass_reason**                    | S    | PASS 상태인 경우에만 존재하는 필드. 패스 이유 설명                                   |
 
 ## 📊 메타 데이터 전용 필드
+- 각 main/subcategory에 속하는 모든 product에 대한 총 제품 수, 작업완료 상태에 대응하는 제품 수 정보 저장
 
 | 필드명               | 타입 | 설명                               |
 | -------------------- | ---- | ---------------------------------- |
 | completed_count      | N    | COMPLETED 상태 상품 수             |
-| recommendation_order | N    | 메타 정보 내에서 평균 추천 순위 등 |
 | pass_count           | N    | PASS 상태 상품 수                  |
 | pending_count        | N    | PENDING 상태 상품 수               |
-| target_sub_category  | N    | 메타 통계 대상 sub_category        |
 | total_products       | N    | 총 상품 수                         |
+| target_sub_category  | N    | 메타 통계 대상 sub_category        |
 
-- 메타 데이터 항목은 항상 sub*category = 0을 가지며, SK = STATUS_STATS*{main*category}*{sub_category} 형식을 따릅니다.
+- 메타 데이터 항목에 접근하기 위한 PK는 항상 0이며, SK는 STATUS_STATS_{main_category}_{sub_category} 형식을 가짐.
 
 ## 🔍 글로벌 보조 인덱스 (GSI)
 
 **CurrentStatus-RecommendationOrder-GSI**
 
 - 파티션 키: curation_status (S)
-- 정렬 키: recommendation_order + # + product_id (S)
+- 정렬 키: recommendation_order (S)
 
-활용: 이 GSI는 특정 curation_status를 가진 상품들을 recommendation_order 순으로 효율적으로 정렬하여 조회할 때 사용됩니다. 예를 들어, "현재 PENDING 상태인 상품들 중 추천 순위가 높은 순서대로 목록을 가져오고 싶을 때" 이 인덱스를 활용하면 매우 빠르게 데이터를 검색할 수 있습니다. #product_id를 추가하여 recommendation_order가 동일한 경우에도 고유성을 보장하고 안정적인 정렬을 가능하게 합니다.
+활용: 이 GSI는 특정 curation_status를 가진 상품들을 recommendation_order 순으로 효율적으로 정렬하여 조회할 때 사용됩니다. 예를 들어, "현재 PENDING 상태인 상품들 중 추천 순위가 높은 순서대로 목록을 가져오고 싶을 때" 이 인덱스를 활용하면 매우 빠르게 데이터를 검색할 수 있습니다. 
 
 ## 주요 활용처 및 장점
 

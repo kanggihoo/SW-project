@@ -3,10 +3,11 @@
 """
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from typing import Any
-
+from langchain_core.runnables import Runnable
+from typing import Optional
+from langchain_core.runnables import RunnableConfig
 # System Prompt for Color Analysis
 system_template = """
-
     당신은 의류 이미지의 색상을 정확하게 분석하는 전문가입니다. 
     주어진 이미지는 {count} 개의 {category} 이미지로써 각 의류 이미지를 개별적으로 분석하여 다음 정보를 정확히 추출해야 합니다:
 
@@ -44,7 +45,7 @@ human_template = [
     }
 ]
 
-class ColorCaptionPrompt:
+class ColorCaptionPrompt(Runnable):
     def __init__(self):
         self.prompt = self._make_prompt()
     
@@ -53,16 +54,11 @@ class ColorCaptionPrompt:
             SystemMessagePromptTemplate.from_template(system_template),
             HumanMessagePromptTemplate.from_template(human_template)
         ])
+    
+    def invoke(self, input: dict[str, Any], config: Optional[RunnableConfig] = None, **kwargs: Any) -> Any:
+        return self.prompt.invoke(input, config, **kwargs)
 
-    def create_color_captioning_chain(self, model):
-        """
-        이미지 캡셔닝을 위한 체인 생성
-        Returns:
-            체인 객체
-        """
-        return self.prompt | model
-
-    def get_chain_input(self, count: int, category: str, image_data: str) -> dict[str, Any]:
+    def extract_chain_input(self, kwargs: dict) -> dict[str, Any]:
         """
         체인 입력 데이터 생성
         
@@ -74,6 +70,11 @@ class ColorCaptionPrompt:
         Returns:
             체인 호출을 위한 입력 딕셔너리
         """
+        count = kwargs.get("count")
+        category = kwargs.get("category")
+        image_data = kwargs.get("image_data")
+        if count is None or category is None or image_data is None:
+            raise ValueError("count, category, image_data 모두 필요합니다.")
         return {
             "count": count,
             "category": category,

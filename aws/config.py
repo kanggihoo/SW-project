@@ -6,7 +6,7 @@ DEFAULT_CACHE_DIR = Path.home() / ".cache" /  "ai_dataset_curation" / "product_i
 
 
 def get_default_pagenator_config() -> dict:
-    return {"MaxItems": 100, "PageSize": 2}
+    return {"MaxItems": 100, "PageSize": 4}
 
 class Config(dict):
     def __init__(self):

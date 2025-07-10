@@ -4,7 +4,7 @@ import logging
 from io import BytesIO
 from typing import Optional
 from PIL import Image
-from aws.product_models import ImageManager
+from caption.models.product import ImageManager
 from aiohttp import ClientTimeout
 
 class ImageDownloader:

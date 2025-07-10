@@ -11,6 +11,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .models.master_data import DeepCaptioningTopOutput, SimpleAttributeOutput
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 def setup_langsmith_tracing(
     enable_tracing: bool = True,
@@ -37,12 +40,12 @@ def setup_langsmith_tracing(
             os.environ["LANGSMITH_PROJECT"] = "fashion-image-analysis"
         
         current_project = os.getenv("LANGSMITH_PROJECT")
-        print(f"✅ LangSmith tracing 활성화됨 - 프로젝트: {current_project}")
+        logger.info(f"✅ LangSmith tracing 활성화됨 - 프로젝트: {current_project}")
         
     else:
         # LangSmith tracing 비활성화
         os.environ["LANGSMITH_TRACING"] = "false"
-        print("🔒 LangSmith tracing 비활성화됨")
+        logger.info("🔒 LangSmith tracing 비활성화됨")
 
 
 
@@ -56,7 +59,7 @@ def setup_gemini_model(model_name: str = "gemini-2.0-flash-001", temperature: fl
         model=model_name,
         temperature=temperature
     )
-    print(f"✅ Gemini 모델 설정 완료: {model_name}")
+    logger.info(f"✅ Gemini 모델 설정 완료: {model_name}")
     return model
 
 
