@@ -8,7 +8,7 @@ import logging
 from .config import Config
 from .s3 import S3Manager
 from .dynamodb import DynamoDBManager
-from .product_models import ImageManager, ProductManager
+from caption.models.product import ImageManager, ProductManager
 
 logger = logging.getLogger(__name__)
 config = Config()
