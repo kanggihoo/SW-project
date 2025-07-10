@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from aws.aws_manager import AWSManager
-from aws.product_models import ImageManager, ProductManager
+from caption.models.product import ImageManager, ProductManager
 from pathlib import Path
 import json
 import logging
