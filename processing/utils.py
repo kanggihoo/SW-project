@@ -5,7 +5,7 @@ from PIL import Image, ImageOps
 
 
 def preprocess_and_concat_images(
-    image_paths: List[str], 
+    pil_images: List[Image.Image], 
     target_size: int = 224, 
     concat_direction: str = 'horizontal'
 ) -> Image.Image:
@@ -13,7 +13,7 @@ def preprocess_and_concat_images(
     여러 이미지를 전처리하고 하나로 이어붙이는 함수
     
     Args:
-        image_paths: 이미지 파일 경로 리스트
+        pil_images: PIL Image 객체 리스트
         target_size: 각 이미지의 목표 크기 (정사각형)
         concat_direction: 'horizontal' 또는 'vertical'
     
@@ -30,9 +30,9 @@ def preprocess_and_concat_images(
     processed_images = []
     
     # 각 이미지 전처리 (aspect ratio 유지 + 패딩)
-    for path in image_paths:
+    for pil_image in pil_images:
         try:
-            image = Image.open(path).convert('RGB')
+            image = pil_image.convert('RGB')
             # ImageOps.pad: aspect ratio 유지하면서 목표 크기에 맞춰 패딩 추가
             processed = ImageOps.pad(
                 image, 
@@ -40,8 +40,8 @@ def preprocess_and_concat_images(
                 color=(0, 0, 0)  # 검정색 패딩
             )
             processed_images.append(processed)
-        except FileNotFoundError:
-            raise FileNotFoundError(f"이미지 파일을 찾을 수 없습니다: {path}")
+        except Exception as e:
+            raise Exception(f"이미지 전처리 중 오류 발생: {e}")
     
     # 이미지 이어붙이기
     if concat_direction == 'horizontal':
@@ -126,7 +126,7 @@ def save_preprocessed_image(
 
 
 def images_to_base64(
-    image_paths: List[str],
+    pil_images: List[Image.Image],
     target_size: int = 224,
     concat_direction: str = 'horizontal'
 ) -> str:
@@ -134,7 +134,7 @@ def images_to_base64(
     여러 이미지를 전처리하고 합친 후 base64로 인코딩하는 함수
     
     Args:
-        image_paths: 이미지 파일 경로 리스트
+        pil_images: PIL Image 객체 리스트
         target_size: 각 이미지의 목표 크기 (정사각형)
         concat_direction: 'horizontal' 또는 'vertical'
     
@@ -147,7 +147,7 @@ def images_to_base64(
     """
     # 기존 함수를 이용해 이미지들을 전처리하고 합치기
     combined_image = preprocess_and_concat_images(
-        image_paths, target_size, concat_direction
+        pil_images, target_size, concat_direction
     )
     
     # PIL 이미지를 base64로 변환
