@@ -1,6 +1,6 @@
 import asyncio
 from .image_downloader import ImageDownloader
-from aws.product_models import ImageManager
+from caption.models.product import ImageManager
 
 
 async def download_images(images:list[ImageManager]):

@@ -2,19 +2,17 @@
 Langchain Gemini 모델을 사용한 패션 상품 이미지 분석 및 캡션 생성
 """
 
-import os
 from pathlib import Path
 import logging
 from typing import List, Optional, Dict, Any
 from langchain.schema.runnable import RunnableParallel
-from PIL import Image
-import numpy as np
+
 
 from dotenv import load_dotenv
-from processing.utils import images_to_base64
-from processing.image_processor import merge_images_horizontally
+from processing.utils import images_to_base64 
 from .langchain_utils import setup_langsmith_tracing, setup_gemini_model
-from .models import DeepCaptioningTopOutput, SimpleAttributeOutput, ImageManager
+from .models import DeepCaptioningTopOutput, SimpleAttributeOutput
+from .models.product import ImageManager
 from .prompt import ColorCaptionPrompt, DeepImageCaptionPrompt
 from .config import Config
 
@@ -35,7 +33,9 @@ class FashionCaptionGenerator:
             self.config = config
             
         self.logger = logging.getLogger(__name__)
-        self.model_name = self.config.get("DEFAULT_MODEL")
+        self.model_name = self.config.get("DEFAULT_CAPTION_MODEL")
+        self.temperature = self.config.get("DEFAULT_TEMPERATURE")
+
 
         # langsmith tracing 설정 
         if self.config.get("DEFAULT_TRACING_ENABLED"):
@@ -46,25 +46,28 @@ class FashionCaptionGenerator:
 
     def _load_model(self, model_name: str):
         """Gemini 모델 로드"""
-        return setup_gemini_model(model_name)
+        return setup_gemini_model(model_name, temperature=self.temperature)
 
     def _setup_chains(self):
         """Chain 초기화 및 설정"""
         # Deep Captioning Chain 설정
         deep_model = self._load_model(self.model_name)
         deep_structured_model = deep_model.with_structured_output(DeepCaptioningTopOutput)
-        self.deep_chain = DeepImageCaptionPrompt() | deep_structured_model
+        prompt = DeepImageCaptionPrompt()
+        self.deep_chain = prompt | deep_structured_model
 
         # Color Analysis Chain 설정
         color_model = self._load_model(self.model_name)
         color_structured_model = color_model.with_structured_output(SimpleAttributeOutput)
-        self.color_chain = ColorCaptionPrompt() | color_structured_model
+        prompt = ColorCaptionPrompt()
+        self.color_chain = prompt | color_structured_model
 
         # Parallel Chain 설정
         self.parallel_chain = RunnableParallel(
             deep_captioning=self.deep_chain,
             color_analysis=self.color_chain
         )
+        return self.parallel_chain
 
     def prepare_images_for_chains(self, images: List[ImageManager], target_size: int = 224) -> Dict[str, str]:
         """이미지 데이터를 체인에 맞게 전처리"""
@@ -80,8 +83,8 @@ class FashionCaptionGenerator:
                         color_images.append(img.pil_image)
 
             # 이미지 병합 및 base64 변환
-            deep_merged = merge_images_horizontally(deep_images)
-            color_merged = merge_images_horizontally(color_images)
+            deep_merged = images_to_base64(deep_images, target_size=target_size)
+            color_merged = images_to_base64(color_images, target_size=target_size)
 
             return {
                 "deep_image": images_to_base64([deep_merged], target_size=target_size),
@@ -131,92 +134,92 @@ class FashionCaptionGenerator:
     # 주요 기능 함수  (chain 만들고=>RunnablePaller로 하고) , chain을 invoke 하는 코드 작성 
     # =============================================================================
 
-    # def analyze_deep_captioning(
-    #     self,
-    #     image_paths: List[str], 
-    #     target_size: int = 224,
-    #     category: str = "상의",
-    # ) -> DeepCaptioningTopOutput:
-    #     """
-    #     딥 캡셔닝을 위한 패션 이미지 분석
+    def analyze_deep_captioning(
+        self,
+        image_paths: List[str], 
+        target_size: int = 224,
+        category: str = "상의",
+    ) -> DeepCaptioningTopOutput:
+        """
+        딥 캡셔닝을 위한 패션 이미지 분석
         
-    #     Args:
-    #         image_paths: 분석할 이미지 파일 경로 리스트
-    #         category: 상품 카테고리 (상의, 하의 등)
-    #         model_name: 사용할 Gemini 모델명
-    #         target_size: 이미지 크기 조정 목표 크기
+        Args:
+            image_paths: 분석할 이미지 파일 경로 리스트
+            category: 상품 카테고리 (상의, 하의 등)
+            model_name: 사용할 Gemini 모델명
+            target_size: 이미지 크기 조정 목표 크기
         
-    #     Returns:
-    #         DeepCaptioningOutput: 분석 결과
-    #     """
-    #     self.logger.info(f"딥 캡셔닝 분석 시작 - 카테고리: {category}")
+        Returns:
+            DeepCaptioningOutput: 분석 결과
+        """
+        self.logger.info(f"딥 캡셔닝 분석 시작 - 카테고리: {category}")
         
-    #     try:
-    #         base64_image = images_to_base64(image_paths, target_size=target_size)
-    #         self.logger.info(f"이미지 Base64 인코딩 완료 (길이: {len(base64_image)})")
+        try:
+            base64_image = images_to_base64(image_paths, target_size=target_size)
+            self.logger.info(f"이미지 Base64 인코딩 완료 (길이: {len(base64_image)})")
             
-    #         model = setup_gemini_model(model_name)
-    #         structured_model = model.with_structured_output(DeepCaptioningTopOutput)
+            model = setup_gemini_model(model_name)
+            structured_model = model.with_structured_output(DeepCaptioningTopOutput)
             
-    #         deep_chain = DeepImageCaptionPrompt().create_image_captioning_chain(structured_model)
-    #         deep_chain_input = DeepImageCaptionPrompt().get_chain_input(category=category, image_data=base64_image)
+            deep_chain = DeepImageCaptionPrompt().create_image_captioning_chain(structured_model)
+            deep_chain_input = DeepImageCaptionPrompt().get_chain_input(category=category, image_data=base64_image)
             
-    #         self.logger.info("VLM 분석 시작...")
-    #         response = deep_chain.invoke(deep_chain_input)
-    #         self.logger.info("VLM 응답 수신 완료")
+            self.logger.info("VLM 분석 시작...")
+            response = deep_chain.invoke(deep_chain_input)
+            self.logger.info("VLM 응답 수신 완료")
             
-    #         return response
+            return response
             
-    #     except Exception as e:
-    #         self.logger.error(f"VLM 분석 중 오류 발생: {e}")
-    #         raise
+        except Exception as e:
+            self.logger.error(f"VLM 분석 중 오류 발생: {e}")
+            raise
 
-    # def analyze_simple_attributes(
-    #     self,
-    #     image_paths: List[str],
-    #     target_size: int = 224,
-    #     product_group_id: str = "",
-    #     category: str = "상의",
-    #     model_name: str = "gemini-2.5-flash-lite-preview-06-17"
-    # ) -> SimpleAttributeOutput:
-    #     """
-    #     단순 속성 추출 (색상)을 위한 패션 이미지 분석
+    def analyze_simple_attributes(
+        self,
+        image_paths: List[str],
+        target_size: int = 224,
+        product_group_id: str = "",
+        category: str = "상의",
+        model_name: str = "gemini-2.5-flash-lite-preview-06-17"
+    ) -> SimpleAttributeOutput:
+        """
+        단순 속성 추출 (색상)을 위한 패션 이미지 분석
         
-    #     Args:
-    #         image_paths: 분석할 이미지 파일 경로 리스트
-    #         product_group_id: 상품 그룹 ID
-    #         category: 상품 카테고리
-    #         model_name: 사용할 Gemini 모델명
-    #         target_size: 이미지 크기 조정 목표 크기
+        Args:
+            image_paths: 분석할 이미지 파일 경로 리스트
+            product_group_id: 상품 그룹 ID
+            category: 상품 카테고리
+            model_name: 사용할 Gemini 모델명
+            target_size: 이미지 크기 조정 목표 크기
         
-    #     Returns:
-    #         SimpleAttributeOutput: 분석 결과
-    #     """
-    #     self.logger.info(f"색상 속성 분석 시작 - 상품 그룹: {product_group_id}")
+        Returns:
+            SimpleAttributeOutput: 분석 결과
+        """
+        self.logger.info(f"색상 속성 분석 시작 - 상품 그룹: {product_group_id}")
         
-    #     try:
-    #         base64_image = images_to_base64(image_paths, target_size=target_size)
-    #         self.logger.info("이미지 Base64 인코딩 완료")
+        try:
+            base64_image = images_to_base64(image_paths, target_size=target_size)
+            self.logger.info("이미지 Base64 인코딩 완료")
             
-    #         model = setup_gemini_model(model_name, temperature=0)
-    #         structured_model = model.with_structured_output(SimpleAttributeOutput)
+            model = setup_gemini_model(model_name, temperature=0)
+            structured_model = model.with_structured_output(SimpleAttributeOutput)
             
-    #         color_chain = ColorCaptionPrompt().create_color_captioning_chain(structured_model)
-    #         color_chain_input = ColorCaptionPrompt().get_chain_input(
-    #             count=len(image_paths),
-    #             category=category,
-    #             image_data=base64_image
-    #         )
+            color_chain = ColorCaptionPrompt().create_color_captioning_chain(structured_model)
+            color_chain_input = ColorCaptionPrompt().get_chain_input(
+                count=len(image_paths),
+                category=category,
+                image_data=base64_image
+            )
             
-    #         self.logger.info("VLM 분석 시작...")
-    #         response = color_chain.invoke(color_chain_input)
-    #         self.logger.info("VLM 응답 수신 완료")
+            self.logger.info("VLM 분석 시작...")
+            response = color_chain.invoke(color_chain_input)
+            self.logger.info("VLM 응답 수신 완료")
             
-    #         return response
+            return response
             
-    #     except Exception as e:
-    #         self.logger.error(f"VLM 분석 중 오류 발생: {e}")
-    #         raise
+        except Exception as e:
+            self.logger.error(f"VLM 분석 중 오류 발생: {e}")
+            raise
 
     # def process_product_batch(self, sub_category: int, condition: dict):
     #     """

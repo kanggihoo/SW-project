@@ -1,6 +1,8 @@
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from typing import Any
-
+from langchain_core.runnables import Runnable
+from typing import Optional
+from langchain_core.runnables import RunnableConfig
 #TODO 프롬프트 수정 입력으로 들어오는 이미지가 1개 혹은 2개인 경우에 따른 system_template 수정
 system_template = """
         당신은 패션 상품 이미지를 전문적으로 분석하는 AI입니다.
@@ -54,7 +56,7 @@ human_template = [
     }
 ]
 
-class DeepImageCaptionPrompt:
+class DeepImageCaptionPrompt(Runnable):
     def __init__(self):
         self.prompt = self._make_prompt()
     
@@ -64,17 +66,11 @@ class DeepImageCaptionPrompt:
             SystemMessagePromptTemplate.from_template(system_template),
             HumanMessagePromptTemplate.from_template(human_template)
         ])
+    
+    def invoke(self, input: dict[str, Any], config: Optional[RunnableConfig] = None, **kwargs: Any) -> Any:
+        return self.prompt.invoke(input, config, **kwargs)
 
-
-    # def create_image_captioning_chain(self , model):
-    #     """
-    #     이미지 캡셔닝을 위한 체인 생성
-    #     Returns:
-    #         체인 객체
-    #     """
-    #     return self.prompt | model
-
-    def get_chain_input(self, category: str, image_data: str) -> dict[str, Any]:
+    def extract_chain_input(self, kwargs: dict) -> dict[str, Any]:
         """
         체인 입력 데이터 생성
         
@@ -85,6 +81,10 @@ class DeepImageCaptionPrompt:
         Returns:
             체인 호출을 위한 입력 딕셔너리
         """
+        category = kwargs.get("category")
+        image_data = kwargs.get("image_data")
+        if category is None or image_data is None:
+            raise ValueError("category, image_data 모두 필요합니다.")
         return {
             "category": category,
             "image_data": image_data
