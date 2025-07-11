@@ -13,11 +13,12 @@ class Config(dict):
         
         _langchain_dict = {
             "DEFAULT_LANGCHAIN_PROJECT_NAME": "fashion-caption-analysis",
-            "DEFAULT_TRACING_ENABLED": False
+            "DEFAULT_TRACING_ENABLED": True
         }
         
         super().__init__()
         self.update(_model_dict)
+        self.update(_langchain_dict)
         
 class LLMInputKeys:
     DEEP_CAPTION = "deep_caption"

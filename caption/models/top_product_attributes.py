@@ -13,7 +13,7 @@ from .base_types import (
 class PatternInfo(BaseModel):
     """상의 패턴 정보"""
     type: Annotated[PatternType, Field(..., description="상의 주요 패턴 타입 선택", examples=["스트라이프", "체크", "플로럴", "지오메트릭", "솔리드"])]
-    description: Annotated[str, Field(default="", description="상의 패턴에 대한 상세 설명 (예: 세로 스트라이프, 대형 체크 패턴, 작은 꽃무늬 등)")]
+    description: Annotated[str, Field(..., description="상의 패턴에 대한 상세 설명 (예: 세로 스트라이프, 대형 체크 패턴, 작은 꽃무늬 등)")]
 
 
 class ClosureInfo(BaseModel):

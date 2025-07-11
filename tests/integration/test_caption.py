@@ -63,7 +63,7 @@ class TestImagePipeline:
         return product_images_url
     
     @pytest.fixture
-    def base64_data_for_llm(self, product_pil_images:list[ImageManager])->dict:
+    def base64_data_for_llm(self, product_pil_images:list[ImageManager])->Base64DataForLLM:
         return parsing_data_for_llm(product_pil_images, target_size=224)
     
    
@@ -177,7 +177,9 @@ class TestImagePipeline:
         assert result is not None
         assert result["deep_caption"] is not None
         assert result["color_images"] is not None
-        print(result["deep_caption"])
+        print(result["deep_caption"].model_dump())
         print("*"*100)
-        print(result["color_images"])
+        print(result["color_images"].model_dump())
+        print("*"*100)
+ 
 

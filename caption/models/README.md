@@ -2,212 +2,115 @@
 
 VLM(Vision-Language Model)을 활용한 상품 데이터 추출을 위한 Pydantic 모델들입니다.
 
-## 📂 구조
+이 문서는 VLM(Vision-Language Model)에서 출력되는 두 가지 주요 데이터 구조인 `DeepCaptioningTopOutput`과 `SimpleAttributeOutput`의 JSON 스키마를 설명합니다.
 
-```
-app/models/
-├── __init__.py              # 패키지 초기화 및 export
-├── base_types.py           # 기본 타입과 열거형 정의
-├── product_attributes.py   # 상품 속성 모델들
-├── variant_models.py       # 상품 변형(색상별) 모델들
-├── master_data.py          # 마스터 데이터 및 단계별 출력 모델들
-├── langchain_utils.py      # Langchain 통합 유틸리티
-└── README.md               # 이 파일
-```
+---
 
-## 🚀 사용법
+## 1. `DeepCaptioningTopOutput`
 
-### 1. 기본 임포트
+상의 의류에 대한 깊이 있는 분석 결과를 담는 JSON 구조입니다. 의류의 구조화된 속성과 다양한 용도의 텍스트 캡션을 포함합니다.
 
-```python
-from app.models import (
-    ProductMasterData,
-    DeepCaptioningOutput,
-    SimpleAttributeOutput,
-    CombinedVLMOutput
-)
-```
+### 전체 구조
 
-### 2. Langchain과 함께 사용하기
-
-```python
-from app.models.langchain_utils import (
-    create_deep_captioning_prompt,
-    create_simple_attribute_prompt,
-    validate_and_fix_vlm_output
-)
-
-# 딥 캡셔닝 프롬프트 생성
-deep_prompt = create_deep_captioning_prompt()
-
-# VLM 체인 구성
-chain = deep_prompt | vlm_model | StrOutputParser()
-
-# VLM 실행 및 결과 파싱
-raw_result = chain.invoke({"image_data": image_base64})
-parsed_result = validate_and_fix_vlm_output(raw_result, DeepCaptioningOutput)
-```
-
-### 3. 단계별 처리
-
-```python
-# 1단계: 딥 캡셔닝 (공통 정보 추출)
-deep_result = DeepCaptioningOutput(
-    base_product_info=BaseProductInfo(...)
-)
-
-# 2단계: 단순 속성 추출 (색상 정보)
-simple_result = SimpleAttributeOutput(
-    variants=[ProductVariant(...), ...]
-)
-
-# 3단계: 결과 결합
-combined = CombinedVLMOutput(
-    product_group_id="P0001",
-    deep_captioning_result=deep_result,
-    simple_attribute_result=simple_result
-)
-
-# 4단계: 마스터 데이터로 변환
-master_data = combined.to_master_data()
+```json
+{
+  "structured_attributes": {
+    "common": {
+      "sleeve_length": "민소매",
+      "neckline": "라운드넥"
+    },
+    "front": {
+      "pattern": {
+        "type": "스트라이프",
+        "description": "세로 스트라이프"
+      },
+      "closures_and_embellishments": {
+        "type": "버튼/단추",
+        "description": "앞면 중앙 버튼 3개"
+      }
+    },
+    "back": {
+      "pattern": {
+        "type": "스트라이프",
+        "description": "세로 스트라이프"
+      },
+      "closures_and_embellishments": {
+        "type": "여밈 없음",
+        "description": ""
+      }
+    },
+    "subjective": {
+      "fit": "레귤러 핏/스탠다드 핏",
+      "style_tags": ["캐주얼", "심플 베이직"],
+      "tpo_tags": ["데일리", "데이트/주말"]
+    }
+  },
+  "image_captions": {
+    "front_text_specific": "정면에서 본 이 옷은 라운드넥과 버튼 여밈이 특징인 반소매 상의입니다. 파란색 바탕에 흰색 세로 스트라이프 패턴이 들어가 있습니다.",
+    "back_text_specific": "후면은 특별한 여밈이나 장식 없이 깔끔한 디자인이며, 정면과 동일한 스트라이프 패턴이 이어집니다.",
+    "design_details_description": "이 상의는 라운드넥, 반소매 디자인을 가지고 있습니다. 전면에 버튼 여밈이 있으며, 전체적으로 세로 스트라이프 패턴이 적용되었습니다.",
+    "style_description": "심플한 스트라이프 패턴과 베이직한 디자인으로 캐주얼하면서도 단정한 느낌을 줍니다.",
+    "tpo_context_description": "일상적인 데일리룩이나 편안한 주말 데이트룩으로 활용하기 좋으며, 다양한 하의와 쉽게 매치할 수 있습니다.",
+    "comprehensive_description": "파란색과 흰색의 조화가 돋보이는 이 라운드넥 반소매 상의는 레귤러 핏으로 편안한 착용감을 제공합니다. 앞면의 버튼 디테일과 전체적인 세로 스트라이프 패턴이 특징이며, 캐주얼한 데일리룩이나 주말 나들이 룩에 잘 어울립니다."
+  }
+}
 ```
 
-### 4. JSON 직렬화/역직렬화
+### 상세 설명
 
-```python
-# JSON으로 저장
-json_data = master_data.model_dump_json(indent=2)
+- **`structured_attributes`**: 의류의 객관적 속성을 체계적으로 분류합니다.
+    - **`common`**: 앞/뒤 공통 속성 (소매 길이, 넥라인).
+    - **`front`**: 정면 디자인 요소 (패턴, 여밈/장식).
+    - **`back`**: 후면 디자인 요소 (패턴, 여밈/장식).
+    - **`subjective`**: 주관적 평가 정보 (핏, 스타일, TPO).
+- **`image_captions`**: 다양한 관점에서 생성된 텍스트 설명입니다.
+    - **`front_text_specific`**: 정면 이미지 기반 상세 설명.
+    - **`back_text_specific`**: 후면 이미지 기반 상세 설명.
+    - **`design_details_description`**: 모든 디자인 요소를 종합한 설명.
+    - **`style_description`**: 스타일과 분위기에 초점을 맞춘 설명.
+    - **`tpo_context_description`**: 추천 착용 상황(TPO)에 대한 설명.
+    - **`comprehensive_description`**: 모든 정보를 종합한 완전한 설명.
 
-# JSON에서 복원
-restored = ProductMasterData.model_validate_json(json_data)
+---
+
+## 2. `SimpleAttributeOutput`
+
+의류의 색상 정보에 특화된 분석 결과를 담는 JSON 구조입니다.
+
+### 전체 구조
+
+```json
+{
+  "color_info": [
+    {
+      "name": "블루",
+      "hex": "#4A90E2",
+      "attributes": {
+        "brightness": "밝음",
+        "saturation": "높음"
+      }
+    },
+    {
+      "name": "화이트",
+      "hex": "#FFFFFF",
+      "attributes": {
+        "brightness": "아주 밝음",
+        "saturation": "아주 낮음"
+      }
+    }
+  ]
+}
 ```
 
-## 📋 주요 모델 설명
+### 상세 설명
 
-### `ProductMasterData`
+- **`color_info`**: 의류에서 식별된 색상 정보의 배열(`list`)입니다. 하나의 의류에 여러 색상이 사용된 경우, 각 색상에 대한 정보가 객체로 추가됩니다.
+    - **`name`**: 대표 색상 이름 (예: "블루").
+    - **`hex`**: 해당 색상의 HEX 코드 (예: "#4A90E2").
+    - **`attributes`**: 색상의 세부 속성.
+        - **`brightness`**: 명도 (밝기).
+        - **`saturation`**: 채도 (선명도).
 
-- 전체 상품 데이터의 최종 형태
-- 상품 그룹 ID, 추출 날짜, 기본 정보, 변형 정보 포함
-
-### `DeepCaptioningOutput`
-
-- 딥 캡셔닝 단계의 출력 (색상 제외한 공통 정보)
-- 고비용 VLM으로 그룹당 1회만 실행
-
-### `SimpleAttributeOutput`
-
-- 단순 속성 추출 단계의 출력 (색상 정보만)
-- 저비용으로 SKU별로 실행
-
-### `BaseProductInfo`
-
-- 구조화된 속성 + 임베딩용 캡션
-- 검색 최적화를 위한 다양한 설명문 포함
-
-## 🎨 색상 및 스타일 분류
-
-### 색상 분류 체계
-
-- **Level 1**: 16가지 기본 색상 (`PrimaryColor`)
-- **Level 2**: 명도, 채도, 톤감 속성 (`ColorAttribute`)
-
-### 스타일 분류
-
-- **핏**: 슬림/레귤러/오버사이즈
-- **스타일**: 모던, 캐주얼, 포멀 등 9가지
-- **TPO**: 데일리, 오피스, 파티 등 8가지
-
-## 🔧 고급 기능
-
-### 1. 출력 검증 및 수정
-
-```python
-from app.models.langchain_utils import validate_and_fix_vlm_output
-
-# VLM 출력이 완벽하지 않을 때 자동 수정
-try:
-    result = validate_and_fix_vlm_output(raw_vlm_output, DeepCaptioningOutput)
-except ValueError as e:
-    print(f"파싱 실패: {e}")
-```
-
-### 2. 스키마 정보 출력
-
-```python
-from app.models.langchain_utils import get_model_schema_description
-
-# 모델 구조를 사람이 읽기 쉬운 형태로 출력
-schema_desc = get_model_schema_description(ProductMasterData)
-print(schema_desc)
-```
-
-### 3. 커스텀 검증
-
-```python
-from pydantic import validator
-
-class CustomProductVariant(ProductVariant):
-    @validator('color')
-    def validate_color_consistency(cls, v):
-        # 커스텀 색상 검증 로직
-        return v
-```
-
-## 📝 예시 데이터
-
-```python
-example_data = ProductMasterData(
-    product_group_id="P0001",
-    base_product_info=BaseProductInfo(
-        structured_attributes=StructuredAttributes(
-            common=CommonAttributes(
-                category_l1="상의",
-                category_l2="셔츠",
-                sleeve_length=SleeveLength.LONG,
-                neckline=Neckline.COLLAR
-            ),
-            front=FrontAttributes(
-                pattern=PatternInfo(
-                    type=PatternType.STRIPE,
-                    description="세로 스트라이프"
-                )
-            ),
-            back=BackAttributes(),
-            subjective=SubjectiveAttributes(
-                fit=FitType.REGULAR,
-                style_tags=[StyleTag.CASUAL, StyleTag.MODERN],
-                mood_tags=["단정한", "산뜻한"],
-                tpo_tags=[TPOTag.DAILY, TPOTag.OFFICE]
-            )
-        ),
-        embedding_captions=EmbeddingCaptions(
-            design_details_description="클래식한 셔츠 칼라와 세로 스트라이프 패턴",
-            style_vibe_description="캐주얼하면서도 미니멀한 스타일",
-            tpo_context_description="데일리룩과 오피스룩에 적합"
-        )
-    ),
-    variants=[
-        ProductVariant(
-            sku_id="P0001-BLUE",
-            is_representative=True,
-            product_image_url="https://example.com/p0001_blue.jpg",
-            color=ColorDetail(
-                primary=ColorInfo(
-                    name=PrimaryColor.BLUE,
-                    hex="#4A90E2",
-                    attributes=[ColorAttribute.VIVID, ColorAttribute.COOL]
-                ),
-                secondary=[],
-                all_colors=["블루", "화이트"],
-                all_color_attributes=["선명한", "쿨톤", "밝은"]
-            ),
-            embedding_captions=VariantEmbeddingCaptions(
-                front_text_specific="블루 스트라이프 셔츠의 정면 이미지"
-            )
-        )
-    ]
-)
-```
 
 ## ⚠️ 주의사항
 

@@ -43,6 +43,8 @@ class FashionCaptionGenerator:
                 enable_tracing=self.config.get("DEFAULT_TRACING_ENABLED"),
                 project_name=self.config.get("DEFAULT_LANGCHAIN_PROJECT_NAME")
             )
+        else:
+            self.logger.info("LangSmith tracing is disabled")
 
     def _load_model(self, model_name: str):
         """Gemini 모델 로드"""
@@ -99,98 +101,3 @@ class FashionCaptionGenerator:
         except Exception as e:
             self.logger.error(f"이미지 분석 중 오류 발생: {e}")
             raise
-
-    #TODO : LLM 반환 결과 대해서 데이터 저장을 위해 parsing 하는 코드 필요. 
-
-
-# if __name__ == "__main__":
-#     main() 
-
-
-# def main():
-#     # 환경변수 로드
-#     load_dotenv()
-    
-#     # LangSmith tracing 설정
-#     # setup_langsmith_tracing(
-#     #     enable_tracing=True,  # 필요에 따라 False로 변경
-#     #     project_name="fashion-caption-analysis"  # 원하는 프로젝트 이름으로 변경
-#     # )
-    
-#     # """메인 실행 함수"""
-#     print("🚀 Langchain Gemini를 사용한 패션 이미지 분석 시작\n")
-
-    
-#     # DATA_DIR = Path(__file__).parent / "data"
-#     # sample_images = [
-#     #     DATA_DIR / "front.jpg",  # 정면 누끼 이미지
-#     #     DATA_DIR / "back.jpg",   # 후면 누끼 이미지  
-#     #     DATA_DIR / "model.jpg"   # 모델 착용 이미지
-#     # ]
-    
-#     # # 실제 테스트용 이미지가 있는지 확인
-#     existing_images = []
-#     for img_path in sample_images:
-#         if os.path.exists(img_path):
-#             existing_images.append(img_path)
-#         else:
-#             print(f"⚠️  이미지 파일이 없습니다: {img_path}")
-    
-    
-#     try:
-#         # 1. 딥 캡셔닝 분석
-#         # gemini-2.5-flash-lite-preview-06-17
-#         # gemini-2.5-pro-preview-06-05
-#         # gemini-2.5-flash
-#         # print(f"\n1️⃣ 딥 캡셔닝 분석 ({len(existing_images)}개 이미지)")
-#         # deep_result = analyze_fashion_images_deep_captioning(
-#         #     image_paths=existing_images,
-#         #     target_size=384,
-#         #     category="상의",
-#         #     model_name="gemini-2.5-flash-lite-preview-06-17"
-#         # )
-#         # print(deep_result)
-        
-        
-#         # 2. 색상 속성 분석
-#         print(f"\n\n2️⃣ 색상 속성 분석")
-#         color_result = analyze_fashion_images_simple_attributes(
-#             image_paths=existing_images[:2],
-#             target_size=224,
-#             product_group_id="TEST_001",
-#             category="상의",
-#             model_name="gemini-2.0-flash"
-#         )
-#         print(color_result)
-        
-#         # print(f"\n✅ 모든 분석이 완료되었습니다!")
-        
-#     except Exception as e:
-#         print(f"\n❌ 분석 중 오류 발생: {e}")
-#         import traceback
-#         traceback.print_exc()
-
-
-# if __name__ == "__main__":
-#     # main()
-#     import logging
-#     from processing.image_processor import download_images_sync
-#     from aws.aws_manager import AWSManager
-#     logging.basicConfig(level=logging.INFO)
-#     logger = logging.getLogger(__name__)
-    
-#     aws_manager = AWSManager()
-#     pagenator = aws_manager.dynamodb_manager.get_product_pagenator(sub_category=1005 , condition={"curation_status":"COMPLETED"})
-#     for page in pagenator:
-#         items = page.get('Items')
-#         logger.info(f"현재 총 제품 수 : {page.get('Count')}")
-#         if items:
-#             for item in items:
-#                 print(item.get('product_id') , item.get('sub_category') , item.get('main_category') , item.get('representative_assets') , item.get('text') )
-#                 images = aws_manager.get_product_images_from_paginator(item)
-#                 logger.info(f"이미지 정보 리스트 : {images}")   
-#                 download_images_sync(images)
-#                 print(images)
-#                 break
-#         break
-    

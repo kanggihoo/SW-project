@@ -1,7 +1,7 @@
 from caption.prompt.color_analysis_prompt_template import ColorCaptionPrompt 
 from caption.prompt.image_deep_captioning_prompt_template import DeepImageCaptionPrompt
 from caption.fashion_caption_generator import FashionCaptionGenerator
-from caption.config import InputKeys, LLMInputKeys
+from caption.config import  LLMInputKeys
 from langchain_core.runnables import RunnableParallel , RunnableLambda
 
 def test_color_caption_prompt():
@@ -30,18 +30,18 @@ def test_fashion_caption_generator():
     p2 = ColorCaptionPrompt()
 
     llm_input = {
-        "deep": {
+        LLMInputKeys.DEEP_CAPTION: {
             "category": "12345",
             "image_data": "base64_image_data",
             "count": 1,
         },
-        "color": {
+        LLMInputKeys.COLOR_IMAGES: {
             "count": 1,
             "category": "qwert123",
             "image_data": "base64_image_data",
             "a" : 10
         },
-        "text": {
+        LLMInputKeys.TEXT_IMAGES: {
             "image_data": "base64_image_data",
         }
     }
