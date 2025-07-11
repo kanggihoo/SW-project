@@ -61,16 +61,17 @@ def parsing_data_for_llm(images:list[ImageManager] , target_size:int )->dict:
         elif image.type == "model":
             deep_caption_images[2] = image.pil_image
         elif image.type == "color_variant":
-            color_images.append(image.pil_image)
+            color_images.append((image.pil_image, image.folder_path))
         elif image.type == "text":
             text_images.append(image.pil_image)
     if color_images:
-        color_images.sort()
+        color_images = [image[0] for image in sorted(color_images, key=lambda x: x[1])]
+    result["fail"] = fail
     if len(deep_caption_images) == 3 and len(color_images): 
-        result["deep_caption_images"] = images_to_base64(deep_caption_images, target_size=target_size)
-        result["color_images"] = images_to_base64(color_images, target_size=target_size)
+        result["deep_caption_images"] = images_to_base64(deep_caption_images, target_size=target_size , type="image")
+        result["color_images"] = images_to_base64(color_images, target_size=target_size, type="image")
         if text_images:
-            result["text_images"] = images_to_base64(text_images, target_size=target_size, concat_direction="vertical")
+            result["text_images"] = images_to_base64(text_images, target_size=target_size, type="text")
         else:
             result["text_images"] =[]
         result["success"] = True
