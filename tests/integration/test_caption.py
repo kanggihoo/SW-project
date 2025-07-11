@@ -4,10 +4,11 @@ import sys
 from PIL import Image
 import matplotlib.pyplot as plt
 from pathlib import Path
+import base64
+from io import BytesIO
 from aws.aws_manager import AWSManager
 from caption.models.product import ImageManager, ProductManager
-from processing.image_processor import download_images_sync
-from processing import utils 
+from processing.image_processor import download_images_sync , parsing_data_for_llm
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ def aws_manager():
 
 class TestImagePipeline:
     @pytest.fixture
-    def first_item(self, aws_manager: AWSManager, item_index: int)->dict:
+    def first_item(self, aws_manager: AWSManager, item_index: int=1)->dict:
         """제품 데이터를 가져오는 fixture
         
         Args:
@@ -43,6 +44,7 @@ class TestImagePipeline:
         
         first_page = next(iter(paginator))
         item = first_page['Items'][item_index]
+        logger.info(f"first_item product_id: {item['product_id']}")
         return item
 
     @pytest.fixture
@@ -119,8 +121,46 @@ class TestImagePipeline:
     #     plt.tight_layout()
     #     plt.show()
 
-    #TODO : 캡션 모듈을 이용한 테스트 코드 작성 필요 
+    #TODO : 지금은 하나의 pagenation을 통해 하나의 제품에 대한 테스트만 이루어져 있지만 실제 모든 pagenation을 통해 동작되는지 확인필요
+    #TODO : page 맨 마지막에 에러 처리 해야 하는지 아니면 단순 for문으로 구현한다면 stopiteration 처리가 되지만 그래도 확인필요
     def test_caption(self , product_pil_images:list[ImageManager]):
-        ...
+        result = parsing_data_for_llm(product_pil_images, target_size=224)
+        assert result["success"] is True
+        assert result["fail"] == 0
+        assert result["deep_caption_images"] is not None
+        assert result["color_images"] is not None
+        assert result["text_images"] is not None
+
+        # Visualize the processed images
+        image_types = {
+            "Deep Caption Images": result["deep_caption_images"],
+            "Color Images": result["color_images"],
+            "Text Images": result["text_images"]
+        }
+
+        plt.figure(figsize=(20, 5))
+
+        plot_idx = 1
+        for type_name, img in image_types.items():
+            # base64 디코딩 및 PIL 이미지로 변환
+            if isinstance(img, str):
+                # base64 문자열을 PIL 이미지로 변환
+                img_data = base64.b64decode(img)
+                img = Image.open(BytesIO(img_data))
+
+            plt.subplot(1, len(image_types), plot_idx)
+            plt.imshow(img)
+            plt.title(type_name)
+            plt.axis('off')
+            plot_idx += 1
+
+        plt.tight_layout()
+        plt.show()
+
+        logger.info(f"Deep caption image processed")
+        logger.info(f"Color image processed")
+        logger.info(f"Text image processed")
+
+        
 
 
