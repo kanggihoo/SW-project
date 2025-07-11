@@ -6,59 +6,75 @@ from PIL import Image, ImageOps
 
 def preprocess_and_concat_images(
     pil_images: List[Image.Image], 
-    target_size: int = 224, 
-    concat_direction: str = 'horizontal'
+    target_size: int = 224,
+    type: str = "image"
 ) -> Image.Image:
     """
     여러 이미지를 전처리하고 하나로 이어붙이는 함수
     
     Args:
         pil_images: PIL Image 객체 리스트
-        target_size: 각 이미지의 목표 크기 (정사각형)
-        concat_direction: 'horizontal' 또는 'vertical'
+        target_size: 각 이미지의 목표 크기 (정사각형) - image type의 경우
+                    또는 목표 width 크기 - text type의 경우
+        type: 이미지 처리 방식 ("image" 또는 "text")
+                - "image": 비율 유지 + 패딩으로 정사각형 만든 후 가로로 합치기
+                - "text": width를 target_size에 맞추고 height는 비율 유지, 세로로 합치기
     
     Returns:
         합쳐진 PIL Image 객체
     
     Raises:
         FileNotFoundError: 이미지 파일을 찾을 수 없는 경우
-        ValueError: 잘못된 concat_direction 값인 경우
+        ValueError: 잘못된 type 값인 경우
     """
-    if concat_direction not in ['horizontal', 'vertical']:
-        raise ValueError("concat_direction은 'horizontal' 또는 'vertical'이어야 합니다.")
+    if type not in ['image', 'text']:
+        raise ValueError("type은 'image' 또는 'text'여야 합니다.")
     
     processed_images = []
     
-    # 각 이미지 전처리 (aspect ratio 유지 + 패딩)
+    # 각 이미지 전처리
     for pil_image in pil_images:
         try:
-            image = pil_image.convert('RGB')
-            # ImageOps.pad: aspect ratio 유지하면서 목표 크기에 맞춰 패딩 추가
-            processed = ImageOps.pad(
-                image, 
-                (target_size, target_size), 
-                color=(0, 0, 0)  # 검정색 패딩
-            )
+            if pil_image.mode != 'RGB':
+                image = pil_image.convert('RGB')
+            else:
+                image = pil_image
+            
+            if type == "image":
+                # 기존 방식: aspect ratio 유지하면서 목표 크기에 맞춰 패딩 추가
+                processed = ImageOps.pad(
+                    image, 
+                    (target_size, target_size), 
+                    color=(0, 0, 0)  # 검정색 패딩
+                )
+            else:  # type == "text"
+                # width를 target_size로 고정하고 height는 비율 유지
+                width, height = image.size
+                aspect_ratio = height / width
+                new_height = int(target_size * aspect_ratio)
+                processed = image.resize((target_size, new_height), Image.Resampling.LANCZOS)
+                
             processed_images.append(processed)
         except Exception as e:
             raise Exception(f"이미지 전처리 중 오류 발생: {e}")
     
     # 이미지 이어붙이기
-    if concat_direction == 'horizontal':
+    if type == "image":
         # 가로로 이어붙이기
         total_width = target_size * len(processed_images)
         combined = Image.new('RGB', (total_width, target_size))
         
         for i, img in enumerate(processed_images):
             combined.paste(img, (i * target_size, 0))
-            
-    else:  # vertical
+    else:  # type == "text"
         # 세로로 이어붙이기
-        total_height = target_size * len(processed_images)
+        total_height = sum(img.size[1] for img in processed_images)
         combined = Image.new('RGB', (target_size, total_height))
         
-        for i, img in enumerate(processed_images):
-            combined.paste(img, (0, i * target_size))
+        current_height = 0
+        for img in processed_images:
+            combined.paste(img, (0, current_height))
+            current_height += img.size[1]
     
     return combined
 
@@ -128,7 +144,7 @@ def save_preprocessed_image(
 def images_to_base64(
     pil_images: List[Image.Image],
     target_size: int = 224,
-    concat_direction: str = 'horizontal'
+    type: str = "image"
 ) -> str:
     """
     여러 이미지를 전처리하고 합친 후 base64로 인코딩하는 함수
@@ -136,18 +152,18 @@ def images_to_base64(
     Args:
         pil_images: PIL Image 객체 리스트
         target_size: 각 이미지의 목표 크기 (정사각형)
-        concat_direction: 'horizontal' 또는 'vertical'
+        type: 'image' 또는 'text'
     
     Returns:
         base64로 인코딩된 문자열
         
     Raises:
         FileNotFoundError: 이미지 파일을 찾을 수 없는 경우
-        ValueError: 잘못된 concat_direction 값인 경우
+        ValueError: 잘못된 type 값인 경우
     """
     # 기존 함수를 이용해 이미지들을 전처리하고 합치기
     combined_image = preprocess_and_concat_images(
-        pil_images, target_size, concat_direction
+        pil_images, target_size, type
     )
     
     # PIL 이미지를 base64로 변환
@@ -156,34 +172,3 @@ def images_to_base64(
     return base64_string
 
 
-# --- 사용 예시 및 테스트 코드 ---
-if __name__ == "__main__":
-    # 예시 이미지 경로들
-    from pathlib import Path
-    DATA_DIR = Path("/Users/kkh/Desktop/1005")
-    PRODUCT_ID = "674732"
-    IMAGE_PATH = DATA_DIR / PRODUCT_ID / "segment"
-    
-    sample_images = [
-        IMAGE_PATH / "0_1.jpg",
-        IMAGE_PATH / "0_2.jpg", 
-        IMAGE_PATH / "1_4.jpg"
-    ]
-    
-    try:
-        # 1. 이미지 전처리 및 합치기dma
-        combined = preprocess_and_concat_images(
-            sample_images, 
-            target_size=384, # (224,224) , (384,384) , (512,512) 
-            concat_direction='vertical'
-        )
-        print(f"합쳐진 이미지 크기: {combined.size}")
-        
-        # 2. Base64 변환
-        base64_string = pil_to_base64(combined)
-        print(f"Base64 길이: {len(base64_string)}")
-        
-    except FileNotFoundError as e:
-        print(f"파일 오류: {e}")
-    except Exception as e:
-        print(f"처리 중 오류 발생: {e}") 
