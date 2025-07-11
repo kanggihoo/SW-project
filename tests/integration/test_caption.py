@@ -7,8 +7,9 @@ from pathlib import Path
 import base64
 from io import BytesIO
 from aws.aws_manager import AWSManager
-from caption.models.product import ImageManager, ProductManager
+from caption.models.product import ImageManager, ProductManager, Base64DataForLLM
 from processing.image_processor import download_images_sync , parsing_data_for_llm
+from caption.fashion_caption_generator import FashionCaptionGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +58,15 @@ class TestImagePipeline:
     @pytest.fixture
     def product_pil_images(self, product_images_url:list[ImageManager])->list[ImageManager]:
         """s3 url로 부터 PIL 이미지 정보 ImageManager에 저장"""
+        #CHECK : 동기함수 말고 await 키워드로도 비동기함수 바로 호출하도록 가능할 수도 ?
         download_images_sync(product_images_url)
         return product_images_url
     
+    @pytest.fixture
+    def base64_data_for_llm(self, product_pil_images:list[ImageManager])->dict:
+        return parsing_data_for_llm(product_pil_images, target_size=224)
+    
+   
     # def test_1_paginator_validation(self, aws_manager: AWSManager):
     #     """1단계: DynamoDB 페이지네이터 검증 테스트"""
     #     paginator = aws_manager.dynamodb_manager.get_product_pagenator(
@@ -123,44 +130,54 @@ class TestImagePipeline:
 
     #TODO : 지금은 하나의 pagenation을 통해 하나의 제품에 대한 테스트만 이루어져 있지만 실제 모든 pagenation을 통해 동작되는지 확인필요
     #TODO : page 맨 마지막에 에러 처리 해야 하는지 아니면 단순 for문으로 구현한다면 stopiteration 처리가 되지만 그래도 확인필요
-    def test_caption(self , product_pil_images:list[ImageManager]):
-        result = parsing_data_for_llm(product_pil_images, target_size=224)
-        assert result["success"] is True
-        assert result["fail"] == 0
-        assert result["deep_caption_images"] is not None
+    # def test_data_processing_for_llm(self , product_pil_images:list[ImageManager]):
+    #     result = parsing_data_for_llm(product_pil_images, target_size=224)
+    #     assert result["success"] is True
+    #     assert result["fail"] == 0
+    #     assert result["deep_caption_images"] is not None
+    #     assert result["color_images"] is not None
+    #     assert result["text_images"] is not None
+
+    #     # Visualize the processed images
+    #     image_types = {
+    #         "Deep Caption Images": result["deep_caption_images"],
+    #         "Color Images": result["color_images"],
+    #         "Text Images": result["text_images"]
+    #     }
+
+    #     plt.figure(figsize=(20, 5))
+
+    #     plot_idx = 1
+    #     for type_name, img in image_types.items():
+    #         # base64 디코딩 및 PIL 이미지로 변환
+    #         if isinstance(img, str):
+    #             # base64 문자열을 PIL 이미지로 변환
+    #             img_data = base64.b64decode(img)
+    #             img = Image.open(BytesIO(img_data))
+
+    #         plt.subplot(1, len(image_types), plot_idx)
+    #         plt.imshow(img)
+    #         plt.title(type_name)
+    #         plt.axis('off')
+    #         plot_idx += 1
+
+    #     plt.tight_layout()
+    #     plt.show()
+
+    #     logger.info(f"Deep caption image processed")
+    #     logger.info(f"Color image processed")
+    #     logger.info(f"Text image processed")
+
+    def test_fashion_caption_generator(self , base64_data_for_llm:Base64DataForLLM):
+        fashion_caption_generator = FashionCaptionGenerator()
+        assert base64_data_for_llm.success is True
+
+
+        result = fashion_caption_generator.invoke(base64_data_for_llm , category="상의")
+        assert result is not None
+        assert result["deep_caption"] is not None
         assert result["color_images"] is not None
-        assert result["text_images"] is not None
-
-        # Visualize the processed images
-        image_types = {
-            "Deep Caption Images": result["deep_caption_images"],
-            "Color Images": result["color_images"],
-            "Text Images": result["text_images"]
-        }
-
-        plt.figure(figsize=(20, 5))
-
-        plot_idx = 1
-        for type_name, img in image_types.items():
-            # base64 디코딩 및 PIL 이미지로 변환
-            if isinstance(img, str):
-                # base64 문자열을 PIL 이미지로 변환
-                img_data = base64.b64decode(img)
-                img = Image.open(BytesIO(img_data))
-
-            plt.subplot(1, len(image_types), plot_idx)
-            plt.imshow(img)
-            plt.title(type_name)
-            plt.axis('off')
-            plot_idx += 1
-
-        plt.tight_layout()
-        plt.show()
-
-        logger.info(f"Deep caption image processed")
-        logger.info(f"Color image processed")
-        logger.info(f"Text image processed")
-
-        
-
+        print(result["deep_caption"])
+        print("*"*100)
+        print(result["color_images"])
 

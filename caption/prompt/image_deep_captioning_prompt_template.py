@@ -3,6 +3,7 @@ from typing import Any
 from langchain_core.runnables import Runnable
 from typing import Optional
 from langchain_core.runnables import RunnableConfig
+from caption.config import LLMInputKeys
 #TODO 프롬프트 수정 입력으로 들어오는 이미지가 1개 혹은 2개인 경우에 따른 system_template 수정
 system_template = """
         당신은 패션 상품 이미지를 전문적으로 분석하는 AI입니다.
@@ -81,8 +82,9 @@ class DeepImageCaptionPrompt(Runnable):
         Returns:
             체인 호출을 위한 입력 딕셔너리
         """
-        category = kwargs.get("category")
-        image_data = kwargs.get("image_data")
+        llm_input = kwargs.get(LLMInputKeys.DEEP_CAPTION)
+        category = llm_input.get("category")
+        image_data = llm_input.get("image_data")
         if category is None or image_data is None:
             raise ValueError("category, image_data 모두 필요합니다.")
         return {

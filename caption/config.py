@@ -19,4 +19,10 @@ class Config(dict):
         super().__init__()
         self.update(_model_dict)
         
-        
+class LLMInputKeys:
+    DEEP_CAPTION = "deep_caption"
+    COLOR_IMAGES = "color_images"
+    TEXT_IMAGES = "text_images"
+
+
+    

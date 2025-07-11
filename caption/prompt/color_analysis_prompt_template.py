@@ -6,6 +6,7 @@ from typing import Any
 from langchain_core.runnables import Runnable
 from typing import Optional
 from langchain_core.runnables import RunnableConfig
+from caption.config import LLMInputKeys
 # System Prompt for Color Analysis
 system_template = """
     당신은 의류 이미지의 색상을 정확하게 분석하는 전문가입니다. 
@@ -70,9 +71,10 @@ class ColorCaptionPrompt(Runnable):
         Returns:
             체인 호출을 위한 입력 딕셔너리
         """
-        count = kwargs.get("count")
-        category = kwargs.get("category")
-        image_data = kwargs.get("image_data")
+        llm_input = kwargs.get(LLMInputKeys.COLOR_IMAGES)
+        count = llm_input.get("count")
+        category = llm_input.get("category")
+        image_data = llm_input.get("image_data")
         if count is None or category is None or image_data is None:
             raise ValueError("count, category, image_data 모두 필요합니다.")
         return {
