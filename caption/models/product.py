@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from PIL import Image
-from pydantic import BaseModel , Base64Str , Field
+from pydantic import BaseModel , Field
 from typing import Annotated
 
 @dataclass
@@ -30,16 +30,16 @@ class Base64DataForLLM(BaseModel):
     LLM 입력에 맞는 데이터 모델
     
     Args:
-        deep_caption (Base64Str): 딥캡션 이미지
-        color_images (Base64Str): 색상 이미지
-        text_images (Base64Str | str): 텍스트 이미지
+        deep_caption (str): 딥캡션 이미지
+        color_images (str): 색상 이미지
+        text_images (str): 텍스트 이미지
         success (bool): 이미지 변환 성공 여부
         fail (int): pil image를 base64로 변환할때 실패한 이미지 개수
         color_count (int): 해당 제품의 색상 이미지 개수
     """
-    deep_caption: Base64Str
-    color_images: Base64Str
-    text_images: Annotated[Base64Str | str, Field(default="")]
+    deep_caption: str
+    color_images: str
+    text_images: Annotated[str, Field(default="")]
     success: Annotated[bool, Field(default=False , description="이미지 변환 성공 여부")]
     fail: Annotated[int, Field(default=0 , description="pil image를 base64로 변환할때 실패한 이미지 개수")]
     color_count: Annotated[int, Field(default=0 , description="해당 제품의 색상 이미지 개수")]
