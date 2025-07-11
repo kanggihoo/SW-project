@@ -2,6 +2,7 @@ import asyncio
 from .image_downloader import ImageDownloader
 from caption.models.product import ImageManager
 from .utils import images_to_base64
+from caption.models.product import Base64DataForLLM
 
 async def download_images(images:list[ImageManager]):
     """
@@ -25,8 +26,7 @@ def download_images_sync(images:list[ImageManager]):
     
         
         
-        
-def parsing_data_for_llm(images:list[ImageManager] , target_size:int )->dict:
+def parsing_data_for_llm(images:list[ImageManager] , target_size:int )->Base64DataForLLM:
     """
     이미지 데이터를 LLM에 전달하기 위한 데이터 파싱
     
@@ -35,15 +35,7 @@ def parsing_data_for_llm(images:list[ImageManager] , target_size:int )->dict:
         target_size: 이미지 크기
         
     Returns:
-        dict: 각 key값에 맞는 이미지 데이터를 base64로 인코딩한 문자열
-            example
-            {
-                "deep_caption_images": "base64_encoded_image",
-                "color_images": "base64_encoded_image",
-                "text_images": "base64_encoded_image",
-                "success": True,
-                "fail": 0
-            }
+        Base64DataForLLM: 딥캡션, 색상, 텍스트 이미지 데이터를 Base64로 변환한 데이터
     """
     result = {}
     deep_caption_images = [0]*3
@@ -68,17 +60,23 @@ def parsing_data_for_llm(images:list[ImageManager] , target_size:int )->dict:
         color_images = [image[0] for image in sorted(color_images, key=lambda x: x[1])]
     result["fail"] = fail
     if len(deep_caption_images) == 3 and len(color_images): 
-        result["deep_caption_images"] = images_to_base64(deep_caption_images, target_size=target_size , type="image")
+        result["deep_caption"] = images_to_base64(deep_caption_images, target_size=target_size , type="image")
         result["color_images"] = images_to_base64(color_images, target_size=target_size, type="image")
         if text_images:
-            result["text_images"] = images_to_base64(text_images, target_size=target_size, type="text")
+            result["text_images"] = images_to_base64(text_images, target_size=target_size, type="image")
         else:
-            result["text_images"] =[]
+            result["text_images"] =""
         result["success"] = True
+        result["color_count"] = len(color_images)
     else:
         result["success"] = False
-    return result
+    return Base64DataForLLM(**result)
         
         
         
-            
+# TODO : 하나의 page에 있는 모든 이미지를 처리하는 코드 추가 
+'''
+한 페이지에 있는 모든 이미지를 한번에 비동기로 s3로 부터 메모리에 업로드 하고 
+이제 다시 동기코드(PIL) 이용해서 threadPoolExecutor 이용해서 이미지 처리 후 처
+
+'''
