@@ -6,9 +6,10 @@ class Config(dict):
         _model_dict = {
             "DEFAULT_CAPTION_MODEL": "gemini-2.5-flash-lite-preview-06-17",
             "DEFAULT_COLOR_MODEL": "gemini-2.5-flash-lite-preview-06-17",
-            "DEFAULT_OCR_MODEL": "gemini-2.5-flash-lite-preview-06-17",
+            "DEFAULT_OCR_MODEL": "gemini-1.5-flash-8b",
             "DEFAULT_IMAGE_SIZE": 224,
-            "DEFAULT_TEMPERATURE": 0.1
+            "DEFAULT_CAPTION_TEMPERATURE": 0.1,
+            "DEFAULT_OCR_TEMPERATURE": 0.0
         }
         
         _langchain_dict = {

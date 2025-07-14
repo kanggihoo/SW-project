@@ -63,7 +63,7 @@ def parsing_data_for_llm(images:list[ImageManager] , target_size:int )->Base64Da
         result["deep_caption"] = images_to_base64(deep_caption_images, target_size=target_size , type="image")
         result["color_images"] = images_to_base64(color_images, target_size=target_size, type="image")
         if text_images:
-            result["text_images"] = images_to_base64(text_images, target_size=target_size, type="image")
+            result["text_images"] = images_to_base64(text_images, target_size=target_size, type="text")
         else:
             result["text_images"] =""
         result["success"] = True

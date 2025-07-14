@@ -1,17 +1,14 @@
 import logging
 import sys
-print(sys.path)
-
 from aws.aws_manager import AWSManager
 from processing.image_processor import download_images_sync , parsing_data_for_llm 
 from caption.models.product import ImageManager, ProductManager, Base64DataForLLM
 from caption.fashion_caption_generator import FashionCaptionGenerator
 import json 
+from utils import setup_logger
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
+logger = setup_logger()
+logger.info("test")
 if __name__ == "__main__":
     aws_manager = AWSManager()
     fashion_caption_generator = FashionCaptionGenerator()

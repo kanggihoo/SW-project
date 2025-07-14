@@ -5,4 +5,5 @@ __all__ = [
     # Master data
     "DeepCaptioningTopOutput",
     "SimpleAttributeOutput", 
+    "TextImageOCROutput",
 ] 

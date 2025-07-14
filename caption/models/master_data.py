@@ -6,6 +6,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 from .top_product_attributes import  StructuredAttributes , ImageCaptions
 from .product_color_attributes import ColorInfo
+from .text_image_attributes import MultiSizeInfo
 
 # class ProductMasterData(BaseModel):
 #     """상품 마스터 데이터 (전체 구조)"""
@@ -43,6 +44,25 @@ class SimpleAttributeOutput(BaseModel):
     """단순 속성 추출 단계 출력 - 주어진 의류의 색상 정보만을 전문적으로 분석한 결과"""
     color_info: Annotated[list[ColorInfo], Field(
         description="의류의 색상 분석 결과. 대표 색상명, 정확한 HEX 코드, 색상 속성 태그(채도/명도)를 포함한 완전한 색상 정보"
+    )]
+
+class TextImageOCROutput(BaseModel):
+    """텍스트 이미지에서 추출된 의류 정보 종합"""
+    material_info: Annotated[str|None, Field(
+        default=None,
+        description="의류의 소재 구성 정보 (예: '면 100%', '울 80%, 나일론 20%', '폴리에스터 65%, 레이온 30%, 스판덱스 5%')"
+    )]
+    size_info: Annotated[MultiSizeInfo, Field(
+        ...,
+        description="상세 사이즈 정보 (실측)"
+    )]
+    care_info: Annotated[str|None, Field(
+        default=None,
+        description="의류 세탁 및 관리 방법"
+    )]
+    product_description: Annotated[str|None, Field(
+        default=None,
+        description="의류의 소개 문구, 주요특징을 종합하여 요약한 상품 설명"
     )]
 
 
