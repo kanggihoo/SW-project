@@ -39,7 +39,6 @@ if __name__ == "__main__":
                 # dynamodb 반영 
                 aws_manager.dynamodb_manager.update_caption_result(sub_category, product_id, "COMPLETED")
         
-
                 # csv 파일에서 product_id로 부터 추가 정보 가져오기 (json으로 저장할 이유가 없네 , csv 파일로 빠르게 제품 id를 인덱스로 해서 빠르게 찾을 수 있게 해야지)
 
                 # 최종 데이터 분리 (denormalize 및 대표 이미지 색상 필드 추가 및 product_id + 색상명으로 유니크 키 생성)
