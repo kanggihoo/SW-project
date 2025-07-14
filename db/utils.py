@@ -38,35 +38,45 @@ def get_embedding_with_jina(texts: list[str] ,
     return [emb.get("embedding") for emb in response.json().get("data")]
 
 
-class IndexManager:
-    """인덱스 관리"""
-    
-    def __init__(self, collection):
-        self.collection = collection
-    
-    def create_unique_indexes(self):
-        # 이메일 유니크 인덱스
-        self.collection.create_index("email", unique=True)
-        
-    def create_compound_indexes(self):
-        # 복합 인덱스
-        self.collection.create_index([("status", 1), ("created_at", -1)])
-    
-    #멀티 필드 인덱스 생성 
-    def create_multi_field_indexes(self, fields: list[str]):
-        pass
-    
-class VectorIndexManager:
-    """벡터 인덱스 관리"""
-    
-    def __init__(self, collection):
-        self.collection = collection
-    
-    def create_vector_index(self, fields: list[str]):
-        pass
+def get_embedding_with_openai(texts: list[str] ,
+                              model_name:str="text-embedding-3-small" ,
+                              api_key:str|None=None) -> list[float]:
+    """주어진 text를 임베딩 하는 함수
+    """
+    from openai import OpenAI
+    client = OpenAI()
+    response = client.embeddings.create(
+        input=texts,
+        model=model_name
+    )
+    return [emb.embedding for emb in response.data] 
+
+def get_embedding_with_gemini(texts: str|list[str] ,
+                              model_name:str="text-embedding-004" ,
+                              api_key:str|None=None) -> list[float]:
+    """genai의 github 참조 , 반환값은 result.embeddings 하면 리스트 형태로 pydantic으로 정의된 클래스 반환 (ContentEmbedding)
+     - 실제 list에 담긴 벡터값 접근하려면 .values 로접근
+     - 768 차원벡터 반환 
+    """
+    from google import genai
+    client = genai.Client()
+
+    result = client.models.embed_content(
+            model=model_name,
+            contents=texts
+    )
+    return [emb.values for emb in result.embeddings]
 
 
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
-    print(get_embedding_with_jina(dimensions=32,texts="heell@@"))
+# TODO: 벡터값 Binary 형태로 저장
+from bson.binary import Binary 
+from bson.binary import BinaryVectorDtype
+
+# Define a function to generate BSON vectors
+def generate_bson_vector(vector, vector_dtype):
+    """벡터값을 BSON 형태로 변환"""
+    # Generate BSON vector from the sample float32 embedding
+    # bson_float32_embedding = generate_bson_vector(embedding, BinaryVectorDtype.FLOAT32)
+    return Binary.from_vector(vector, vector_dtype)
+
+
