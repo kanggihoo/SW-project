@@ -1,8 +1,9 @@
 class Config(dict):
     def __init__(self):
         _mongodb_dict = {
-            "MONGODB_DATABASE_NAME": "test_sw",
-            "MONGODB_COLLECTION_NAME": "test_collections"
+            "MONGODB_LOCAL_DATABASE_NAME": "fashion_db",
+            "MONGODB_LOCAL_COLLECTION_NAME": "products",
+            "MONGODB_LOCAL_CONNECTION_STRING": "mongodb://localhost:27017/"
         }
         
         super().__init__()

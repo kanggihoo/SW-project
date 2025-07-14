@@ -1,8 +1,50 @@
 from pymongo.collection import Collection
-from pymongo.operations import SearchIndexModel
+from pymongo.operations import SearchIndexModel , ASCENDING , DESCENDING
 import logging
 from typing import Any, Dict
 logger = logging.getLogger(__name__)
+
+
+
+def create_indexes(collection: Collection):
+    """검색 성능 향상을 위한 인덱스 생성"""
+    try:
+        # 기본 인덱스들
+        indexes = [
+            # # 상품 ID - 유니크 인덱스
+            # ("product_id", ASCENDING),
+            # 카테고리 필터링용
+            [("category_main", ASCENDING), ("category_sub", ASCENDING)],
+            # # 성별 필터링용
+            # ("gender", ASCENDING),
+            # # 가격 범위 검색용
+            # ("product_price", ASCENDING),
+            # # 평점 정렬용
+            # ("avg_rating", DESCENDING),
+            # # 리뷰 수 정렬용
+            # ("review_count", DESCENDING),
+            # # 좋아요 수 정렬용
+            # ("num_likes", DESCENDING),
+            # # 생성 시간 정렬용
+            # ("created_at", DESCENDING),
+            # 크롤링 상태 확인용
+            # ("success_status", ASCENDING),
+        ]
+        
+        for index in indexes:
+            if isinstance(index, tuple):
+                collection.create_index([index])
+            else:
+                collection.create_index(index)
+        
+        # # 상품 ID를 유니크 인덱스로 설정
+        # self.collection.create_index("product_id", unique=True)
+        
+        logger.info("인덱스 생성 완료")
+        
+    except Exception as e:
+        logger.warning(f"인덱스 생성 중 오류: {e}")
+
 
 
 class IndexManager:
@@ -192,6 +234,7 @@ class VectorIndexManager:
         
         logger.info(f"일괄 삭제 완료: {results['success_count']}/{results['total']} 성공")
         return results
+    
     def update_vector_index(self, index_name:str, field_names:list[str] | str ,
                             dimensions:int,
                             similarity:str = "cosine",
