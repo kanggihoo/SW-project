@@ -114,23 +114,20 @@ class DynamoDBManager:
             logger.error(f"DynamoDB 조회 간 오류 발생 : {e}")
             return {}
     @validate_call
-    def update_caption_result(self, sub_category: int, product_id: str , update_result:str) -> bool:
+    def update_caption_result(self, sub_category: int, product_id: str , update_result:str):
         """caption_status 업데이트 
 
         Args:
             sub_category (int): 서브 카테고리 ID
             product_id (str): 제품 ID
             update_result (str): 업데이트 결과 => value 값은 COMPLETED, PENDING, FAIL 중 하나
-
-        Returns:
-            bool: 성공 여부
         """
         if isinstance(sub_category, str):
             sub_category = int(sub_category)
         
-        if update_result not in ['COMPLETED', 'PENDING', 'FAIL']:
-            logger.error(f"caption_status 업데이트 결과 값 오류 : {update_result} , 업데이트 결과 값은 COMPLETED, PENDING, FAIL 중 하나")
-            return False
+        if update_result != 'COMPLETED':
+            logger.error(f"caption_status 업데이트 결과 값 오류 : {update_result} , 업데이트 결과 값은 COMPLETED 여야 합니다.")
+            return
         try:
             key = self._convert_python_to_dynamodb({
                 'sub_category': sub_category,
@@ -146,13 +143,12 @@ class DynamoDBManager:
                 UpdateExpression=update_expression,
                 ExpressionAttributeValues=expression_attribute_values
             )
-            return True
+            logger.info(f"DynamoDB caption_status 업데이트 성공 : {sub_category} , {product_id} : {update_result}")
         except ClientError as e:
             logger.error(f"DynamoDB 업데이트 간 오류 발생 : {e}")
-            return False
         except Exception as e:
             logger.error(f"예상치 못한 오류 발생 : {e}")
-            return False
+
         
     
     # def put_item(self, item: dict) -> bool:
