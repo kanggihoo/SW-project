@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Dict, List, Optional, Any
 from db.config.database import DatabaseManager
-from db.config.config import Config
+from db.config import Config
 from pymongo.collection import Collection
 import os 
 class BaseRepository(ABC):
