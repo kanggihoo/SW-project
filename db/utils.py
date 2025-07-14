@@ -63,7 +63,11 @@ def get_embedding_with_gemini(texts: str|list[str] ,
 
     result = client.models.embed_content(
             model=model_name,
-            contents=texts
+            contents=texts,
+            # config=types.EmbedContentConfig(
+            #   task_type="retrieval_document",
+            #   title=title
+            # )
     )
     return [emb.values for emb in result.embeddings]
 
