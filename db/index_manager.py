@@ -192,6 +192,7 @@ class VectorIndexManager:
         
         logger.info(f"일괄 삭제 완료: {results['success_count']}/{results['total']} 성공")
         return results
+    
     def update_vector_index(self, index_name:str, field_names:list[str] | str ,
                             dimensions:int,
                             similarity:str = "cosine",
