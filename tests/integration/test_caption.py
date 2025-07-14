@@ -6,10 +6,15 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import base64
 from io import BytesIO
+from langchain_core.runnables import RunnableLambda , RunnableConfig
+
 from aws.aws_manager import AWSManager
-from caption.models.product import ImageManager, ProductManager, Base64DataForLLM
 from processing.image_processor import download_images_sync , parsing_data_for_llm
+from caption.models.product import ImageManager, ProductManager, Base64DataForLLM
 from caption.fashion_caption_generator import FashionCaptionGenerator
+from caption.prompt.text_image_ocr_prompt_template import TextImageOCRPrompt
+from caption.config import Config
+
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +69,7 @@ class TestImagePipeline:
     
     @pytest.fixture
     def base64_data_for_llm(self, product_pil_images:list[ImageManager])->Base64DataForLLM:
-        return parsing_data_for_llm(product_pil_images, target_size=224)
+        return parsing_data_for_llm(product_pil_images, target_size=512)
     
    
     # def test_1_paginator_validation(self, aws_manager: AWSManager):
@@ -110,7 +115,7 @@ class TestImagePipeline:
     #         assert image.pil_image is not None
     #         assert isinstance(image.pil_image, Image.Image)
 
-    # @pytest.mark.parametrize("item_index", [2])
+    # @pytest.mark.parametrize("item_index", [1])
     # def test_5_pil_image_check(self, product_pil_images:list[ImageManager]):
     #     plt.figure(figsize=(15, 5))
     #     for idx, image in enumerate(product_pil_images, 1):
@@ -130,49 +135,62 @@ class TestImagePipeline:
 
     #TODO : 지금은 하나의 pagenation을 통해 하나의 제품에 대한 테스트만 이루어져 있지만 실제 모든 pagenation을 통해 동작되는지 확인필요
     #TODO : page 맨 마지막에 에러 처리 해야 하는지 아니면 단순 for문으로 구현한다면 stopiteration 처리가 되지만 그래도 확인필요
-    # def test_data_processing_for_llm(self , product_pil_images:list[ImageManager]):
-    #     result = parsing_data_for_llm(product_pil_images, target_size=224)
-    #     assert result["success"] is True
-    #     assert result["fail"] == 0
-    #     assert result["deep_caption_images"] is not None
-    #     assert result["color_images"] is not None
-    #     assert result["text_images"] is not None
+    def test_data_processing_for_llm(self , product_pil_images:list[ImageManager]):
+        result:Base64DataForLLM = parsing_data_for_llm(product_pil_images, target_size=224)
+        assert result.success is True
+        assert result.fail == 0
+        assert result.deep_caption is not None
+        assert result.color_images is not None
+        assert result.text_images is not None
 
-    #     # Visualize the processed images
-    #     image_types = {
-    #         "Deep Caption Images": result["deep_caption_images"],
-    #         "Color Images": result["color_images"],
-    #         "Text Images": result["text_images"]
-    #     }
+        # Visualize the processed images
+        image_types = {
+            "Deep Caption Images": result.deep_caption,
+            "Color Images": result.color_images,
+            "Text Images": result.text_images
+        }
 
-    #     plt.figure(figsize=(20, 5))
+        plt.figure(figsize=(20, 5))
 
-    #     plot_idx = 1
-    #     for type_name, img in image_types.items():
-    #         # base64 디코딩 및 PIL 이미지로 변환
-    #         if isinstance(img, str):
-    #             # base64 문자열을 PIL 이미지로 변환
-    #             img_data = base64.b64decode(img)
-    #             img = Image.open(BytesIO(img_data))
+        plot_idx = 1
+        for type_name, img in image_types.items():
+            # base64 디코딩 및 PIL 이미지로 변환
+            if isinstance(img, str):
+                # base64 문자열을 PIL 이미지로 변환
+                img_data = base64.b64decode(img)
+                img = Image.open(BytesIO(img_data))
 
-    #         plt.subplot(1, len(image_types), plot_idx)
-    #         plt.imshow(img)
-    #         plt.title(type_name)
-    #         plt.axis('off')
-    #         plot_idx += 1
+            plt.subplot(1, len(image_types), plot_idx)
+            plt.imshow(img)
+            plt.title(type_name)
+            plt.axis('off')
+            plot_idx += 1
 
-    #     plt.tight_layout()
-    #     plt.show()
+        plt.tight_layout()
+        plt.show()
 
-    #     logger.info(f"Deep caption image processed")
-    #     logger.info(f"Color image processed")
-    #     logger.info(f"Text image processed")
+        logger.info(f"Deep caption image processed")
+        logger.info(f"Color image processed")
+        logger.info(f"Text image processed")
+    def test_text_image_ocr(self , base64_data_for_llm:Base64DataForLLM):
+        # assert base64_data_for_llm.success is True
+        fashion_caption_generator = FashionCaptionGenerator()
+        model = fashion_caption_generator.ocr_chain
+        config = Config()
+        config = RunnableConfig(
+            {
+                "tags": [config.get("DEFAULT_OCR_MODEL")],
+                "run_name": "test_text_image_ocr"
+            }
+        )
+        result = model.invoke(base64_data_for_llm.text_images, config=config)
+        print(result)
 
     def test_fashion_caption_generator(self , base64_data_for_llm:Base64DataForLLM):
         fashion_caption_generator = FashionCaptionGenerator()
         assert base64_data_for_llm.success is True
 
-
+        #TODO : 텍스트 이미지 없는 경우에는 ??? 
         result = fashion_caption_generator.invoke(base64_data_for_llm , category="상의")
         assert result is not None
         assert result["deep_caption"] is not None
@@ -181,5 +199,6 @@ class TestImagePipeline:
         print("*"*100)
         print(result["color_images"].model_dump())
         print("*"*100)
+        print(result["text_images"].model_dump())
  
 
