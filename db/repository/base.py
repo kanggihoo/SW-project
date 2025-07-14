@@ -6,10 +6,10 @@ from pymongo.collection import Collection
 import os 
 class BaseRepository(ABC):
     """기본 Repository 클래스"""
-    def __init__(self, collection_string: str):
-        self.db_manager: DatabaseManager = DatabaseManager(connection_string=os.getenv("MONGODB_ATLAS_URI"))
+    def __init__(self, connection_string: str):
+        self.db_manager: DatabaseManager = DatabaseManager(connection_string)
         self.collection: Collection = self.db_manager.get_collection()
-        self.collection_string = collection_string
+        self.connection_string = connection_string
     
     # 공통 CRUD 메서드들
     def find_by_id(self, doc_id: str) -> Optional[Dict]:
