@@ -260,6 +260,14 @@ class FashionRepository(BaseRepository):
             logger.error(f"상품 업서트 중 오류: {e}")
             return False
     
+    # def insert_from_local_to_atlas(self, doc:dict , ) -> bool:
+    #     """
+    #     로컬 데이터베이스에서 데이터 가져와서 아틀라스 데이터베이스에 저장
+    #     """
+    #     try:
+    #         product_data = self.find_by_id(product_id)
+    #         if not product_data:
+    
     def delete_product(self, product_id: str) -> bool:
         """
         상품 삭제
