@@ -29,8 +29,8 @@ class DatabaseManager:
             logger.info("Connection parameters changed, reinitializing...")
         self.config = Config()
         self.connection_string = connection_string 
-        self.database_name = database_name if database_name else self.config["MONGODB_DATABASE_NAME"]
-        self.collection_name = collection_name if collection_name else self.config["MONGODB_COLLECTION_NAME"]
+        self.database_name = database_name if database_name else self.config["MONGODB_LOCAL_DATABASE_NAME"]
+        self.collection_name = collection_name if collection_name else self.config["MONGODB_LOCAL_COLLECTION_NAME"]
         self.timeout_ms = timeout_ms
         self.__initialize_connection()
         

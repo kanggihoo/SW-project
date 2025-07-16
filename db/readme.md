@@ -14,8 +14,10 @@ VLM으로 추출한 패션 상품 데이터를 MongoDB Atlas에 저장하고, �
 
 추출된 데이터 구조
 ```json
-{
-     "structured_attributes": {
+
+{ 
+    "deep_caption":{
+        "structured_attributes": {
             "common": {
                 "sleeve_length": "긴소매",
                 "neckline": "라운드넥"
@@ -63,17 +65,35 @@ VLM으로 추출한 패션 상품 데이터를 MongoDB Atlas에 저장하고, �
             "comprehensive_description": "이 제품은 라운드넥에 긴소매를 가진 검은색 맨투맨 티셔츠입니다. 정면과 후면 모두 무지 디자인이며, 특별한 여밈이나 장식 요소는 없습니다. 레귤러 핏으로 편안하게 착용할 수 있으며, 캐주얼하고 모던한 스타일을 연출하기 좋습니다. 데일리룩이나 편안한 주말 활동에 적합합니다."
         }
     },
-{
-    "color_info": [
-        {
-            "name": "블랙",
-            "hex": "#000000",
-            "attributes": {
-                "brightness": "아주 어두움",
-                "saturation": "낮음"
+    "color_images" :{
+        "color_info": [
+            {
+                "name": "블랙",
+                "hex": "#000000",
+                "attributes": {
+                    "brightness": "아주 어두움",
+                    "saturation": "낮음"
+                }
+            },
+            {
+                "name": "블랙",
+                "hex": "#000000",
+                "attributes": {
+                    "brightness": "아주 어두움",
+                    "saturation": "낮음"
+                }
             }
+        ]
+    },
+    "text_images" : {
+        "care_info" : "찬물로 단독 손세탁 하십시오. 소재 특성상 세탁 후 약간의 수축이 있을수 있습니다 ",
+        "marerial_info" : "COTTON 100%",
+        "product_description" : "FUNDAMENTAL을 위해 개발된 800G/Y 이상 헤비 코튼 스웨트 원단으로 텐타, 덤블 방축 가공 및 바이오 워싱 처리가 되어 터치감이 부드럽고 표면은 기모감 없이 깨끗합니다. 수많은 가공으로 세탁 후에도 옷의 형태감 유지 및 봉제 변형 방지, 컬러 변화 최소화. 안정적인 견뢰도의 리플렉티브 필름 프레스 작업으로 세탁 후에도 반사광 유지.",
+        "size_info" : {
+            "is_exist" : true ,
+            "size_measurements" : '{"SIZE 1": {"총장": "67cm", "가슴단면": "61cm", "어깨너비": "63cm", "소매길이": "60cm"}, "SIZE 2": {"총장": "69cm", "가슴단면": "64cm", "어깨너비": "65cm", "소매길이": "62cm"}}'
         }
-    ]
+    }
 }
 ```
 
