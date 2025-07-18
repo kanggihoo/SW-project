@@ -5,7 +5,7 @@ import uuid
 from dotenv import load_dotenv
 
 from .router import websocket
-
+from .api.v1.api import api_router
 load_dotenv()
 # os.environ["LANGSMITH_TRACING"] = "true"
 # os.environ["LANGSMITH_PROJECT"] = "langgraph-test"
@@ -18,13 +18,17 @@ app = FastAPI(
 )
 
 app.include_router(websocket.router)
-
+app.include_router(api_router)
 
 @app.get("/" , tags=["root"])
 async def root():
     return {"message": "Welcome to the Clothing Recommendation API"}
 
 
+
+
+
+#TODO : 문서화 추가 
 from fastapi.openapi.utils import get_openapi
 
 def custom_openapi():
