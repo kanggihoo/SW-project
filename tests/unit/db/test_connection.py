@@ -1,10 +1,10 @@
 import pytest
-from db.config.database import DatabaseManager
 from dotenv import load_dotenv
 import logging
 import os
 import sys
-from db.repository.base import BaseRepository
+from db import create_fashion_repo
+
 @pytest.fixture(scope="session" , autouse=True)
 def setup():
     load_dotenv()
@@ -19,8 +19,13 @@ def setup():
     
 logger = logging.getLogger(__name__)
 class TestConnection:
-    def test_connection(self):
-        with DatabaseManager(connection_string=os.getenv("MONGODB_ATLAS_URI")) as db:
-            assert db.is_connected()
-            logger.info(f"Connected to MongoDB: {db.database_name}")
+   def test_connection_local(self):
+      repo = create_fashion_repo(use_atlas=False)
+      assert repo.db_manager.is_connected()
+      logger.info(f"Connected to MongoDB: {repo.db_manager.database_name}")
+
+   def test_connection_atlas(self):
+      repo = create_fashion_repo(use_atlas=True)
+      assert repo.db_manager.is_connected()
+      logger.info(f"Connected to MongoDB: {repo.db_manager.database_name}")
 

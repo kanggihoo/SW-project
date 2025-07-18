@@ -5,8 +5,8 @@ import logging
 import os
 logger = logging.getLogger(__name__)
 class FashionRepository(BaseRepository):
-    def __init__(self , connection_string: str = None):
-        super().__init__(connection_string=connection_string)
+    def __init__(self , connection_string: str , database_name: str , collection_name: str):
+        super().__init__(connection_string=connection_string , database_name=database_name , collection_name=collection_name)
 
     def find_by_id(self, product_id: str) -> Optional[Dict]:
         try:
