@@ -10,44 +10,41 @@ logger = logging.getLogger(__name__)
 class DatabaseManager:
     """DB 연결 관리 클래스 - 싱글톤 패턴과 컨텍스트 매니저 지원"""
     _instance = None
-    _client: MongoClient = None
+    _initialized = False
     
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-                
-    def get_collection(self):
-        if not hasattr(self, 'db') or self.db is None:
-            raise ConnectionError("Database connection not established")
-        return self.db[self.collection_name]
+    # def __new__(cls, *args, **kwargs):
+    #     if cls._instance is None:
+    #         cls._instance = super().__new__(cls)
+    #     return cls._instance
     
     def __init__(self, connection_string: str, database_name: str = None, collection_name: str = None, timeout_ms: int = 5000):
-        # 이미 초기화된 경우 설정만 업데이트하고 재연결하지 않음
-        if self._instance is None:
-            # 연결 정보가 다른 경우에만 재초기화
-            logger.info("Connection parameters changed, reinitializing...")
+        if self._initialized:
+            return
         self.config = Config()
         self.connection_string = connection_string 
         self.database_name = database_name if database_name else self.config["MONGODB_LOCAL_DATABASE_NAME"]
         self.collection_name = collection_name if collection_name else self.config["MONGODB_LOCAL_COLLECTION_NAME"]
         self.timeout_ms = timeout_ms
+        self._initialized = True
         self.__initialize_connection()
         
+    def get_collection(self):
+        if not hasattr(self, 'db') or self.db is None:
+            raise ConnectionError("Database connection not established")
+        return self.db[self.collection_name]
     
     def __initialize_connection(self):
         try:
             if not self.connection_string:
                 raise ValueError("Connection string is required")
-                
-            if self._client is None:
-                self._client:MongoClient = MongoClient(
-                    self.connection_string,
-                    serverSelectionTimeoutMS=self.timeout_ms,
-                    connectTimeoutMS=self.timeout_ms,
-                    socketTimeoutMS=self.timeout_ms,
-                    server_api=ServerApi('1')
-                )
+         
+            self._client:MongoClient = MongoClient(
+                self.connection_string,
+                serverSelectionTimeoutMS=self.timeout_ms,
+                connectTimeoutMS=self.timeout_ms,
+                socketTimeoutMS=self.timeout_ms,
+                server_api=ServerApi('1')
+            )
                  
             self.db:Database = self._client[self.database_name]
             is_connected = self.__test_connection()
@@ -61,8 +58,6 @@ class DatabaseManager:
     
     def __test_connection(self):
         try:
-            if self._client is None:
-                raise ConnectionError("MongoDB client is not initialized")
             self._client.admin.command('ping')
             collections = self.db.list_collection_names()
             logger.info(f"Connected to MongoDB: {self.database_name}. {len(collections)} collections found")
