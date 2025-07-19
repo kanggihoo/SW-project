@@ -108,6 +108,14 @@ class AWSManager:
     # =============================================================================
     # 유틸리티 함수
     # =============================================================================
+    def close_connection(self):
+        if self.s3_manager:
+            self.s3_manager.close_connection()
+        if self.dynamodb_manager:
+            self.dynamodb_manager.close_connection()
+        self.aws_manager = None
+        logger.info("AWS 서비스 연결 종료")
+
     def _parse_representative_assets(self, representative_assets:dict) -> tuple[bool, list[ImageManager]]:
         images = []
         success = True

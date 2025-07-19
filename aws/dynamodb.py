@@ -260,6 +260,11 @@ class DynamoDBManager:
     # =============================================================================
     # 유틸리티 함수
     # =============================================================================
+    def close_connection(self):
+        if self.client:
+            self.client.close()
+            self.client = None
+            logger.info(f"DynamoDB 클라이언트 연결 종료: {self.table_name}")
 
     def _convert_dynamodb_item_to_python(self, item: dict) -> dict:
         """
