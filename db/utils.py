@@ -2,6 +2,7 @@ import requests
 import os
 from pymongo.collection import Collection
 
+# TODO: 여기에 정의 된 임베딩 관련 API는 따로 모듈화 
 def get_embedding_with_jina(texts: list[str] ,
                             model_name:str="jina-embeddings-v3" ,
                             task="retrieval.query",
