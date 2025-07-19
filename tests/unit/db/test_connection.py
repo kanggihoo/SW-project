@@ -1,7 +1,6 @@
 import pytest
 from dotenv import load_dotenv
 import logging
-import os
 import sys
 from db import create_fashion_repo
 from db.config.database import DatabaseManager
@@ -20,6 +19,15 @@ def setup():
 
 config = Config()
 logger = logging.getLogger(__name__)
+
+@pytest.fixture(scope="session")
+def mongodb_atlas():
+   return create_fashion_repo(use_atlas=True)
+
+@pytest.fixture(scope="session")
+def mongodb_local():
+   return create_fashion_repo(use_atlas=False)
+
 class TestConnection:
    def test_database_manager(self):
       print(config["MONGODB_LOCAL_CONNECTION_STRING"])
@@ -40,3 +48,9 @@ class TestConnection:
       assert repo.db_manager.is_connected()
       logger.info(f"Connected to MongoDB: {repo.db_manager.database_name}")
 
+   def test_atlas_method(self  , mongodb_atlas):
+      result = mongodb_atlas.find_all({"sub_category":"1005"})
+      for item in result:
+         print(item)
+      
+      
