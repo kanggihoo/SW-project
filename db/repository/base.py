@@ -16,6 +16,9 @@ class BaseRepository(ABC):
             database_name: 데이터베이스 이름  
             collection_name: 컬렉션 이름
         """
+        self.connection_string = connection_string
+        self.database_name = database_name
+        self.collection_name = collection_name
         self.db_manager = DatabaseManager(connection_string, database_name, collection_name)
         self.collection = self.db_manager.get_collection()
     

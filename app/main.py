@@ -25,7 +25,6 @@ async def lifespan(app: FastAPI):
         aws_manager = get_aws_manager()
     except Exception as e:
         logger.error(f"AWS connection error: {e}")
-
     logger.info("lifespan started")
     yield
 
