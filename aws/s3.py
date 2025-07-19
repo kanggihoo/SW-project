@@ -60,5 +60,9 @@ class S3Manager:
             logger.error(f"Presigned URL 생성 실패: {e}")
             return None
     
-    
+    def close_connection(self):
+        if self.client:
+            self.client.close()
+            self.client = None
+            logger.info(f"S3 클라이언트 연결 종료: {self.bucket_name}")
     
