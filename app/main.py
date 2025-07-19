@@ -12,23 +12,20 @@ load_dotenv()
 # os.environ["LANGSMITH_PROJECT"] = "langgraph-test"
 
 # 로깅설정
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s : %(filename)s - %(lineno)d' , datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         fashion_repo = get_fashion_repo()
-        if fashion_repo.db_manager.is_connected():
-            logger.info("Connected to MongoDB")
-        else:
-            logger.error("Failed to connect to MongoDB")
     except Exception as e:
         logger.error(f"MongoDB connection error: {e}")
+    logger.info("lifespan started")
     yield
 
     logger.info("Shutting down...")
-    fashion_repo.db_manager.close()
+    fashion_repo.close_connection()
     
 
 app = FastAPI(
