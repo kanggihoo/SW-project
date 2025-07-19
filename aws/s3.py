@@ -1,5 +1,4 @@
 import boto3
-import json 
 import logging
 from botocore.exceptions import ClientError
 from pathlib import Path
@@ -10,17 +9,30 @@ class S3Manager:
     def __init__(self , region_name: str, bucket_name: str):
         self.region_name = region_name
         self.bucket_name = bucket_name
-        self.initialize_client()
-    def initialize_client(self):
-        self.client = boto3.client('s3', region_name=self.region_name)
+        self.client = None
+        self._initialize_client()
+
+    def _initialize_client(self):
+        try:
+            self.client = boto3.client('s3', region_name=self.region_name)
+        except ClientError as e:
+            logger.error(f"S3 클라이언트 초기화 실패: {e}")
+            raise 
         logger.info(f"S3 클라이언트 초기화 완료: {self.bucket_name}")
-    
     def test_connection(self) -> bool:
+        
+        if not self.client:
+            return False
         try:
             self.client.head_bucket(Bucket=self.bucket_name)
             return True
         except ClientError as e:
+            logger.error(f"S3 연결 테스트 실패: {e}")
             return False
+        except Exception as e:
+            logger.error(f"S3 연결 테스트 예상치 못한 오류: {e}")
+            return False
+    
     
     def get_s3_object_key(self, main_category: str, sub_category: int, product_id: str, relative_path: str) -> str:
         '''

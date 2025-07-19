@@ -3,80 +3,49 @@ import logging
 from botocore.exceptions import ClientError
 from boto3.dynamodb.types import TypeSerializer
 from pathlib import Path
-import json
 from typing import Iterator , Any
-from pydantic import validate_call , Field
-from .config import Config
+from pydantic import validate_call 
 
 # logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-config = Config()
-'''
-테이블 명 : ProductAssets
-- 파티션 키 : sub_category (N) , 메타 데이터인 경우 0 (N)
-- 정렬 키 : product_id (S) , 메타 데이터인 경우 STATUS_STATS_MAIN_SUB
-- 필드명	
-# 기본 데이터인 경우
-    representative_assets (M)
-        - back (S)
-        - front (S)
-        - model (S)
-        - color_variant (L)
-    curation_status (S) : (COMPLETED, PENDING, PASS)
-    main_category (S) 
-    detail (L)
-    segment (L)
-    summary (L)
-    text (L)
-    
-    recommendation_order (S)
-    created_at (S)
-    completed_by (S)
-    
-    ## 참고
-    - curation_status = PASS 인 경우 representative_assets 필드는 비어 있고, pass_reason 필드 존재
-    - pass_reasons (S)
-
-# 메타 데이터인 경우
-    completed_count (N)
-    recommendation_order (S)
-    main_category (S)
-    pass_count (N)
-    pending_count (N)
-    target_sub_category (N)
-    total_products (N)
-    
-- GSI
-    - CurrentStatus-RecommendationOrder-GSI
-        - 파티션 키 : curation_status (S)
-        - 정렬 키 : recommendation_order+"#"+product_id (S)
-'''
-
-
-
 class DynamoDBManager:
-    def __init__(self , region_name: str|None = None, table_name: str|None = None):
+    def __init__(self , region_name: str|None = None, table_name: str|None = None, config:dict=None):
         self.region_name = region_name
         self.table_name = table_name
+        self.projection_fields = config.get("DEFAULT_PROJECTION_FIELDS",[])
+        self.pagenator_config = config.get("DEFAULT_PAGINATOR_CONFIG",{})
+
+        self.client = None
         self._initialize_dynamodb_client()
-        self.config = Config()
     
     # =============================================================================
     # 클라이언트 초기화 관련 함수
     # =============================================================================
-    def test_connection(self) -> bool:
+    def _initialize_clietn(self):
         try:
+            self.client = boto3.client('dynamodb', region_name=self.region_name)
+        except ClientError as e:
+            logger.error(f"DynamoDB 클라이언트 초기화 실패: {e}")
+            raise 
+        except Exception as e:
+            logger.error(f"DynamoDB 클라이언트 초기화 예상치 못한 오류: {e}")
+            raise 
+        logger.info(f"DynamoDB 클라이언트 초기화 완료: {self.table_name}")
+
+
+    def test_connection(self) -> bool:
+        """DynamoDB 연결 테스트"""
+        try:
+            if not self.client:
+                return False
             self.table_info = self.client.describe_table(TableName=self.table_name)
             return True
         except ClientError as e:
+            logger.error(f"DynamoDB 연결 테스트 실패: {e}")
             return False
-        
-    def _initialize_dynamodb_client(self):
-        if self.region_name is None and self.table_name is None:
-            config = self._load_config()
-            self.region_name = config.get('aws', {}).get('region_name', 'ap-northeast-2')
-            self.table_name = config.get('dynamodb', {}).get('table_name', 'ProductAssets')
-        self.client = boto3.client('dynamodb', region_name=self.region_name)
+        except Exception as e:
+            logger.error(f"DynamoDB 연결 중 예상치 못한 오류: {e}")
+            return False
     
     # =============================================================================
     # CRUD , Query 관련 함수들
@@ -165,8 +134,8 @@ class DynamoDBManager:
 
     def get_product_pagenator(self ,
                               sub_category: int,
-                              projection_fields:list[str]=list(config["DEFAULT_PROJECTION_FIELDS"]),
-                              pagenator_config:dict=config["DEFAULT_PAGINATOR_CONFIG"],
+                              projection_fields:list[str],
+                              pagenator_config:dict,
                               condition:dict|None = None ,
                               ) -> Iterator[dict] | None:
         """조건에 맞는 제품 리스트 조회 (페이지네이터 반환)
@@ -351,14 +320,7 @@ class DynamoDBManager:
         serializer = TypeSerializer()
         return {k: serializer.serialize(v) for k, v in item.items()}
     
-    def _load_config(self) -> dict:
-        config_path = Path(__file__).parent / "config.json"
-        if not config_path.exists():
-            raise FileNotFoundError(f"설정 파일을 찾을 수 없습니다: {config_path}")
-        
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-        return config
+
         
 
 # if __name__ == "__main__":

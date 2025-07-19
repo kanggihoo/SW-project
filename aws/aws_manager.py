@@ -1,8 +1,5 @@
 from pathlib import Path
-import json
 from typing import Annotated, Iterator, Any
-from dataclasses import dataclass, field
-from pydantic import Field
 import logging
 
 from .config import Config
@@ -11,62 +8,71 @@ from .dynamodb import DynamoDBManager
 from caption.models.product import ImageManager, ProductManager
 
 logger = logging.getLogger(__name__)
-config = Config()
    
 
 class AWSManager:
     def __init__(self) -> None:
-        self._initialize_aws_services()
-        # self._initialize_cache()
-    
+        self.config = Config()
+        self.s3_manager = None 
+        self.dynamodb_manager = None
+        self._initialize_services()
     # =============================================================================
     # 초기화 관련 함수
     # =============================================================================
         
-    def _initialize_aws_services(self) -> None:
-        config = self._load_config()
-        self.region_name = config.get('aws', {}).get('region_name', 'ap-northeast-2')
-        self.bucket_name = config.get('s3', {}).get('bucket_name', 'sw-fashion-image-data')
-        self.table_name = config.get('dynamodb', {}).get('table_name', 'ProductAssets')
-        
-        # S3와 DynamoDB 매니저 초기화
-        self.s3_manager = S3Manager(region_name=self.region_name, bucket_name=self.bucket_name)
-        self.dynamodb_manager = DynamoDBManager(region_name=self.region_name, table_name=self.table_name)
-        
-        # 연결 테스트 및 상세한 에러 처리
-        connection_status = self.test_connection()
-        if connection_status['success']:
-            logger.info("AWS S3 , Dynamodb 연결 성공")
-        else:
+    def _initialize_services(self) -> None:
+        try:
+            #s3 초기화
+            s3_config = self.config.get_s3_config()
+            self.s3_manager = S3Manager(
+                region_name=s3_config.get('region_name'),
+                bucket_name=s3_config.get('bucket_name')
+            )
+            
+
+            # dynamodb 초기화
+            dynamodb_config = self.config.get_dynamodb_config()
+            self.dynamodb_manager = DynamoDBManager(
+                region_name=dynamodb_config.get('region_name'),
+                table_name=dynamodb_config.get('table_name'),
+                config=dynamodb_config
+            )
+
+            # 연결 테스트 
+            self._verify_connection()
+            logger.info("AWS 서비스 초기화 완료")
+
+        except Exception as e:
+            logger.error(f"AWS 서비스 초기화 실패: {e}")
+            raise 
+    
+    def _verify_connection(self):
+        connection_status = self._test_connection()
+
+        if not connection_status['success']:
             error_msg = "AWS 연결 초기화 실패:\n"
             if not connection_status['s3']:
-                error_msg += f"- S3 연결 실패: {self.bucket_name}\n"
+                error_msg += f"- S3 연결 실패: {self.s3_manager.bucket_name}\n"
             if not connection_status['dynamodb']:
-                error_msg += f"- DynamoDB 연결 실패: {self.table_name}\n"
+                error_msg += f"- DynamoDB 연결 실패: {self.dynamodb_manager.table_name}\n"
             logger.error(error_msg)
             raise ConnectionError(error_msg)
-    
-    # def _initialize_cache(self):
-    #     self.HOME_DIR = Path.home()
-        # self.CACHE_DIR = Path(config["DEFAULT_CACHE_DIR"])
-        # self.cache_manager = CacheManager(s3_manager=self.s3_manager, cache_dir=str(self.CACHE_DIR))
-        
 
-    def test_connection(self) -> dict:
-        """
-        S3와 DynamoDB 연결 상태를 개별적으로 확인
-        
-        Returns:
-            dict: {'success': bool, 's3': bool, 'dynamodb': bool}
-        """
+    def _test_connection(self):
+        # 연결 테스트 및 상세한 에러 처리
         s3_success = self.s3_manager.test_connection()
         dynamodb_success = self.dynamodb_manager.test_connection()
         
         return {
-            'success': all([s3_success, dynamodb_success]),
-            's3': s3_success,
-            'dynamodb': dynamodb_success
+            "success": all([s3_success, dynamodb_success]),
+            "s3": s3_success,
+            "dynamodb": dynamodb_success
         }
+    # def _initialize_cache(self):
+    #     self.HOME_DIR = Path.home()
+    #     self.CACHE_DIR = Path(config["DEFAULT_CACHE_DIR"])
+    #     self.cache_manager = CacheManager(s3_manager=self.s3_manager, cache_dir=str(self.CACHE_DIR))
+        
     # =============================================================================
     # 주요 함수
     # =============================================================================
@@ -102,16 +108,6 @@ class AWSManager:
     # =============================================================================
     # 유틸리티 함수
     # =============================================================================
-    def _load_config(self) -> dict:
-        config_path = Path(__file__).parent / "config.json"
-        if not config_path.exists():
-            raise FileNotFoundError(f"설정 파일을 찾을 수 없습니다: {config_path}")
-        
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-        return config
-
-    
     def _parse_representative_assets(self, representative_assets:dict) -> tuple[bool, list[ImageManager]]:
         images = []
         success = True
