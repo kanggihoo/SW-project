@@ -6,10 +6,9 @@ from dotenv import load_dotenv
 import logging
 from .router import websocket
 from .api.v1.api import api_router
-from .config.dependencies import get_fashion_repo
+from .config.dependencies import get_fashion_repo , get_aws_manager
 load_dotenv()
-# os.environ["LANGSMITH_TRACING"] = "true"
-# os.environ["LANGSMITH_PROJECT"] = "langgraph-test"
+
 
 # 로깅설정
 logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s : %(filename)s - %(lineno)d' , datefmt='%Y-%m-%d %H:%M:%S')
@@ -21,11 +20,17 @@ async def lifespan(app: FastAPI):
         fashion_repo = get_fashion_repo()
     except Exception as e:
         logger.error(f"MongoDB connection error: {e}")
+    try:
+        aws_manager = get_aws_manager()
+    except Exception as e:
+        logger.error(f"AWS connection error: {e}")
+
     logger.info("lifespan started")
     yield
 
     logger.info("Shutting down...")
     fashion_repo.close_connection()
+    aws_manager.close_connection()
     
 
 app = FastAPI(
