@@ -37,13 +37,13 @@ class FashionRepository(BaseRepository):
         try:
             filter_dict = filter_dict or {}
             cursor = self.collection.find(filter_dict)
-            products = []
+            # products = []
             
-            for product in cursor:
-                processed_product = self._process_product_output(product)
-                products.append(processed_product)
+            # for product in cursor:
+            #     processed_product = self._process_product_output(product)
+            #     products.append(processed_product)
             
-            return products
+            return cursor
         except Exception as e:
             logger.error(f"Error finding products: {e}")
             return []

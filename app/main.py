@@ -9,6 +9,7 @@ from .api.v1.api import api_router
 from .config.dependencies import get_fashion_repo , get_aws_manager
 load_dotenv()
 
+#TODO : 에러처리 추가 
 
 # 로깅설정
 logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s : %(filename)s - %(lineno)d' , datefmt='%Y-%m-%d %H:%M:%S')
@@ -31,7 +32,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
     fashion_repo.close_connection()
     aws_manager.close_connection()
-    
+    logger.info("lifespan ended")
 
 app = FastAPI(
     title="Clothing Recommendation API",

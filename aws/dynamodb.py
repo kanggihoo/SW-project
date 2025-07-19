@@ -16,12 +16,12 @@ class DynamoDBManager:
         self.pagenator_config = config.get("DEFAULT_PAGINATOR_CONFIG",{})
 
         self.client = None
-        self._initialize_dynamodb_client()
+        self._initialize_client()
     
     # =============================================================================
     # 클라이언트 초기화 관련 함수
     # =============================================================================
-    def _initialize_clietn(self):
+    def _initialize_client(self):
         try:
             self.client = boto3.client('dynamodb', region_name=self.region_name)
         except ClientError as e:
