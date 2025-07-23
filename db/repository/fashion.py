@@ -24,9 +24,7 @@ class FashionRepository(BaseRepository):
         """상품 ID로 조회"""
         try:
             product = self.collection.find_one({"_id": doc_id})
-            if product:
-                return self._process_product_output(product)
-            return None
+            return product
         except Exception as e:
             logger.error(f"Error finding product by ID {doc_id}: {e}")
             return None
@@ -52,15 +50,15 @@ class FashionRepository(BaseRepository):
     def create(self, document: Dict) -> Optional[str]:
         """상품 생성"""
         try:
-            # 상품 데이터 검증
-            if not self._validate_product_data(document):
-                return None
+            # # 상품 데이터 검증
+            # if not self._validate_product_data(document):
+            #     return None
             
-            # 상품 데이터 전처리
-            processed_data = self._process_product_input(document)
+            # # 상품 데이터 전처리
+            # processed_data = self._process_product_input(document)
             
             # 삽입 실행
-            result = self.collection.insert_one(processed_data)
+            result = self.collection.insert_one(document)
             return str(result.inserted_id) if result.inserted_id else None
             
         except DuplicateKeyError:
@@ -77,12 +75,12 @@ class FashionRepository(BaseRepository):
             if not update_data:
                 return False
             
-            # 업데이트 데이터 전처리
-            processed_update = self._process_update_data(update_data)
+            # # 업데이트 데이터 전처리
+            # processed_update = self._process_update_data(update_data)
             
             result = self.collection.update_one(
                 {"_id": doc_id},
-                {"$set": processed_update}
+                {"$set": update_data}
             )
             
             return result.modified_count > 0
