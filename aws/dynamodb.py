@@ -16,12 +16,12 @@ class DynamoDBManager:
         self.pagenator_config = config.get("DEFAULT_PAGINATOR_CONFIG",{})
         self.GSI_NAME = config.get("DEFAULT_GSI_NAME",None)
         self.client = None
-        self._initialize_dynamodb_client()
+        self._initialize_client()
     
     # =============================================================================
     # 클라이언트 초기화 관련 함수
     # =============================================================================
-    def _initialize_clietn(self):
+    def _initialize_client(self):
         try:
             self.client = boto3.client('dynamodb', region_name=self.region_name)
         except ClientError as e:
@@ -133,11 +133,11 @@ class DynamoDBManager:
     # =============================================================================
 
     def get_product_pagenator(self ,
-                              projection_fields:list[str],
-                              pagenator_config:dict,
                               partition:dict|None = None ,
                               sub_category:int|None = None,
                               GSI_NAME:str|None = None,
+                              projection_fields:list[str]=None,
+                              pagenator_config:dict=None,
                               ) -> Iterator[dict] | None:
         """조건에 맞는 제품 리스트 조회 (페이지네이터 반환)
 
