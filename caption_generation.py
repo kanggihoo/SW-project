@@ -9,20 +9,20 @@ from db.config.database import DatabaseManager
 from db import create_fashion_repo
 from db.config import Config
 from utils import setup_logger
+from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s : %(filename)s - %(lineno)d' , datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger(__name__)
 if __name__ == "__main__":
+    load_dotenv()
     db_config = Config()
-    aws_manager = AWSManager()
-
-    
+    aws_manager = AWSManager()    
     fashion_repository_local = create_fashion_repo(use_atlas=False)
     fashion_repository_atlas = create_fashion_repo(use_atlas=True)
 
 
     fashion_caption_generator = FashionCaptionGenerator()
-    pagenator = aws_manager.dynamodb_manager.get_product_pagenator(partition={"key":"curation_status","value":"COMPLETED","type":"S"},GSI_NAME = "CurationStatus-RecommendationOrder-GSI")
+    pagenator = aws_manager.dynamodb_manager.get_product_pagenator(partition={"key":"sub_category_curation_status","value":"1005#COMPLETED","type":"S"},GSI_NAME = "CurationStatus-SubCategory-GSI")
     count = 0
     for page in pagenator:
         items = page.get('Items')
@@ -42,9 +42,6 @@ if __name__ == "__main__":
                     category = "상의"
                 else:
                     category = "하의"
-                if category == "하의":
-                    continue
-
                 images = aws_manager.get_product_images_from_paginator(item)
                 logger.debug(f"이미지 정보 리스트 : {images}")   
                 download_images_sync(images)
@@ -59,7 +56,7 @@ if __name__ == "__main__":
                 print(deep_caption)
                 print(color_images)
                 print(text_images)
-                break
+                sys.exit()
                 
                 
                 # dynamodb 반영 (caption PENDING => COMPLETED)

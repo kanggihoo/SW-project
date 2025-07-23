@@ -24,11 +24,11 @@ def setup_logging():
     root = logging.getLogger()
     root.handlers = []
     handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s : %(filename)s - %(lineno)d')
     handler.setFormatter(formatter)
     root.addHandler(handler)
-    root.setLevel(logging.INFO)
+    
 
 # AWS Manager fixture
 @pytest.fixture(scope="session")
@@ -37,20 +37,22 @@ def aws_manager():
 
 class TestImagePipeline:
     @pytest.fixture
-    def first_item(self, aws_manager: AWSManager, item_index: int=1)->dict:
+    def first_item(self, aws_manager: AWSManager, item_index: int=0)->dict:
         """제품 데이터를 가져오는 fixture
         
         Args:
             item_index (int, optional): 가져올 아이템의 인덱스. Defaults to 0.
         """
         paginator = aws_manager.dynamodb_manager.get_product_pagenator(
-            sub_category=1005, 
-            condition={"curation_status": "COMPLETED"}
+            partition={"key":"sub_category_curation_status","value":"1005#COMPLETED","type":"S"},
+            GSI_NAME = "CurationStatus-SubCategory-GSI"
         )
         
         first_page = next(iter(paginator))
         item = first_page['Items'][item_index]
+        item = aws_manager.dynamodb_manager._convert_dynamodb_item_to_python(item)
         logger.info(f"first_item product_id: {item['product_id']}")
+
         return item
 
     @pytest.fixture
@@ -72,29 +74,30 @@ class TestImagePipeline:
         return parsing_data_for_llm(product_pil_images, target_size=512)
     
    
-    # def test_1_paginator_validation(self, aws_manager: AWSManager):
-    #     """1단계: DynamoDB 페이지네이터 검증 테스트"""
-    #     paginator = aws_manager.dynamodb_manager.get_product_pagenator(
-    #         sub_category=1005, 
-    #         condition={"curation_status": "COMPLETED"}
-    #     )
+    def test_1_paginator_validation(self, aws_manager: AWSManager):
+        """1단계: DynamoDB 페이지네이터 검증 테스트"""
+        paginator = aws_manager.dynamodb_manager.get_product_pagenator(
+            partition={"key":"sub_category_curation_status","value":"1005#COMPLETED","type":"S"},
+            GSI_NAME = "CurationStatus-SubCategory-GSI"
+        )
         
-    #     assert paginator is not None
-    #     first_page = next(iter(paginator))
-    #     assert first_page is not None
-    #     assert 'Items' in first_page
-    #     assert 'Count' in first_page
-    #     assert first_page['Count'] > 0
+        assert paginator is not None
+        first_page = next(iter(paginator))
+        assert first_page is not None
+        assert 'Items' in first_page
+        assert 'Count' in first_page
+        assert first_page['Count'] > 0
         
-    #     first_item = first_page['Items'][1]
-    #     assert 'product_id' in first_item
-    #     assert 'representative_assets' in first_item
+        # first_item = first_page['Items'][1]
+        # assert 'product_id' in first_item
+        # assert 'representative_assets' in first_item
 
-    # def test_2_dynamodb_product_fetch(self, first_item):
-    #     """2단계: DynamoDB에서 제품 데이터 조회 테스트"""
-    #     assert first_item is not None
-    #     assert 'product_id' in first_item
-    #     assert 'representative_assets' in first_item
+    def test_2_dynamodb_product_fetch(self, first_item):
+        """2단계: DynamoDB에서 제품 데이터 조회 테스트"""
+        print(first_item)
+        assert first_item is not None
+        assert 'product_id' in first_item
+        assert 'representative_assets' in first_item
 
     # def test_3_image_url_extraction(self, product_images_url:list[ImageManager]):
     #     """3단계: 제품 데이터에서 이미지 URL 추출 테스트"""
@@ -199,6 +202,6 @@ class TestImagePipeline:
         print("*"*100)
         print(result["color_images"].model_dump())
         print("*"*100)
-        print(result["text_images"].model_dump())
+        print(result.get("text_images").model_dump() if result.get("text_images") else "no text image")
  
 

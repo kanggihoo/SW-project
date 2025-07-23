@@ -16,6 +16,8 @@ from .models import DeepCaptioningTopOutput, SimpleAttributeOutput, TextImageOCR
 from .models.product import ImageManager, Base64DataForLLM
 from .prompt import ColorCaptionPrompt, DeepImageCaptionPrompt, TextImageOCRPrompt
 from .config import Config, LLMInputKeys
+import logging 
+logger = logging.getLogger(__name__)
 class FashionCaptionGenerator:
     def __init__(self, config: Config = None):
         """패션 이미지 캡션 생성기 초기화"""
@@ -31,8 +33,6 @@ class FashionCaptionGenerator:
             self.config = Config()
         else:
             self.config = config
-            
-        self.logger = logging.getLogger(__name__)
         # self.model_name = self.config.get("DEFAULT_CAPTION_MODEL")
         self.caption_temperature = self.config.get("DEFAULT_CAPTION_TEMPERATURE")
         self.ocr_temperature = self.config.get("DEFAULT_OCR_TEMPERATURE")
@@ -45,7 +45,7 @@ class FashionCaptionGenerator:
                 project_name=self.config.get("DEFAULT_LANGCHAIN_PROJECT_NAME")
             )
         else:
-            self.logger.info("LangSmith tracing is disabled")
+           logger.info("LangSmith tracing is disabled")
 
     def _load_model(self, model_name: str , temperature: float = 0.0):
         """Gemini 모델 로드"""
@@ -56,27 +56,65 @@ class FashionCaptionGenerator:
         # Deep Captioning Chain 설정
         deep_model = self._load_model(self.config.get("DEFAULT_CAPTION_MODEL") , self.caption_temperature)
         deep_structured_model = deep_model.with_structured_output(DeepCaptioningTopOutput)
-        deep_prompt = DeepImageCaptionPrompt()
-        self.deep_chain = deep_prompt | deep_structured_model
+        self.deep_prompt = DeepImageCaptionPrompt()
+        self.deep_chain = self.deep_prompt | deep_structured_model
 
         # Color Analysis Chain 설정
         color_model = self._load_model(self.config.get("DEFAULT_COLOR_MODEL") , self.caption_temperature)
         color_structured_model = color_model.with_structured_output(SimpleAttributeOutput)
-        color_prompt = ColorCaptionPrompt()
-        self.color_chain = color_prompt | color_structured_model
+        self.color_prompt = ColorCaptionPrompt()
+        self.color_chain = self.color_prompt | color_structured_model
 
         # OCR Chain 설정
         ocr_model = self._load_model(self.config.get("DEFAULT_OCR_MODEL"), self.ocr_temperature)
         ocr_structured_model = ocr_model.with_structured_output(TextImageOCROutput)
-        ocr_prompt = TextImageOCRPrompt()
-        self.ocr_chain = ocr_prompt | ocr_structured_model
+        self.ocr_prompt = TextImageOCRPrompt()
+        self.ocr_chain = self.ocr_prompt | ocr_structured_model
 
         # Parallel Chain 설정
-        self.parallel_chain = RunnableParallel(
-            deep_caption=RunnableLambda(deep_prompt.extract_chain_input) | self.deep_chain,
-            color_images=RunnableLambda(color_prompt.extract_chain_input) | self.color_chain,
-            text_images=RunnableLambda(ocr_prompt.extract_chain_input) | self.ocr_chain
-        )
+        # self.parallel_chain = RunnableParallel(
+        #     deep_caption=RunnableLambda(deep_prompt.extract_chain_input) | self.deep_chain,
+        #     color_images=RunnableLambda(color_prompt.extract_chain_input) | self.color_chain,
+        #     text_images=RunnableLambda(ocr_prompt.extract_chain_input) | self.ocr_chain
+        # )
+    
+    def _validate_image_data(self, image_data: str, data_type: str) -> bool:
+        """base64 이미지 데이터 유효성 검증"""
+        if not image_data or image_data.strip() == "":
+            logger.warning(f"{data_type} 이미지 데이터가 비어있습니다.")
+            return False
+        return True
+
+    # def _create_default_ocr_output(self) -> TextImageOCROutput:
+    #     """기본 OCR 출력 생성"""
+    #     from .models.text_image_attributes import MultiSizeInfo
+    #     return TextImageOCROutput(
+    #         material_info=None,
+    #         size_info=MultiSizeInfo(is_exist=False, size_measurements=None),
+    #         care_info=None,
+    #         product_description=None
+    #     )
+
+    def _build_dynamic_chain(self , llm_input:dict[str , Any])-> RunnableParallel:
+        """동적 체인 생성"""
+        chain_components = {}
+        if self._validate_image_data(llm_input[LLMInputKeys.DEEP_CAPTION]["image_data"] , "Deep Caption"):
+            chain_components[LLMInputKeys.DEEP_CAPTION] = RunnableLambda(self.deep_prompt.extract_chain_input) | self.deep_chain
+        else:
+            raise ValueError("Deep Caption 이미지 데이터가 비어있습니다.")
+        
+        if self._validate_image_data(llm_input[LLMInputKeys.COLOR_IMAGES]["image_data"] , "Color Images"):
+            chain_components[LLMInputKeys.COLOR_IMAGES] = RunnableLambda(self.color_prompt.extract_chain_input) | self.color_chain
+        else:
+            raise ValueError("Color Images 이미지 데이터가 비어있습니다.")
+        
+        if self._validate_image_data(llm_input[LLMInputKeys.TEXT_IMAGES]["image_data"] , "Text Images"):
+            chain_components[LLMInputKeys.TEXT_IMAGES] = RunnableLambda(self.ocr_prompt.extract_chain_input) | self.ocr_chain
+
+
+        return RunnableParallel(**chain_components)
+
+
 
     def invoke(
         self,
@@ -101,12 +139,12 @@ class FashionCaptionGenerator:
         }
         try:
             # 병렬 실행 및 결과 반환
-            self.logger.info("이미지 분석 시작...")
-            results = self.parallel_chain.invoke(llm_input , config=config)
-            self.logger.info("이미지 분석 완료")
+            dynamic_parallel_chain = self._build_dynamic_chain(llm_input)
+            logger.info("이미지 분석 시작...")
+            results = dynamic_parallel_chain.invoke(llm_input , config=config)
+            logger.info("이미지 분석 완료")
 
             return results
 
         except Exception as e:
-            self.logger.error(f"이미지 분석 중 오류 발생: {e}")
-            raise
+            logger.error(f"이미지 분석 중 오류 발생: {e}")
