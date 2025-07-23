@@ -123,7 +123,7 @@ def db(config):
 
 
 def test_vector_qeury(db ):
-    results = db.vector_search("부드러운 아이보리 , 허리 밴딩 처리 , 시원하게 착용하기")
+    results = db.vector_search("라운드넥에 긴소매 기장을 가진 블랙 색상의 상의")
     print(results)
     
 
