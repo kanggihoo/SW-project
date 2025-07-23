@@ -40,6 +40,7 @@ if __name__ == "__main__":
                     main_category = item.get('main_category')
                     sub_category = item.get('sub_category')
                     product_id = item.get('product_id')
+                    representative_assets = item.get('representative_assets')
                     
                     #TODO : 하의 일때 model 처리 필요
                     if main_category == "TOP":
@@ -66,7 +67,8 @@ if __name__ == "__main__":
                             "deep_caption": deep_caption,
                             "color_images": color_images,
                             "text_images": text_images,
-                        }
+                        },
+                        "representative_assets": representative_assets
                     }
                     
                     #dynamodb 반영 (caption PENDING => COMPLETED)
