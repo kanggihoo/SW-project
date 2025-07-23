@@ -3,6 +3,11 @@ from typing import Dict, Any, Optional , List , override
 from pymongo.errors import DuplicateKeyError , BulkWriteError
 import logging
 logger = logging.getLogger(__name__)
+
+'''
+어떻게 데이터를 가지고 올 것인지에 대한 작성 
+
+'''
 class FashionRepository(BaseRepository):
     """패션 상품 전용 Repository"""
     
@@ -24,9 +29,9 @@ class FashionRepository(BaseRepository):
         """상품 ID로 조회"""
         try:
             product = self.collection.find_one({"_id": doc_id})
-            if product:
-                return self._process_product_output(product)
-            return None
+            # if product:
+            #     return self._process_product_output(product)
+            return product
         except Exception as e:
             logger.error(f"Error finding product by ID {doc_id}: {e}")
             return None
@@ -56,11 +61,11 @@ class FashionRepository(BaseRepository):
             if not self._validate_product_data(document):
                 return None
             
-            # 상품 데이터 전처리
-            processed_data = self._process_product_input(document)
+            # # 상품 데이터 전처리
+            # processed_data = self._process_product_input(document)
             
             # 삽입 실행
-            result = self.collection.insert_one(processed_data)
+            result = self.collection.insert_one(document)
             return str(result.inserted_id) if result.inserted_id else None
             
         except DuplicateKeyError:
@@ -77,12 +82,12 @@ class FashionRepository(BaseRepository):
             if not update_data:
                 return False
             
-            # 업데이트 데이터 전처리
-            processed_update = self._process_update_data(update_data)
+            # # 업데이트 데이터 전처리
+            # processed_update = self._process_update_data(update_data)
             
             result = self.collection.update_one(
                 {"_id": doc_id},
-                {"$set": processed_update}
+                {"$set": update_data}
             )
             
             return result.modified_count > 0
@@ -100,36 +105,41 @@ class FashionRepository(BaseRepository):
             logger.error(f"Error deleting product {doc_id}: {e}")
             return False
     
+    @override
+    def find(self , query: dict) -> List[Dict]:
+        """쿼리에 맞는 문서 조회"""
+        return self.collection.find(query)
+    
     # ============================================================================
     # 패션 도메인 특화 메서드들
     # ============================================================================
-    def find_products(self, 
-                     filter_query: Optional[Dict[str, Any]] = None,
-                     projection: Optional[Dict[str, int]] = None,
-                     sort_by: Optional[List[tuple]] = None,
-                     limit: Optional[int] = None,
-                     skip: Optional[int] = None) -> List[Dict[str, Any]]:
-        """고급 상품 검색 (필터링, 정렬, 페이징)"""
-        try:
-            cursor = self.collection.find(filter_query or {}, projection)
+    # def find_products(self, 
+    #                  filter_query: Optional[Dict[str, Any]] = None,
+    #                  projection: Optional[Dict[str, int]] = None,
+    #                  sort_by: Optional[List[tuple]] = None,
+    #                  limit: Optional[int] = None,
+    #                  skip: Optional[int] = None) -> List[Dict[str, Any]]:
+    #     """고급 상품 검색 (필터링, 정렬, 페이징)"""
+    #     try:
+    #         cursor = self.collection.find(filter_query or {}, projection)
             
-            if sort_by:
-                cursor = cursor.sort(sort_by)
-            if skip:
-                cursor = cursor.skip(skip)
-            if limit:
-                cursor = cursor.limit(limit)
+    #         if sort_by:
+    #             cursor = cursor.sort(sort_by)
+    #         if skip:
+    #             cursor = cursor.skip(skip)
+    #         if limit:
+    #             cursor = cursor.limit(limit)
             
-            products = []
-            for product in cursor:
-                processed_product = self._process_product_output(product)
-                products.append(processed_product)
+    #         products = []
+    #         for product in cursor:
+    #             processed_product = self._process_product_output(product)
+    #             products.append(processed_product)
             
-            return products
+    #         return products
             
-        except Exception as e:
-            logger.error(f"Error in advanced product search: {e}")
-            return []
+    #     except Exception as e:
+    #         logger.error(f"Error in advanced product search: {e}")
+    #         return []
     
     def find_by_category(self, category_main: str, category_sub: Optional[str] = None) -> List[Dict]:
         """카테고리별 상품 조회"""
@@ -138,6 +148,11 @@ class FashionRepository(BaseRepository):
             filter_dict["category_sub"] = category_sub
         
         return self.find_products(filter_query=filter_dict)
+    
+    def find_by_caption_status(self , caption_status: str) -> List[Dict]:
+        """캡션 상태별 상품 조회"""
+        query = self.query_builder.caption_status_filter(caption_status)
+        return self.find(query)
     
     # def get_product_stats(self) -> Dict[str, Any]:
     #     """상품 통계 정보"""

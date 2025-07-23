@@ -14,7 +14,7 @@ class DynamoDBManager:
         self.table_name = table_name
         self.projection_fields = config.get("DEFAULT_PROJECTION_FIELDS",[])
         self.pagenator_config = config.get("DEFAULT_PAGINATOR_CONFIG",{})
-
+        self.GSI_NAME = config.get("DEFAULT_GSI_NAME",None)
         self.client = None
         self._initialize_client()
     
@@ -133,15 +133,17 @@ class DynamoDBManager:
     # =============================================================================
 
     def get_product_pagenator(self ,
-                              sub_category: int,
-                              projection_fields:list[str],
-                              pagenator_config:dict,
-                              condition:dict|None = None ,
+                              partition:dict|None = None ,
+                              sub_category:int|None = None,
+                              GSI_NAME:str|None = None,
+                              projection_fields:list[str]=None,
+                              pagenator_config:dict=None,
                               ) -> Iterator[dict] | None:
         """조건에 맞는 제품 리스트 조회 (페이지네이터 반환)
 
         Args:
-            sub_category (int): 서브 카테고리 ID
+            projection_fields (list[str], optional): 조회할 필드 목록. Defaults to None.
+            pagenator_config (dict, optional): 페이지네이터 설정. Defaults to None.
             condition (dict, optional): 조회 조건. Defaults to None.
                 - curation_status: GSI 사용 시 필수 파티션 키
                 - product_id: 정렬 키 조건 (=, begins_with)
@@ -157,6 +159,8 @@ class DynamoDBManager:
             TypeError: 파라미터 타입이 올바르지 않은 경우
             ValueError: 파라미터 값이 올바르지 않은 경우
         """
+        projection_fields = projection_fields if projection_fields else self.projection_fields
+        pagenator_config = pagenator_config if pagenator_config else self.pagenator_config
         try:
             # DynamoDB 예약어 처리
             reserved_keywords = {"text"}
@@ -174,17 +178,17 @@ class DynamoDBManager:
             projection_expression = ", ".join(projection_expresssion_part)
             
                 
-            # condition 파라미터 처리
-            if condition is None:
-                condition = {}
+            # # condition 파라미터 처리
+            # if condition is None:
+            #     condition = {}
             
             # GSI 사용 여부 결정 (curation_status가 있으면 GSI 사용)
-            use_gsi = 'curation_status' in condition
+            use_gsi = GSI_NAME is not None
             
             # 기본 쿼리 파라미터 설정
             query_params = {
                 'TableName': self.table_name,
-                'PaginationConfig': pagenator_config
+                'PaginationConfig': pagenator_config 
             }
             
             # KeyConditionExpression 및 ExpressionAttributeValues 구성
@@ -194,12 +198,14 @@ class DynamoDBManager:
             
             if use_gsi:
                 # GSI 사용 시
-                query_params['IndexName'] = 'CurationStatus-RecommendationOrder-GSI'
+                query_params['IndexName'] = GSI_NAME
                 
                 # 파티션 키: curation_status
-                curation_status = condition['curation_status']
-                key_condition_parts.append('curation_status = :curation_status')
-                expression_values[':curation_status'] = {'S': curation_status}
+                partition_key = partition.get("key")
+                partition_value = partition.get("value")
+                partition_type = partition.get("type")
+                key_condition_parts.append(f'{partition_key} = :{partition_key}')
+                expression_values[f':{partition_key}'] = {partition_type: partition_value}
                 
             else:
                 # 파티션 키: sub_category

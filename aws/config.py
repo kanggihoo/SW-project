@@ -23,7 +23,7 @@ class Config():
                 "table_name": "ProductAssets",
                 "DEFAULT_PROJECTION_FIELDS": ("sub_category", "product_id", "main_category", "representative_assets" , "text"),
                 "DEFAULT_PAGINATOR_CONFIG": get_default_pagenator_config(),
-                "DEFAULT_CACHE_DIR":DEFAULT_CACHE_DIR.as_posix()
+                "DEFAULT_CACHE_DIR":DEFAULT_CACHE_DIR.as_posix(),
             },
             "cache": {
                 "DEFAULT_CACHE_DIR":DEFAULT_CACHE_DIR.as_posix()
