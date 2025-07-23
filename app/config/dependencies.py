@@ -11,6 +11,8 @@ from aws.aws_manager import AWSManager
 from aws.s3 import S3Manager
 from aws.dynamodb import DynamoDBManager
 
+from app.services.search import SearchService
+
 # =============================================================================
 # DB 관련 의존성 
 # =============================================================================
@@ -52,6 +54,15 @@ def get_aws_manager_dependency()->AWSManager:
     return get_aws_manager()
 
 # =============================================================================
+# 서비스 관련 의존성 
+# =============================================================================
+@lru_cache()
+def get_search_service_dependency()->SearchService:
+    s3_manager = get_s3_manager_dependency()
+    repository = get_fashion_repo_dependency()
+    return SearchService(s3_manager , repository)
+
+# =============================================================================
 # 의존성 타입 어노테이션 정의
 # =============================================================================
 
@@ -63,8 +74,5 @@ AWSManagerDep = Annotated[AWSManager , Depends(get_aws_manager_dependency)]
 S3ManagerDep = Annotated[S3Manager , Depends(get_s3_manager_dependency)]
 DynamoDBManagerDep = Annotated[DynamoDBManager , Depends(get_dynamodb_manager_dependency)]
 
-
-
-
-
-
+# 서비스 관련
+SearchServiceDep = Annotated[SearchService , Depends(get_search_service_dependency)]

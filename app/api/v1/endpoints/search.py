@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi import Body
 from typing import Annotated, List, Dict, Any
 from pydantic import Field
-from app.config.dependencies import RepositoryDep, AWSManagerDep, DynamoDBManagerDep , S3ManagerDep
+from app.config.dependencies import RepositoryDep, AWSManagerDep, DynamoDBManagerDep , S3ManagerDep , SearchServiceDep
 from pydantic import BaseModel
 router = APIRouter(
     prefix="/search",
@@ -10,17 +10,16 @@ router = APIRouter(
 )
 
 class SearchRequest(BaseModel):
-    messages : List[str]
+    messages : str = Field(..., description="검색 쿼리")
 
 class SearchResponse(BaseModel):
     success : Annotated[bool , Field(default=True)]
     message : Annotated[str , Field(default="Success")]
-    data : Annotated[List[Dict[str, Any]] , Field(default_factory=list)]
+    data : Annotated[Dict[str, Any] , Field(default={})]
        
 @router.post("/" , response_model=SearchResponse)
 async def search_product(
-    repository: RepositoryDep,
-    s3_manager: S3ManagerDep,
+    search_service:SearchServiceDep,
     request: Annotated[SearchRequest , Body()]
 ):
     try:
@@ -32,14 +31,10 @@ async def search_product(
         #     item["representative_image_url"] = url
         #     data.append(item)
             # item["representative_image_url"] = url
-
-        data = []
-        s3_key = ["TOP/1002/1006161/segment/0_0.jpg" , "BOTTOM/3002/1014964/segment/0_0.jpg"]
-        for key in s3_key:
-            url = s3_manager.generate_presigned_url(key)
-            data.append({"representative_image_url":url})
-
-        return SearchResponse(data=data)
+        query = request.messages
+        result = search_service.vector_search(query)
+        print(result)
+        return SearchResponse(data=result)
     except Exception as e:
         return SearchResponse(success=False, message=str(e))
 
