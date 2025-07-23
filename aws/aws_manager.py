@@ -80,21 +80,21 @@ class AWSManager:
     def get_product_images_from_paginator(self, item:dict) -> list[ImageManager]:
         """dynanodb의 페이지네이터를 통해 조회한 1개의 데이터를 파싱하여 S3 에서 다운로드 가능한 url 반환
         Args:
-            item (dict): dynamodb 페이지네이터를 통해 조회한 1개의 데이터
+            item (dict): dynamodb 페이지네이터를 통해 조회한 1개의 데이터(dynamodb 타입 변환 후)
 
         Returns:
             list[ImageManager]: 이미지 정보 리스트
         """
        
-        converted_item = self.dynamodb_manager._convert_dynamodb_item_to_python(item)
-        success, images = self._parse_data_for_caption(converted_item)
+        # converted_item = self.dynamodb_manager._convert_dynamodb_item_to_python(item)
+        success, images = self._parse_data_for_caption(item)
         if not success:
-            logger.error(f"데이터 파싱간 오류 발생. product_id : {converted_item['product_id']} , 데이터 : {converted_item}")
+            logger.error(f"데이터 파싱간 오류 발생. product_id : {item['product_id']} , 데이터 : {item}")
         
         product_model = ProductManager(
-            main_category=converted_item['main_category'],
-            product_id=converted_item['product_id'],
-            sub_category=converted_item['sub_category'],
+            main_category=item['main_category'],
+            product_id=item['product_id'],
+            sub_category=item['sub_category'],
             images=images
         )
         

@@ -133,11 +133,11 @@ class DynamoDBManager:
     # =============================================================================
 
     def get_product_pagenator(self ,
-                              projection_fields:list[str],
-                              pagenator_config:dict,
                               partition:dict|None = None ,
                               sub_category:int|None = None,
                               GSI_NAME:str|None = None,
+                              projection_fields:list[str]=None,
+                              pagenator_config:dict=None,
                               ) -> Iterator[dict] | None:
         """조건에 맞는 제품 리스트 조회 (페이지네이터 반환)
 
