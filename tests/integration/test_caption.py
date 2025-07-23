@@ -37,7 +37,7 @@ def aws_manager():
 
 class TestImagePipeline:
     @pytest.fixture
-    def first_item(self, aws_manager: AWSManager, item_index: int=0)->dict:
+    def first_item(self, aws_manager: AWSManager, item_index: int=1)->dict:
         """제품 데이터를 가져오는 fixture
         
         Args:
@@ -194,7 +194,7 @@ class TestImagePipeline:
         assert base64_data_for_llm.success is True
 
         #TODO : 텍스트 이미지 없는 경우에는 ??? 
-        result = fashion_caption_generator.invoke(base64_data_for_llm , category="상의")
+        result = fashion_caption_generator.invoke(base64_data_for_llm , category="상의" , has_size=False)
         assert result is not None
         assert result["deep_caption"] is not None
         assert result["color_images"] is not None

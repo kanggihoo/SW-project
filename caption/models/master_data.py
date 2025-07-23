@@ -46,7 +46,7 @@ class SimpleAttributeOutput(BaseModel):
         description="의류의 색상 분석 결과. 대표 색상명, 정확한 HEX 코드, 색상 속성 태그(채도/명도)를 포함한 완전한 색상 정보"
     )]
 
-class TextImageOCROutput(BaseModel):
+class TextImageOCROutput_Full(BaseModel):
     """텍스트 이미지에서 추출된 의류 정보 종합"""
     material_info: Annotated[str|None, Field(
         default=None,
@@ -64,6 +64,22 @@ class TextImageOCROutput(BaseModel):
         default=None,
         description="의류의 소개 문구, 주요특징을 종합하여 요약한 상품 설명"
     )]
+
+class TextImageOCROutput_NoSize(BaseModel):
+    """텍스트 이미지에서 추출된 의류 정보 종합"""
+    material_info: Annotated[str|None, Field(
+        default=None,
+        description="의류의 소재 구성 정보 (예: '면 100%', '울 80%, 나일론 20%', '폴리에스터 65%, 레이온 30%, 스판덱스 5%')"
+    )]
+    care_info: Annotated[str|None, Field(
+        default=None,
+        description="의류 세탁 및 관리 방법"
+    )]
+    product_description: Annotated[str|None, Field(
+        default=None,
+        description="의류의 소개 문구, 주요특징을 종합하여 요약한 상품 설명"
+    )]
+
 
 
 # class CombinedVLMOutput(BaseModel):

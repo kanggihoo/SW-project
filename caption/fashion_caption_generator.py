@@ -12,7 +12,7 @@ from langchain_core.runnables import RunnableConfig
 from dotenv import load_dotenv
 from processing.utils import images_to_base64 
 from .langchain_utils import setup_langsmith_tracing, setup_gemini_model
-from .models import DeepCaptioningTopOutput, SimpleAttributeOutput, TextImageOCROutput
+from .models import DeepCaptioningTopOutput, SimpleAttributeOutput, TextImageOCROutput_Full, TextImageOCROutput_NoSize
 from .models.product import ImageManager, Base64DataForLLM
 from .prompt import ColorCaptionPrompt, DeepImageCaptionPrompt, TextImageOCRPrompt
 from .config import Config, LLMInputKeys
@@ -65,18 +65,9 @@ class FashionCaptionGenerator:
         self.color_prompt = ColorCaptionPrompt()
         self.color_chain = self.color_prompt | color_structured_model
 
-        # OCR Chain 설정
-        ocr_model = self._load_model(self.config.get("DEFAULT_OCR_MODEL"), self.ocr_temperature)
-        ocr_structured_model = ocr_model.with_structured_output(TextImageOCROutput)
-        self.ocr_prompt = TextImageOCRPrompt()
-        self.ocr_chain = self.ocr_prompt | ocr_structured_model
+        # OCR Chain 설정 (동적으로 생성하므로 기본 모델만 로드 )
+        self.ocr_model = self._load_model(self.config.get("DEFAULT_OCR_MODEL"), self.ocr_temperature)
 
-        # Parallel Chain 설정
-        # self.parallel_chain = RunnableParallel(
-        #     deep_caption=RunnableLambda(deep_prompt.extract_chain_input) | self.deep_chain,
-        #     color_images=RunnableLambda(color_prompt.extract_chain_input) | self.color_chain,
-        #     text_images=RunnableLambda(ocr_prompt.extract_chain_input) | self.ocr_chain
-        # )
     
     def _validate_image_data(self, image_data: str, data_type: str) -> bool:
         """base64 이미지 데이터 유효성 검증"""
@@ -85,17 +76,7 @@ class FashionCaptionGenerator:
             return False
         return True
 
-    # def _create_default_ocr_output(self) -> TextImageOCROutput:
-    #     """기본 OCR 출력 생성"""
-    #     from .models.text_image_attributes import MultiSizeInfo
-    #     return TextImageOCROutput(
-    #         material_info=None,
-    #         size_info=MultiSizeInfo(is_exist=False, size_measurements=None),
-    #         care_info=None,
-    #         product_description=None
-    #     )
-
-    def _build_dynamic_chain(self , llm_input:dict[str , Any])-> RunnableParallel:
+    def _build_dynamic_chain(self , llm_input:dict[str , Any] , has_size: bool = True)-> RunnableParallel:
         """동적 체인 생성"""
         chain_components = {}
         if self._validate_image_data(llm_input[LLMInputKeys.DEEP_CAPTION]["image_data"] , "Deep Caption"):
@@ -109,17 +90,33 @@ class FashionCaptionGenerator:
             raise ValueError("Color Images 이미지 데이터가 비어있습니다.")
         
         if self._validate_image_data(llm_input[LLMInputKeys.TEXT_IMAGES]["image_data"] , "Text Images"):
-            chain_components[LLMInputKeys.TEXT_IMAGES] = RunnableLambda(self.ocr_prompt.extract_chain_input) | self.ocr_chain
+            include_size = not has_size
+            ocr_chain , ocr_prompt = self._create_ocr_chain(include_size)
+            chain_components[LLMInputKeys.TEXT_IMAGES] = RunnableLambda(ocr_prompt.extract_chain_input) | ocr_chain
 
 
         return RunnableParallel(**chain_components)
 
+    def _create_ocr_chain(self , include_size: bool = True)-> tuple[RunnableLambda, RunnableLambda]:
+        """OCR 체인 생성 및 프롬프트 반환
 
+        Args:
+            has_size (bool, optional): 사이즈 정보 포함 여부. Defaults to True.
+        Returns:
+            tuple[RunnableLambda, RunnableLambda]: (OCR 체인 , OCR 프롬프트)
+        """
+        
+        output_model = TextImageOCROutput_Full if include_size else TextImageOCROutput_NoSize
+        prompt = TextImageOCRPrompt(include_size=include_size)
+        structured_model = self.ocr_model.with_structured_output(output_model)
+
+        return prompt | structured_model , prompt
 
     def invoke(
         self,
         base64_data_for_llm: Base64DataForLLM,
         category: str,
+        has_size: bool = True,
         config: RunnableConfig = None
     ) -> Dict[str, Any]:
         """상품 이미지 분석 실행"""
@@ -139,7 +136,7 @@ class FashionCaptionGenerator:
         }
         try:
             # 병렬 실행 및 결과 반환
-            dynamic_parallel_chain = self._build_dynamic_chain(llm_input)
+            dynamic_parallel_chain = self._build_dynamic_chain(llm_input , has_size=has_size)
             logger.info("이미지 분석 시작...")
             results = dynamic_parallel_chain.invoke(llm_input , config=config)
             logger.info("이미지 분석 완료")
