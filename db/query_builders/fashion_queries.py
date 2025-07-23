@@ -39,28 +39,38 @@ class FashionQueryBuilder:
     #             "total_spent": {"$sum": "$orders.amount"}
     #         }}
     #     ]
-    def vector_search_pipeline(self, user_query:str, embedding_factory:Callable[[str], list[float]], config:Dict):
-        embedding = embedding_factory(user_query)
+    def vector_search_pipeline(self, user_query:str, embedding_factory:Callable[[str], list[float]]):
+        embedding = embedding_factory(user_query)[0]
         pipeline = [
             {
                 "$vectorSearch": {
-                    "index": config["vector_index_name"],
+                    "index": "tmp",
                     "queryVector": embedding,
                     "exact": False,
-                    "path": "plot_embedding",
+                    "path": "embedding.comprehensive_description.vector",
                     "numCandidates": 100,
                     "limit": 5,
                 }
             },
             {
                 "$project":{
-                    "fullplot": 1,
-                    "type": 1,
+                    "product_id":1,
+                    "main_category":1,
+                    "sub_category":1,
+                    # "deep_caption":1,
+                    "representative_assets":1,
+                    # "caption_info":1,
                     "score":{
                         "$meta" : "vectorSearchScore"
-                    }
+                    },   
                 }
             }
+            # },
+            # {
+            #     "$replaceRoot": { "newRoot": { "$mergeObjects": ["$document", { "score": "$score" }] } }
+            #     # 'document' 필드를 루트로 승격하고, 'score' 필드를 병합
+            #     # 이렇게 하면 'score'가 최상위 필드로 포함된 원래 문서 형태가 됩니다.
+            # }
         ]
         return pipeline 
         # results = collection.aggregate(pipeline)

@@ -2,6 +2,7 @@ from .base import BaseRepository
 from typing import Dict, Any, Optional , List , override
 from pymongo.errors import DuplicateKeyError , BulkWriteError
 import logging
+from embedding import get_embedding_with_jina
 logger = logging.getLogger(__name__)
 
 '''
@@ -57,9 +58,9 @@ class FashionRepository(BaseRepository):
     def create(self, document: Dict) -> Optional[str]:
         """상품 생성"""
         try:
-            # 상품 데이터 검증
-            if not self._validate_product_data(document):
-                return None
+            # # 상품 데이터 검증
+            # if not self._validate_product_data(document):
+            #     return None
             
             # # 상품 데이터 전처리
             # processed_data = self._process_product_input(document)
@@ -153,6 +154,11 @@ class FashionRepository(BaseRepository):
         """캡션 상태별 상품 조회"""
         query = self.query_builder.caption_status_filter(caption_status)
         return self.find(query)
+    
+    def vector_search(self , query: str) -> List[Dict]:
+        """벡터 검색"""
+        pipeline = self.query_builder.vector_search_pipeline(user_query=query , embedding_factory=get_embedding_with_jina)
+        return list(self.collection.aggregate(pipeline))
     
     # def get_product_stats(self) -> Dict[str, Any]:
     #     """상품 통계 정보"""

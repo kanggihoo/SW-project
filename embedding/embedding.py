@@ -35,7 +35,7 @@ def get_embedding_with_jina(texts: list[str] ,
         "input": texts
     }
     response = requests.post(url, json=data, headers=headers)
-    print(response.json())
+    # print(response.json())
     return [emb.get("embedding") for emb in response.json().get("data")]
 
 
