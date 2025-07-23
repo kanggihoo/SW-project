@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Any
 from db.config.database import DatabaseManager
 from db.config import Config
 from pymongo.collection import Collection
+from db.query_builders.fashion_queries import FashionQueryBuilder
 import os 
 class BaseRepository(ABC):
     """기본 Repository 추상 클래스"""
@@ -18,6 +19,7 @@ class BaseRepository(ABC):
         """
         self.db_manager = DatabaseManager(connection_string, database_name, collection_name)
         self.collection = self.db_manager.get_collection()
+        self.query_builder = FashionQueryBuilder()
     
     # ============================================================================
     # 연결 관리 메서드 (구현체 제공)
@@ -56,6 +58,10 @@ class BaseRepository(ABC):
     @abstractmethod
     def delete_by_id(self, doc_id: str) -> bool:
         """ID로 문서 삭제"""
+        pass
+    @abstractmethod
+    def find(self , query: dict) -> List[Dict]:
+        """쿼리에 맞는 문서 조회"""
         pass
     
     # ============================================================================
