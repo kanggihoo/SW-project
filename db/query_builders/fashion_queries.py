@@ -4,10 +4,19 @@ import logging
 from typing import List, Dict , Callable
 logger = logging.getLogger(__name__)
 
+'''
+원하는 데이터를 가져오기 위해서 mongodb 쿼리로 변환
+
+'''
 class FashionQueryBuilder:
     """MongoDB Atlas Search 를 사용한 쿼리/벡터 검색 파이프라인 생성
     Fashion 관련 쿼리/파이프라인 생성
     """
+    def __init__(self):
+        pass
+
+    def caption_status_filter(self , caption_status: str) -> dict:
+        return {"caption_info.caption_status": caption_status}
     
     # def get_active_users_pipeline(self) -> List[Dict]:
     #     return [
@@ -30,7 +39,7 @@ class FashionQueryBuilder:
     #             "total_spent": {"$sum": "$orders.amount"}
     #         }}
     #     ]
-    def get_pipeline_for_vector_search(self, user_query:str, embedding_factory:Callable[[str], list[float]], config:Dict):
+    def vector_search_pipeline(self, user_query:str, embedding_factory:Callable[[str], list[float]], config:Dict):
         embedding = embedding_factory(user_query)
         pipeline = [
             {
