@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
 
     fashion_caption_generator = FashionCaptionGenerator()
-    pagenator = aws_manager.dynamodb_manager.get_product_pagenator(sub_category=1005 , condition={"curation_status":"COMPLETED"})
+    pagenator = aws_manager.dynamodb_manager.get_product_pagenator(partition={"key":"curation_status","value":"COMPLETED","type":"S"},GSI_NAME = "CurationStatus-RecommendationOrder-GSI")
     count = 0
     for page in pagenator:
         items = page.get('Items')
