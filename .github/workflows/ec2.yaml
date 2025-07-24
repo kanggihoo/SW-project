@@ -46,6 +46,7 @@ jobs:
             echo "📁 프로젝트 디렉토리를 생성하고 리포지토리를 clone합니다..."
             git clone https://github.com/kanggihoo/SW-project.git
             cd $PROJECT_DIR
+            git pull origin ${BRANCH_NAME}
           else
             echo "📁 기존 프로젝트 디렉토리를 사용합니다..."
             cd $PROJECT_DIR
@@ -82,7 +83,7 @@ jobs:
 
           # FastAPI 서버 백그라운드로 실행
           echo "FastAPI 서버를 시작합니다..."
-          nohup uv run uvicorn main:app --host 0.0.0.0 --port 8000 > ../fastapi.log 2>&1 &
+          nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 > ../fastapi.log 2>&1 &
           echo "FastAPI 서버 시작 명령 실행 완료."
 
           # 프로세스 확인
