@@ -21,15 +21,18 @@ jobs:
         username: ${{ secrets.AI_SERVER_EC2_USERNAME }}
         key: ${{ secrets.AI_SERVER_EC2_SSH_KEY }}
         script: |
-            # 현재 브랜치 정보를 환경변수로 전달
+
+
+            # --- 변수 설정 및 초기화 ---
             BRANCH_NAME="${{ github.ref_name }}"
-            echo "현재 배포 브랜치: ${BRANCH_NAME}"
-            echo "BRANCH_NAME 변수 값: '$BRANCH_NAME'"
-            
-            echo "작업 시작: $(date)" # 디버깅을 위한 타임스탬프
             HOME_DIR="/home/${{ secrets.AI_SERVER_EC2_USERNAME }}"
             PROJECT_DIR="${HOME_DIR}/SW-project"
+            SERVICE_NAME="fastapi-app.service" # systemd 서비스 이름
 
+            echo "현재 배포 브랜치: ${BRANCH_NAME}"
+            echo "작업 시작: $(date)"
+
+           
 
             # Git 설치 확인 및 설치 (Amazon Linux용)
             if ! command -v git &> /dev/null; then
@@ -40,27 +43,26 @@ jobs:
             else
                 echo "git이 이미 설치되어 있습니다."
             fi
-
+                
+            # --- Git 프로젝트 클론/풀 ---
             if [ ! -d "$PROJECT_DIR" ]; then
                 echo "📁 프로젝트 디렉토리를 생성하고 리포지토리를 clone합니다..."
                 git clone https://github.com/kanggihoo/SW-project.git
-                cd $PROJECT_DIR
                 git pull origin ${BRANCH_NAME}
             else
                 echo "📁 기존 프로젝트 디렉토리를 사용합니다..."
-                cd $PROJECT_DIR
                 echo "git pull origin ${BRANCH_NAME} 실행 중..."
                 git pull origin ${BRANCH_NAME}
             fi
-            echo "저장소 클론 완료."
+            echo "저장소 클론/pull 완료."
 
-            echo "🔄 기존 서비스를 중지합니다..."
-            # 포트 기반 정리 (안전함)
-            echo "포트 8000 정리 중..."
-            lsof -ti:8000 | xargs -r kill -TERM 2>/dev/null || true
-            sleep 3
+            # echo "🔄 기존 서비스를 중지합니다..."
+            # # 포트 기반 정리 (안전함)
+            # echo "포트 8000 정리 중..."
+            # lsof -ti:8000 | xargs -r kill -TERM 2>/dev/null || true
+            # sleep 3
 
-            # uv 설치 확인 및 설치
+            # --- uv 설치 및 Python 가상환경 설정 ---
             if ! command -v uv &> /dev/null; then
                 echo "uv가 설치되어 있지 않습니다. 설치를 진행합니다..."
                 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -69,7 +71,8 @@ jobs:
             else
                 echo "uv가 이미 설치되어 있습니다."
             fi
-
+            
+            cd $PROJECT_DIR # 프로젝트 디렉토리로 이동 확인
             # Python 가상환경 확인 및 생성
             if [ ! -d ".venv" ]; then
                 echo "📦 Python 가상환경을 생성합니다..."
@@ -80,26 +83,58 @@ jobs:
             uv sync
             echo "가상환경 및 의존성 설치 완료."
 
+         
+            # --- 환경 변수 (.env) 파일 생성/업데이트 ---
+            echo "환경 변수 파일을 생성/업데이트 중..."
+            # .env 파일 생성 또는 덮어쓰기
+            cat << EOF > "$PROJECT_DIR/.env"
+            MONGODB_ATLAS_URI="${{ secrets.MONGODB_ATLAS_URI }}"
+            JINA_API_KEY="${{ secrets.JINA_API_KEY }}"
+            OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
+            USE_ATLAS="${{ secrets.USE_ATLAS }}"
+            GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
+            # 필요하다면 여기에 추가 환경 변수를 정의하세요.
+            EOF
+            chmod 600 "$PROJECT_DIR/.env" # .env 파일 권한 설정 (소유자만 읽기/쓰기 가능)
+            echo "환경 변수 파일 생성/업데이트 및 권한 설정 완료."
+            
+            # --- systemd 서비스 파일 생성/업데이트 ---
+            echo "systemd 서비스 파일을 생성/업데이트 중..."
+            # systemd 서비스 파일 생성 (root 권한 필요)
+            sudo bash -c "cat << EOF > /etc/systemd/system/${SERVICE_NAME}
+            [Unit]
+            Description=FastAPI application service
+            After=network.target
 
-            # FastAPI 서버 백그라운드로 실행
-            echo "FastAPI 서버를 시작합니다..."
-            # FastAPI 서버 백그라운드로 실행 부분을 다음과 같이 수정
-            nohup bash -c 'source ~/.bashrc && source .venv/bin/activate && \
-            MONGODB_ATLAS_URI="${{ secrets.MONGODB_ATLAS_URI }}" \
-            JINA_API_KEY="${{ secrets.JINA_API_KEY }}" \
-            OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-            USE_ATLAS="${{ secrets.USE_ATLAS }}" \
-            GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}" \
-            uv run uvicorn app.main:app --host 0.0.0.0 --port 8000' > ../fastapi.log 2>&1 &
-            echo "FastAPI 서버 시작 명령 실행 완료."
+            [Service]
+            User=${{ secrets.AI_SERVER_EC2_USERNAME }}
+            WorkingDirectory=${PROJECT_DIR}
+            ExecStart=${PROJECT_DIR}/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+            Restart=always
+            RestartSec=10
+            EnvironmentFile=${PROJECT_DIR}/.env # .env 파일에서 환경 변수 로드
 
-          # 프로세스 확인
-          # sleep 5
-          # if pgrep -f "uvicorn" > /dev/null; then
-          #   echo "FastAPI 서버가 성공적으로 시작되었습니다!"
-          #   echo "로그 확인: tail -f ~/fastapi.log"
-          # else
-          #   echo "FastAPI 서버 시작에 실패했습니다. 로그를 확인하세요."
-          #   tail -n 20 ../fastapi.log
-          #   exit 1 # 서버 시작 실패 시 워크플로우 실패
-          # fi
+            [Install]
+            WantedBy=multi-user.target
+            EOF"
+            echo "systemd 서비스 파일 생성/업데이트 완료."
+
+            # --- systemd 서비스 재로드, 활성화 및 재시작 ---
+            echo "systemd 서비스 데몬 재로드, 활성화 및 재시작 중..."
+            sudo systemctl daemon-reload           # systemd 설정 다시 로드
+            sudo systemctl enable ${SERVICE_NAME}  # 부팅 시 자동 시작 활성화
+            sudo systemctl restart ${SERVICE_NAME} # 서비스 재시작 (최신 코드 및 설정 적용)
+            echo "FastAPI systemd 서비스 재시작 명령 실행 완료."
+
+            # --- 서비스 상태 확인 ---
+            sleep 5 # 서비스 시작 대기
+            if systemctl is-active --quiet ${SERVICE_NAME}; then
+                echo "FastAPI 서버가 성공적으로 시작되었습니다!"
+                echo "로그 확인: journalctl -u ${SERVICE_NAME} -f"
+            else
+                echo "FastAPI 서버 시작에 실패했습니다. 다음 명령어로 상태를 확인하세요:"
+                echo "sudo systemctl status ${SERVICE_NAME}"
+                journalctl -u ${SERVICE_NAME} --no-pager -n 50 # 최근 50줄 로그 출력
+                exit 1 # 서버 시작 실패 시 워크플로우 실패
+            fi
+            echo "배포 완료: $(date)"
