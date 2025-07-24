@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-# load_dotenv()
+load_dotenv()
 class Config_(dict):
     def __init__(self):
         _mongodb_local_dict ={
@@ -76,9 +76,3 @@ def get_config():
 # 기존 코드와의 호환성 
 Config = get_config
 
-if __name__ == "__main__":
-    config = get_config()
-    print(config.get_atlas_config())
-    print(config.get_local_config())
-    print(config.get_vector_search_config())
-    print(config.get_connection_config())

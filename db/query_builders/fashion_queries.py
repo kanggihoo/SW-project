@@ -51,7 +51,7 @@ class FashionQueryBuilder:
         index_name = index_name or self.vector_search_config.get("DEFAULT_VECTOR_INDEX")
         embedding_field_path = embedding_field_path or self.vector_search_config.get("EMBEDDING_FIELD_PATH")
         num_candidates = num_candidates or self.vector_search_config.get("DEFAULT_NUM_CANDIDATES")
-        limit = limit or self.vector_search_config.get("DEFAULT_LIMIT")
+        
 
 
         embedding = embedding_factory(user_query)[0]

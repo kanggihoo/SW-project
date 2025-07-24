@@ -12,10 +12,18 @@ router = APIRouter(
 class SearchRequest(BaseModel):
     messages : str = Field(..., description="검색 쿼리")
 
-class SearchResponse(BaseModel):
+class SearchResultItem(BaseModel):
+    query : str
+    data : dict
+    total_count : int
+    message : str
+
+class BaseResponse(BaseModel):
     success : Annotated[bool , Field(default=True)]
     message : Annotated[str , Field(default="Success")]
-    data : Annotated[Dict[str, Any] , Field(default={})]
+class SearchResponse(BaseResponse):
+    """검색 결과 응답 모델"""
+    data : SearchResultItem
        
 @router.post("/" , response_model=SearchResponse)
 async def search_product(
@@ -32,8 +40,8 @@ async def search_product(
         #     data.append(item)
             # item["representative_image_url"] = url
         query = request.messages
-        result = search_service.vector_search(query)
-        return SearchResponse(data=result)
+        result = search_service.vector_search_one(query)
+        return SearchResponse(data=SearchResultItem(**result))
     except Exception as e:
-        return SearchResponse(success=False, message=str(e))
+        return SearchResponse(success=False, message=str(e) , data=SearchResultItem(query=query, data={}, total_count=0, message="Search failed"))
 
