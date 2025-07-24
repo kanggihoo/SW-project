@@ -33,7 +33,6 @@ async def search_product(
             # item["representative_image_url"] = url
         query = request.messages
         result = search_service.vector_search(query)
-        print(result)
         return SearchResponse(data=result)
     except Exception as e:
         return SearchResponse(success=False, message=str(e))

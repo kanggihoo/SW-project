@@ -20,8 +20,8 @@ class SearchService:
         try:
             representative_image = data.get("representative_assets")["color_variant"][0]
             product_id = data.get("product_id")
-            main_category = data.get("main_category")
-            sub_category = data.get("sub_category")
+            main_category = data.get("category_main")
+            sub_category = data.get("category_sub")
             s3_key = f"{main_category}/{sub_category}/{product_id}/{representative_image}"
             print(s3_key)
             return self._generate_s3_url(s3_key)
