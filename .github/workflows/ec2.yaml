@@ -117,27 +117,44 @@ jobs:
             EOF
             chmod 600 "$PROJECT_DIR/.env" # .env 파일 권한 설정 (소유자만 읽기/쓰기 가능)
             echo "환경 변수 파일 생성/업데이트 및 권한 설정 완료."
+
+            # --- [DEBUG] 생성된 파일 및 디렉토리 확인 ---
+            echo "--- [DEBUG] 프로젝트 디렉토리 내용 ---"
+            ls -la "${PROJECT_DIR}"
+            echo "--- [DEBUG] .env 파일 내용 ---"
+            cat "${PROJECT_DIR}/.env"
+            echo "-----------------------------------"
             
-            # --- systemd 서비스 파일 생성/업데이트 ---
-            echo "systemd 서비스 파일을 생성/업데이트 중..."
-            # systemd 서비스 파일 생성 (root 권한 필요)
-            sudo bash -c "cat << EOF > /etc/systemd/system/${SERVICE_NAME}
+            # --- systemd 서비스 파일 생성 ---
+            echo "⚙️ systemd 서비스 파일을 생성합니다..."
+            # 임시 파일에 먼저 내용을 쓴다 (변수 확장을 위해 EOF에 따옴표 없음)
+            cat << EOF > "${HOME_DIR}/temp-fastapi-app.service"
             [Unit]
-            Description=FastAPI application service
+            Description=FastAPI application service for SW-project
             After=network.target
 
             [Service]
             User=${{ secrets.AI_SERVER_EC2_USERNAME }}
+            Group=$(id -gn ${{ secrets.AI_SERVER_EC2_USERNAME }})
             WorkingDirectory=${PROJECT_DIR}
-            EnvironmentFile=${PROJECT_DIR}/.env # .env 파일에서 환경 변수 로드
+            EnvironmentFile=${PROJECT_DIR}/.env
             ExecStart=${PROJECT_DIR}/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
             Restart=always
             RestartSec=10
 
             [Install]
             WantedBy=multi-user.target
-            EOF"
-            echo "systemd 서비스 파일 생성/업데이트 완료."
+            EOF
+
+            # sudo를 이용해 최종 위치로 이동하고 권한 설정
+            sudo mv "${HOME_DIR}/temp-fastapi-app.service" "/etc/systemd/system/${SERVICE_NAME}"
+            sudo chmod 644 "/etc/systemd/system/${SERVICE_NAME}"
+            echo "✅ systemd 서비스 파일 생성 완료."
+
+            # --- [DEBUG] 생성된 systemd 서비스 파일 확인 ---
+            echo "--- [DEBUG] systemd 서비스 파일 내용 ---"
+            cat "/etc/systemd/system/${SERVICE_NAME}"
+            echo "----------------------------------------"
 
             # --- systemd 서비스 재로드, 활성화 및 재시작 ---
             echo "systemd 서비스 데몬 재로드, 활성화 및 재시작 중..."
