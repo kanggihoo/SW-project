@@ -55,8 +55,8 @@ class FashionQueryBuilder:
             {
                 "$project":{
                     "product_id":1,
-                    "main_category":1,
-                    "sub_category":1,
+                    "category_main":1,
+                    "category_sub":1,
                     # "deep_caption":1,
                     "representative_assets":1,
                     # "caption_info":1,
