@@ -44,7 +44,7 @@ jobs:
 
           if [ ! -d "$PROJECT_DIR" ]; then
             echo "📁 프로젝트 디렉토리를 생성하고 리포지토리를 clone합니다..."
-            git clone -b ${BRANCH_NAME} https://github.com/kanggihoo/SW-project.git
+            git clone https://github.com/kanggihoo/SW-project.git
             cd $PROJECT_DIR
           else
             echo "📁 기존 프로젝트 디렉토리를 사용합니다..."
