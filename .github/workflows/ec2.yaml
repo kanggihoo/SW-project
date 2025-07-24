@@ -23,14 +23,18 @@ jobs:
         script: |
 
 
-            # --- 변수 설정 및 초기화 ---
+            # --- 변수 설정 ---
             BRANCH_NAME="${{ github.ref_name }}"
             HOME_DIR="/home/${{ secrets.AI_SERVER_EC2_USERNAME }}"
             PROJECT_DIR="${HOME_DIR}/SW-project"
-            SERVICE_NAME="fastapi-app.service" # systemd 서비스 이름
+            SERVICE_NAME="fastapi-app.service"
+            REPO_URL="https://github.com/kanggihoo/SW-project.git"
 
-            echo "현재 배포 브랜치: ${BRANCH_NAME}"
-            echo "작업 시작: $(date)"
+            echo "================================================="
+            echo "🚀 배포 시작: $(date)"
+            echo "BRANCH: ${BRANCH_NAME}"
+            echo "PROJECT_DIR: ${PROJECT_DIR}"
+            echo "================================================="
 
            
 
@@ -44,23 +48,24 @@ jobs:
                 echo "git이 이미 설치되어 있습니다."
             fi
                 
-            # --- Git 프로젝트 클론/풀 ---
-            if [ ! -d "$PROJECT_DIR" ]; then
-                echo "📁 프로젝트 디렉토리를 생성하고 리포지토리를 clone합니다..."
-                git clone https://github.com/kanggihoo/SW-project.git
-                git pull origin ${BRANCH_NAME}
+            # --- Git 프로젝트 클론 또는 업데이트 ---
+            if [ ! -d "$PROJECT_DIR/.git" ]; then
+                echo "📁 프로젝트가 존재하지 않거나 Git 저장소가 아닙니다. 새로 clone 합니다..."
+                rm -rf "$PROJECT_DIR" # 기존 디렉토리가 있다면 정리
+                git clone "${REPO_URL}" "$PROJECT_DIR"
             else
-                echo "📁 기존 프로젝트 디렉토리를 사용합니다..."
-                echo "git pull origin ${BRANCH_NAME} 실행 중..."
-                git pull origin ${BRANCH_NAME}
+                echo "📁 기존 프로젝트 디렉토리를 업데이트합니다..."
             fi
-            echo "저장소 클론/pull 완료."
+      
+            # --- 프로젝트 디렉토리로 이동 ---
+            cd "$PROJECT_DIR" || { echo "❌ 프로젝트 디렉토리로 이동 실패"; exit 1; }
+            
+            echo "현재 작업 디렉토리: $(pwd)"
 
-            # echo "🔄 기존 서비스를 중지합니다..."
-            # # 포트 기반 정리 (안전함)
-            # echo "포트 8000 정리 중..."
-            # lsof -ti:8000 | xargs -r kill -TERM 2>/dev/null || true
-            # sleep 3
+            # --- Git 브랜치 업데이트 ---
+            echo "🔄 Git 저장소를 최신 상태로 업데이트합니다..."
+            git pull origin "${BRANCH_NAME}"
+
 
             # --- uv 설치 및 Python 가상환경 설정 ---
             if ! command -v uv &> /dev/null; then
@@ -84,16 +89,19 @@ jobs:
             echo "가상환경 및 의존성 설치 완료."
 
             echo "🔄 기존 서비스를 중지합니다..."
-            # 포트 기반 정리 (안전함)
-            echo "포트 8000 정리 중..."
-            lsof -ti:8000 | xargs -r kill -TERM 2>/dev/null || true
-            sleep 3
 
-            # systemctl도 이제 안전하게 사용 가능
-            if sudo systemctl is-active --quiet fastapi-app; then
-                sudo systemctl stop fastapi-app
-                sleep 3
+
+            # --- 기존 서비스 중지 ---
+            echo "🔄 기존 서비스를 중지합니다..."
+            if sudo systemctl is-active --quiet ${SERVICE_NAME}; then
+                sudo systemctl stop ${SERVICE_NAME}
+                echo "서비스 ${SERVICE_NAME} 중지 완료."
+            else
+                echo "서비스 ${SERVICE_NAME}는 실행 중이 아니었습니다."
             fi
+            # 포트 정리 (안전장치)
+            sudo lsof -ti:8000 | xargs -r sudo kill -9 || true
+            sleep 3
 
          
             # --- 환경 변수 (.env) 파일 생성/업데이트 ---
@@ -121,10 +129,10 @@ jobs:
             [Service]
             User=${{ secrets.AI_SERVER_EC2_USERNAME }}
             WorkingDirectory=${PROJECT_DIR}
+            EnvironmentFile=${PROJECT_DIR}/.env # .env 파일에서 환경 변수 로드
             ExecStart=${PROJECT_DIR}/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
             Restart=always
             RestartSec=10
-            EnvironmentFile=${PROJECT_DIR}/.env # .env 파일에서 환경 변수 로드
 
             [Install]
             WantedBy=multi-user.target
@@ -139,19 +147,18 @@ jobs:
             echo "FastAPI systemd 서비스 재시작 명령 실행 완료."
 
             # --- 서비스 상태 확인 ---
-            sleep 5 # 서비스 시작 대기
-            if systemctl is-active --quiet ${SERVICE_NAME}; then
-                echo "FastAPI 서버가 성공적으로 시작되었습니다!"
-                echo "로그 확인: journalctl -u ${SERVICE_NAME} -f"
+            sleep 5
+            if sudo systemctl is-active --quiet ${SERVICE_NAME}; then
+                echo "🎉 FastAPI 서버가 성공적으로 시작되었습니다!"
+                echo "서버 주소: http://${{ secrets.AI_SERVER_EC2_HOST }}:8000"
+                echo "로그 확인: sudo journalctl -u ${SERVICE_NAME} -f"
             else
-                echo "FastAPI 서버 시작에 실패했습니다. 다음 명령어로 상태를 확인하세요:"
-                echo "sudo systemctl status ${SERVICE_NAME}"
-                journalctl -u ${SERVICE_NAME} --no-pager -n 50 # 최근 50줄 로그 출력
-                exit 1 # 서버 시작 실패 시 워크플로우 실패
+                echo "❌ FastAPI 서버 시작에 실패했습니다."
+                echo "--- 최근 로그 50줄 ---"
+                sudo journalctl -u ${SERVICE_NAME} --no-pager -n 50
+                exit 1
             fi
 
-            # 배포 확인
-            echo "✅ 배포가 완료되었습니다!"
-            echo "📍 서버 주소: http://${{ secrets.AI_SERVER_EC2_HOST }}:8000"
-            
-            echo "배포 완료: $(date)"
+            echo "================================================="
+            echo "✅ 배포가 성공적으로 완료되었습니다: $(date)"
+            echo "================================================="
