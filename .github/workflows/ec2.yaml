@@ -81,6 +81,16 @@ jobs:
           uv sync
           echo "가상환경 및 의존성 설치 완료."
 
+          #환경변수 설정 
+          export MONGODB_ATLAS_URI=${{ secrets.MONGODB_ATLAS_URI }}
+          export JINA_API_KEY=${{ secrets.JINA_API_KEY }}
+          export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          export USE_ATLAS=${{ secrets.USE_ATLAS }}
+          export GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+          
+
+          echo "환경변수 설정 완료."
+
           # FastAPI 서버 백그라운드로 실행
           echo "FastAPI 서버를 시작합니다..."
           nohup uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 > ../fastapi.log 2>&1 &
