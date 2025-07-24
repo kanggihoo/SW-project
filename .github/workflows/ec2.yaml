@@ -51,49 +51,47 @@ jobs:
             cd $PROJECT_DIR
             echo "git pull origin ${BRANCH_NAME} 실행 중..."
             git pull origin ${BRANCH_NAME}
-            echo "git pull 완료. 현재 브랜치: $(git branch --show-current)"
           fi
           echo "저장소 클론 완료."
 
-        #   echo "🔄 기존 서비스를 중지합니다..."
-        #   # 포트 기반 정리 (안전함)
-        #   echo "포트 8000 정리 중..."
-        #   lsof -ti:8000 | xargs -r kill -TERM 2>/dev/null || true
-        #   sleep 3
+          echo "🔄 기존 서비스를 중지합니다..."
+          # 포트 기반 정리 (안전함)
+          echo "포트 8000 정리 중..."
+          lsof -ti:8000 | xargs -r kill -TERM 2>/dev/null || true
+          sleep 3
 
-        #   # uv 설치 확인 및 설치
-        #   if ! command -v uv &> /dev/null; then
-        #     echo "uv가 설치되어 있지 않습니다. 설치를 진행합니다..."
-        #     curl -LsSf https://astral.sh/uv/install.sh | sh
-        #     export PATH="$HOME/.local/bin:$PATH"
-        #     echo "uv 설치 및 PATH 설정 완료."
-        #   else
-        #     echo "uv가 이미 설치되어 있습니다."
-        #   fi
+          # uv 설치 확인 및 설치
+          if ! command -v uv &> /dev/null; then
+            echo "uv가 설치되어 있지 않습니다. 설치를 진행합니다..."
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            export PATH="$HOME/.local/bin:$PATH"
+            echo "uv 설치 및 PATH 설정 완료."
+          else
+            echo "uv가 이미 설치되어 있습니다."
+          fi
 
-        #    # Python 가상환경 확인 및 생성
-        #   if [ ! -d ".venv" ]; then
-        #     echo "📦 Python 가상환경을 생성합니다..."
-        #     uv venv
-        #   fi
-        #   echo "가상환경을 실행"
-        #   source .venv/bin/activate
-        #   uv sync
-        #   echo "가상환경 및 의존성 설치 완료."
+           # Python 가상환경 확인 및 생성
+          if [ ! -d ".venv" ]; then
+            echo "📦 Python 가상환경을 생성합니다..."
+            uv venv
+          fi
+          echo "가상환경을 실행"
+          source .venv/bin/activate
+          uv sync
+          echo "가상환경 및 의존성 설치 완료."
 
-        #   # FastAPI 서버 백그라운드로 실행
-        #   echo "FastAPI 서버를 시작합니다..."
-        #   nohup uv run uvicorn main:app --host 0.0.0.0 --port 8000 > ../fastapi.log 2>&1 &
-        #   echo "FastAPI 서버 시작 명령 실행 완료."
+          # FastAPI 서버 백그라운드로 실행
+          echo "FastAPI 서버를 시작합니다..."
+          nohup uv run uvicorn main:app --host 0.0.0.0 --port 8000 > ../fastapi.log 2>&1 &
+          echo "FastAPI 서버 시작 명령 실행 완료."
 
-        #   # 프로세스 확인
-        #   # sleep 5
-        #   # if pgrep -f "uvicorn" > /dev/null; then
-        #   #   echo "FastAPI 서버가 성공적으로 시작되었습니다!"
-        #   #   echo "로그 확인: tail -f ~/fastapi.log"
-        #   # else
-        #   #   echo "FastAPI 서버 시작에 실패했습니다. 로그를 확인하세요."
-        #   #   tail -n 20 ../fastapi.log
-        #   #   exit 1 # 서버 시작 실패 시 워크플로우 실패
-        #   # fi
-        #   echo "배포 프로세스 성공적으로 완료: $(date)"
+          # 프로세스 확인
+          # sleep 5
+          # if pgrep -f "uvicorn" > /dev/null; then
+          #   echo "FastAPI 서버가 성공적으로 시작되었습니다!"
+          #   echo "로그 확인: tail -f ~/fastapi.log"
+          # else
+          #   echo "FastAPI 서버 시작에 실패했습니다. 로그를 확인하세요."
+          #   tail -n 20 ../fastapi.log
+          #   exit 1 # 서버 시작 실패 시 워크플로우 실패
+          # fi
