@@ -83,6 +83,18 @@ jobs:
             uv sync
             echo "가상환경 및 의존성 설치 완료."
 
+            echo "🔄 기존 서비스를 중지합니다..."
+            # 포트 기반 정리 (안전함)
+            echo "포트 8000 정리 중..."
+            lsof -ti:8000 | xargs -r kill -TERM 2>/dev/null || true
+            sleep 3
+
+            # systemctl도 이제 안전하게 사용 가능
+            if sudo systemctl is-active --quiet fastapi-app; then
+                sudo systemctl stop fastapi-app
+                sleep 3
+            fi
+
          
             # --- 환경 변수 (.env) 파일 생성/업데이트 ---
             echo "환경 변수 파일을 생성/업데이트 중..."
@@ -137,4 +149,9 @@ jobs:
                 journalctl -u ${SERVICE_NAME} --no-pager -n 50 # 최근 50줄 로그 출력
                 exit 1 # 서버 시작 실패 시 워크플로우 실패
             fi
+
+            # 배포 확인
+            echo "✅ 배포가 완료되었습니다!"
+            echo "📍 서버 주소: http://${{ secrets.AI_SERVER_EC2_HOST }}:8000"
+            
             echo "배포 완료: $(date)"
