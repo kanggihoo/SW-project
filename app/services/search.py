@@ -11,7 +11,6 @@ class SearchService:
     def vector_search(self, query: str, limit: int = 5):
         #TODO : 유사도 검색할 후보 개수 받을 수 있도록 변경하고 
         max_similarity_data= self.repository.vector_search(query)[0]
-        print(max_similarity_data)
         representative_image_url = self._parsing_representative_image_url(max_similarity_data)
         max_similarity_data["image_url"] = representative_image_url
         return max_similarity_data
@@ -23,7 +22,6 @@ class SearchService:
             main_category = data.get("category_main")
             sub_category = data.get("category_sub")
             s3_key = f"{main_category}/{sub_category}/{product_id}/{representative_image}"
-            print(s3_key)
             return self._generate_s3_url(s3_key)
         except Exception as e:
             logger.error(f"Error parsing representative image: {e}")

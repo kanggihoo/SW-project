@@ -1,0 +1,181 @@
+name: Deploy FastAPI to EC2
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.AI_SERVER_EC2_HOST }}
+        username: ${{ secrets.AI_SERVER_EC2_USERNAME }}
+        key: ${{ secrets.AI_SERVER_EC2_SSH_KEY }}
+        script: |
+
+
+            # --- 변수 설정 ---
+            BRANCH_NAME="${{ github.ref_name }}"
+            HOME_DIR="/home/${{ secrets.AI_SERVER_EC2_USERNAME }}"
+            PROJECT_DIR="${HOME_DIR}/SW-project"
+            SERVICE_NAME="fastapi-app.service"
+            REPO_URL="https://github.com/kanggihoo/SW-project.git"
+
+            echo "================================================="
+            echo "🚀 배포 시작: $(date)"
+            echo "BRANCH: ${BRANCH_NAME}"
+            echo "PROJECT_DIR: ${PROJECT_DIR}"
+            echo "================================================="
+
+           
+
+            # Git 설치 확인 및 설치 (Amazon Linux용)
+            if ! command -v git &> /dev/null; then
+                echo "git이 설치되어 있지 않습니다. 설치를 진행합니다..."
+                sudo yum update -y # 패키지 목록 업데이트 (Amazon Linux)
+                sudo yum install git -y # git 설치 (Amazon Linux)
+                echo "git 설치 완료."
+            else
+                echo "git이 이미 설치되어 있습니다."
+            fi
+                
+            # --- Git 프로젝트 클론 또는 업데이트 ---
+            if [ ! -d "$PROJECT_DIR/.git" ]; then
+                echo "📁 프로젝트가 존재하지 않거나 Git 저장소가 아닙니다. 새로 clone 합니다..."
+                rm -rf "$PROJECT_DIR" # 기존 디렉토리가 있다면 정리
+                git clone "${REPO_URL}" "$PROJECT_DIR"
+            else
+                echo "📁 기존 프로젝트 디렉토리를 업데이트합니다..."
+            fi
+      
+            # --- 프로젝트 디렉토리로 이동 ---
+            cd "$PROJECT_DIR" || { echo "❌ 프로젝트 디렉토리로 이동 실패"; exit 1; }
+            
+            echo "현재 작업 디렉토리: $(pwd)"
+
+            # --- Git 브랜치 업데이트 ---
+            echo "🔄 Git 저장소를 최신 상태로 업데이트합니다..."
+            git pull origin "${BRANCH_NAME}"
+
+
+            # --- uv 설치 및 Python 가상환경 설정 ---
+            if ! command -v uv &> /dev/null; then
+                echo "uv가 설치되어 있지 않습니다. 설치를 진행합니다..."
+                curl -LsSf https://astral.sh/uv/install.sh | sh
+                export PATH="$HOME/.local/bin:$PATH"
+                echo "uv 설치 및 PATH 설정 완료."
+            else
+                echo "uv가 이미 설치되어 있습니다."
+            fi
+            
+            cd $PROJECT_DIR # 프로젝트 디렉토리로 이동 확인
+            # Python 가상환경 확인 및 생성
+            if [ ! -d ".venv" ]; then
+                echo "📦 Python 가상환경을 생성합니다..."
+                uv venv
+            fi
+            echo "가상환경을 실행"
+            source .venv/bin/activate
+            uv sync
+            echo "가상환경 및 의존성 설치 완료."
+
+            echo "🔄 기존 서비스를 중지합니다..."
+
+
+            # --- 기존 서비스 중지 ---
+            echo "🔄 기존 서비스를 중지합니다..."
+            if sudo systemctl is-active --quiet ${SERVICE_NAME}; then
+                sudo systemctl stop ${SERVICE_NAME}
+                echo "서비스 ${SERVICE_NAME} 중지 완료."
+            else
+                echo "서비스 ${SERVICE_NAME}는 실행 중이 아니었습니다."
+            fi
+            # 포트 정리 (안전장치)
+            sudo lsof -ti:8000 | xargs -r sudo kill -9 || true
+            sleep 3
+
+         
+            # --- 환경 변수 (.env) 파일 생성/업데이트 ---
+            echo "환경 변수 파일을 생성/업데이트 중..."
+            # .env 파일 생성 또는 덮어쓰기
+            cat << EOF > "$PROJECT_DIR/.env"
+            MONGODB_ATLAS_URI="${{ secrets.MONGODB_ATLAS_URI }}"
+            JINA_API_KEY="${{ secrets.JINA_API_KEY }}"
+            OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
+            USE_ATLAS="${{ secrets.USE_ATLAS }}"
+            GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
+            # 필요하다면 여기에 추가 환경 변수를 정의하세요.
+            EOF
+            chmod 600 "$PROJECT_DIR/.env" # .env 파일 권한 설정 (소유자만 읽기/쓰기 가능)
+            echo "환경 변수 파일 생성/업데이트 및 권한 설정 완료."
+
+            # --- [DEBUG] 생성된 파일 및 디렉토리 확인 ---
+            echo "--- [DEBUG] 프로젝트 디렉토리 내용 ---"
+            ls -la "${PROJECT_DIR}"
+            echo "--- [DEBUG] .env 파일 내용 ---"
+            cat "${PROJECT_DIR}/.env"
+            echo "-----------------------------------"
+            
+            # --- systemd 서비스 파일 생성 ---
+            echo "⚙️ systemd 서비스 파일을 생성합니다..."
+            # 임시 파일에 먼저 내용을 쓴다 (변수 확장을 위해 EOF에 따옴표 없음)
+            cat << EOF > "${HOME_DIR}/temp-fastapi-app.service"
+            [Unit]
+            Description=FastAPI application service for SW-project
+            After=network.target
+
+            [Service]
+            User=${{ secrets.AI_SERVER_EC2_USERNAME }}
+            Group=$(id -gn ${{ secrets.AI_SERVER_EC2_USERNAME }})
+            WorkingDirectory=${PROJECT_DIR}
+            EnvironmentFile=${PROJECT_DIR}/.env
+            ExecStart=${PROJECT_DIR}/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+            Restart=always
+            RestartSec=10
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+
+            # sudo를 이용해 최종 위치로 이동하고 권한 설정
+            sudo mv "${HOME_DIR}/temp-fastapi-app.service" "/etc/systemd/system/${SERVICE_NAME}"
+            sudo chmod 644 "/etc/systemd/system/${SERVICE_NAME}"
+            echo "✅ systemd 서비스 파일 생성 완료."
+
+            # --- [DEBUG] 생성된 systemd 서비스 파일 확인 ---
+            echo "--- [DEBUG] systemd 서비스 파일 내용 ---"
+            cat "/etc/systemd/system/${SERVICE_NAME}"
+            echo "----------------------------------------"
+
+            # --- systemd 서비스 재로드, 활성화 및 재시작 ---
+            echo "systemd 서비스 데몬 재로드, 활성화 및 재시작 중..."
+            sudo systemctl daemon-reload           # systemd 설정 다시 로드
+            sudo systemctl enable ${SERVICE_NAME}  # 부팅 시 자동 시작 활성화
+            sudo systemctl restart ${SERVICE_NAME} # 서비스 재시작 (최신 코드 및 설정 적용)
+            echo "FastAPI systemd 서비스 재시작 명령 실행 완료."
+
+            # --- 서비스 상태 확인 ---
+            sleep 5
+            if sudo systemctl is-active --quiet ${SERVICE_NAME}; then
+                echo "🎉 FastAPI 서버가 성공적으로 시작되었습니다!"
+                echo "서버 주소: http://${{ secrets.AI_SERVER_EC2_HOST }}:8000"
+                echo "로그 확인: sudo journalctl -u ${SERVICE_NAME} -f"
+            else
+                echo "❌ FastAPI 서버 시작에 실패했습니다."
+                echo "--- 최근 로그 50줄 ---"
+                sudo journalctl -u ${SERVICE_NAME} --no-pager -n 50
+                exit 1
+            fi
+
+            echo "================================================="
+            echo "✅ 배포가 성공적으로 완료되었습니다: $(date)"
+            echo "================================================="

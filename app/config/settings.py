@@ -12,7 +12,10 @@ class Settings(BaseSettings):
 
 
     
+<<<<<<< Updated upstream
     model_config = SettingsConfigDict(_env_file=".env")
+=======
+>>>>>>> Stashed changes
 
 
 @lru_cache
