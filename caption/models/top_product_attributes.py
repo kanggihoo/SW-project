@@ -69,13 +69,13 @@ class SubjectiveAttributes(BaseModel):
     )]
     style_tags: Annotated[list[StyleTag], Field(
         default_factory=list, 
-        description="상의의 스타일 태그들을 다중 선택 가능 (모던/미니멀, 캐주얼, 스트릿, 포멀/클래식 등)",
-        examples=[["캐주얼", "스트릿"], ["모던/미니멀", "심플 베이직"]]
+        description="상의의 스타일 태그들을 다중 선택 가능 (모던, 캐주얼, 스트릿, 포멀 등)",
+        examples=[["캐주얼", "스트릿"], ["모던", "심플 베이직"]]
     )]
     tpo_tags: Annotated[list[TPOTag], Field(
         default_factory=list, 
-        description="상의의 착용 상황(TPO) 태그들을 다중 선택 가능 (데일리, 오피스/비즈니스, 데이트/주말 등)",
-        examples=[["데일리", "데이트/주말"], ["오피스/비즈니스", "격식/하객"]]
+        description="상의의 착용 상황(TPO) 태그들을 다중 선택 가능 (데일리, 오피스, 데이트 등)",
+        examples=[["데일리", "데이트"], ["오피스", "격식"]]
     )]
 
 
