@@ -6,19 +6,19 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 from .base_types import (
     Neckline, SleeveLength,
-    FitType, StyleTag, TPOTag, PatternType, ClosureType
+    TopFitType, StyleTag, TPOTag, TopPatternType, TopClosureType
 )
 
 
-class PatternInfo(BaseModel):
+class TopPatternInfo(BaseModel):
     """상의 패턴 정보"""
-    type: Annotated[PatternType, Field(..., description="상의 주요 패턴 타입 선택", examples=["스트라이프", "체크", "플로럴", "지오메트릭", "솔리드"])]
+    type: Annotated[TopPatternType, Field(..., description="상의 주요 패턴 타입 선택", examples=["스트라이프", "체크", "플로럴", "지오메트릭", "솔리드"])]
     description: Annotated[str, Field(..., description="상의 패턴에 대한 상세 설명 (예: 세로 스트라이프, 대형 체크 패턴, 작은 꽃무늬 등)")]
 
 
-class ClosureInfo(BaseModel):
+class TopClosureInfo(BaseModel):
     """상의 여밈/장식 정보"""
-    type: Annotated[ClosureType, Field(..., description="여밈/장식 타입 선택", examples=["버튼/단추", "지퍼", "스냅 버튼", "스트링/끈"])]
+    type: Annotated[TopClosureType, Field(..., description="여밈/장식 타입 선택", examples=["버튼/단추", "지퍼", "스냅 버튼", "스트링/끈"])]
     description: Annotated[str, Field(..., description="여밈/장식 요소에 대한 상세 설명 (예: 앞면 중앙 버튼 3개, 측면 지퍼, 허리 스트링 등)")] 
 
 
@@ -43,15 +43,13 @@ class TopAttributes(BaseModel):
     상의의 정면 또는 후면에서 나타나는 구체적인 디자인 요소들을 정의합니다.
     패턴과 여밈/장식 요소는 상의의 개성과 기능성을 나타내는 중요한 속성입니다.
     """
-    pattern: Annotated[PatternInfo, Field(
+    pattern: Annotated[TopPatternInfo, Field(
         ..., 
-        description="상의에 적용된 주요 패턴 타입 선택",
-        examples=["스트라이프", "체크", "플로럴", "지오메트릭", "솔리드"]
+        description="상의에 적용된 주요 패턴 타입 선택 및 상세 설명"
     )]
-    closures_and_embellishments: Annotated[ClosureInfo, Field(
+    closures_and_embellishments: Annotated[TopClosureInfo, Field(
         ..., 
-        description="상의 주요 여밈 방식 타입 선택",
-        examples=["버튼/단추", "지퍼", "스냅 버튼", "스트링/끈", "여밈 없음"]
+        description="상의 주요 여밈 방식 타입 선택 및 상세 설명"
     )]
 
 # class BackAttributes(BaseModel):
@@ -64,7 +62,7 @@ class TopAttributes(BaseModel):
 
 class SubjectiveAttributes(BaseModel):
     """주관적 속성 Tags - 상의의 핏, 스타일, 착용 상황에 대한 주관적 평가 정보"""
-    fit: Annotated[FitType, Field(
+    fit: Annotated[TopFitType, Field(
         ..., 
         description="상의의 핏 타입을 하나만 선택",
         examples=["슬림 핏", "레귤러 핏/스탠다드 핏", "오버사이즈 핏"]

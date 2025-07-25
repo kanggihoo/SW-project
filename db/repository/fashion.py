@@ -30,8 +30,6 @@ class FashionRepository(BaseRepository):
         """상품 ID로 조회"""
         try:
             product = self.collection.find_one({"_id": doc_id})
-            # if product:
-            #     return self._process_product_output(product)
             return product
         except Exception as e:
             logger.error(f"Error finding product by ID {doc_id}: {e}")

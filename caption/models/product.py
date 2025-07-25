@@ -30,9 +30,9 @@ class Base64DataForLLM(BaseModel):
     LLM 입력에 맞는 데이터 모델
     
     Args:
-        deep_caption (str): 딥캡션 이미지
-        color_images (str): 색상 이미지
-        text_images (str): 텍스트 이미지
+        deep_caption (str): 딥캡션 이미지(base64)
+        color_images (str): 색상 이미지(base64)
+        text_images (str): 텍스트 이미지(base64)
         success (bool): 이미지 변환 성공 여부
         fail (int): pil image를 base64로 변환할때 실패한 이미지 개수
         color_count (int): 해당 제품의 색상 이미지 개수

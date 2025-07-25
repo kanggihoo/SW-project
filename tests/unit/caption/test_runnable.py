@@ -81,3 +81,5 @@ def test_fashion_caption_generator():
     print(result["color_analysis"])
     print("*"*100)
     print(result["text_image_ocr"])
+
+
