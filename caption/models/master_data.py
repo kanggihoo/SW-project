@@ -4,7 +4,8 @@
 
 from typing import Annotated
 from pydantic import BaseModel, Field
-from .top_product_attributes import  StructuredAttributes , ImageCaptions
+from .top_product_attributes import StructuredAttributes as TopStructuredAttributes, ImageCaptions as TopImageCaptions
+from .bottom_product_attributes import StructuredAttributes as BottomStructuredAttributes, ImageCaptions as BottomImageCaptions
 from .product_color_attributes import ColorInfo
 from .text_image_attributes import MultiSizeInfo
 
@@ -32,13 +33,21 @@ from .text_image_attributes import MultiSizeInfo
 # VLM 단계별 출력 모델들
 class DeepCaptioningTopOutput(BaseModel):
     """상의의 모든 구조화된 속성과 이미지 캡션을 포함한 종합 분석 결과"""
-    structured_attributes: Annotated[StructuredAttributes, Field(
+    structured_attributes: Annotated[TopStructuredAttributes, Field(
         description="상의의 모든 구조화된 속성 정보. 공통 속성(소매길이, 넥라인), 정면/후면별 디자인 요소(패턴, 여밈), 주관적 속성(핏, 스타일, TPO)을 체계적으로 분류하여 저장"
     )]
-    image_captions: Annotated[ImageCaptions, Field(
+    image_captions: Annotated[TopImageCaptions, Field(
         description="상의의 다양한 용도별 이미지 캡션 모음. 정면/후면 전용 설명, 디자인 디테일, 스타일 분위기, TPO 상황, 종합 설명 등 6가지 관점의 상세한 텍스트 캡션"
     )]
 
+class DeepCaptioningBottomOutput(BaseModel):
+    """하의의 모든 구조화된 속성과 이미지 캡션을 포함한 종합 분석 결과"""
+    structured_attributes: Annotated[BottomStructuredAttributes, Field(
+        description="하의의 모든 구조화된 속성 정보. 공통 속성(기장 길이), 정면/후면별 디자인 요소(패턴, 여밈), 주관적 속성(핏, 스타일, TPO)을 체계적으로 분류하여 저장"
+    )]
+    image_captions: Annotated[BottomImageCaptions, Field(
+        description="하의의 다양한 용도별 이미지 캡션 모음. 정면/후면 전용 설명, 디자인 디테일, 스타일 분위기, TPO 상황, 종합 설명 등 6가지 관점의 상세한 텍스트 캡션"
+    )]
 
 class SimpleAttributeOutput(BaseModel):
     """단순 속성 추출 단계 출력 - 주어진 의류의 색상 정보만을 전문적으로 분석한 결과"""

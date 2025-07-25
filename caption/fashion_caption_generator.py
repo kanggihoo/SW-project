@@ -12,7 +12,7 @@ from langchain_core.runnables import RunnableConfig
 from dotenv import load_dotenv
 from processing.utils import images_to_base64 
 from .langchain_utils import setup_langsmith_tracing, setup_gemini_model
-from .models import DeepCaptioningTopOutput, SimpleAttributeOutput, TextImageOCROutput_Full, TextImageOCROutput_NoSize
+from .models import DeepCaptioningTopOutput, DeepCaptioningBottomOutput, SimpleAttributeOutput, TextImageOCROutput_Full, TextImageOCROutput_NoSize
 from .models.product import ImageManager, Base64DataForLLM
 from .prompt import ColorCaptionPrompt, DeepImageCaptionPrompt, TextImageOCRPrompt
 from .config import Config, LLMInputKeys
@@ -54,10 +54,12 @@ class FashionCaptionGenerator:
     def _setup_chains(self):
         """Chain 초기화 및 설정"""
         # Deep Captioning Chain 설정
-        deep_model = self._load_model(self.config.get("DEFAULT_CAPTION_MODEL") , self.caption_temperature)
-        deep_structured_model = deep_model.with_structured_output(DeepCaptioningTopOutput)
+        self.deep_model = self._load_model(self.config.get("DEFAULT_CAPTION_MODEL") , self.caption_temperature)
         self.deep_prompt = DeepImageCaptionPrompt()
-        self.deep_chain = self.deep_prompt | deep_structured_model
+
+        # deep_structured_model = deep_model.with_structured_output(DeepCaptioningTopOutput)
+        # self.deep_prompt = DeepImageCaptionPrompt()
+        # self.deep_chain = self.deep_prompt | deep_structured_model
 
         # Color Analysis Chain 설정
         color_model = self._load_model(self.config.get("DEFAULT_COLOR_MODEL") , self.caption_temperature)
@@ -76,11 +78,20 @@ class FashionCaptionGenerator:
             return False
         return True
 
-    def _build_dynamic_chain(self , llm_input:dict[str , Any] , has_size: bool = True)-> RunnableParallel:
+    def _build_dynamic_chain(self , llm_input:dict[str , Any] , category: str, has_size: bool = True )-> RunnableParallel:
         """동적 체인 생성"""
         chain_components = {}
         if self._validate_image_data(llm_input[LLMInputKeys.DEEP_CAPTION]["image_data"] , "Deep Caption"):
-            chain_components[LLMInputKeys.DEEP_CAPTION] = RunnableLambda(self.deep_prompt.extract_chain_input) | self.deep_chain
+            if category == "상의":
+                deep_structured_model = self.deep_model.with_structured_output(DeepCaptioningTopOutput)
+                deep_chain = self.deep_prompt | deep_structured_model
+                chain_components[LLMInputKeys.DEEP_CAPTION] = RunnableLambda(self.deep_prompt.extract_chain_input) | deep_chain
+            elif category == "하의":
+                deep_structured_model = self.deep_model.with_structured_output(DeepCaptioningBottomOutput)
+                deep_chain = self.deep_prompt | deep_structured_model
+                chain_components[LLMInputKeys.DEEP_CAPTION] = RunnableLambda(self.deep_prompt.extract_chain_input) | deep_chain
+            else:
+                raise ValueError(f"Invalid category(Deep Caption을 위한 카테고리 값 오류) : {category}")
         else:
             raise ValueError("Deep Caption 이미지 데이터가 비어있습니다.")
         
@@ -136,7 +147,7 @@ class FashionCaptionGenerator:
         }
         try:
             # 병렬 실행 및 결과 반환
-            dynamic_parallel_chain = self._build_dynamic_chain(llm_input , has_size=has_size)
+            dynamic_parallel_chain = self._build_dynamic_chain(llm_input , has_size=has_size , category=category)
             logger.info("이미지 분석 시작...")
             results = dynamic_parallel_chain.invoke(llm_input , config=config)
             logger.info("이미지 분석 완료")

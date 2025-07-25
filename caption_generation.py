@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
 
     fashion_caption_generator = FashionCaptionGenerator()
-    pagenator = aws_manager.dynamodb_manager.get_product_pagenator(partition={"key":"sub_category_curation_status","value":"1005#COMPLETED","type":"S"},GSI_NAME = "CurationStatus-SubCategory-GSI")
+    pagenator = aws_manager.dynamodb_manager.get_product_pagenator(partition={"key":"sub_category_curation_status","value":"3002#COMPLETED","type":"S"},GSI_NAME = "CurationStatus-SubCategory-GSI")
     total_count = 0
     success_count = 0
     fail_count = 0
@@ -42,18 +42,15 @@ if __name__ == "__main__":
                     product_id = item.get('product_id')
                     representative_assets = item.get('representative_assets')
                     
-                    #TODO : 하의 일때 model 처리 필요
-                    if main_category == "TOP":
-                        category = "상의"
-                    else:
-                        category = "하의"
+                    category = "상의" if main_category.lower() == "top" else "하의"
                     images = aws_manager.get_product_images_from_paginator(item)
-                    logger.debug(f"이미지 정보 리스트 : {images}")   
+                    # logger.info(f"이미지 정보 리스트 : {images}")  
+                    logger.info(f"category : {category}")
                     download_images_sync(images)
                     base64_data_for_llm = parsing_data_for_llm(images, target_size=512)
-                    
                     #해당 제품이 사이즈 정보 있는지 확인 (local mongodb 에서 확인, _id로 접근)
                     doc = fashion_repository_local.find_by_id(product_id)
+
                     has_size = True if doc.get("size_detail_info") else False
                     result = fashion_caption_generator.invoke(base64_data_for_llm , category=category , has_size=has_size)
                     
@@ -77,10 +74,12 @@ if __name__ == "__main__":
                     #local mongodb 에 저장 
                     fashion_repository_local.update_by_id(product_id , caption_result)
                     success_count+=1
+                    sys.exit()
     
                 except Exception as e:
                     logger.error(f"Error caption generation: {e}")
                     fail_count+=1
+                    sys.exit()
     logger.info("caption generation completed")
     logger.info(f"총 제품 수 : {total_count}")
     logger.info(f"성공 제품 수 : {success_count}")
