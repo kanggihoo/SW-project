@@ -109,6 +109,7 @@ async def process_single_item(item:dict, dep:CaptionDependency):
         # dep.asw_manager.dynamodb_manager.update_caption_result(sub_category, product_id, "COMPLETED")
 
         # local mongodb 에 저장 및 data_status 업데이트 (CA_COMP)
+        # caption_result["data_status"] = "CA_COMP"
         # dep.fashion_repository_local.update_by_id(product_id, caption_result)
         
         logger.debug(f"caption generation completed - main_category : {main_category} , sub_category : {sub_category} , 제품 id : {product_id} ")
@@ -117,6 +118,7 @@ async def process_single_item(item:dict, dep:CaptionDependency):
     except Exception as e:
         logger.error(f"Error caption generation: {e}")
         # local mongodb 에 저장 및 data_status 업데이트 (AWS_UPS) -> 업로드는 되어 있는 상태 
+        # dep.fashion_repository_local.update_by_id(product_id, {"data_status": "AWS_UPS"})
         return False
     
 
