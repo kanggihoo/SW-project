@@ -2,7 +2,7 @@ import logging
 import sys
 from typing import Any
 from aws.aws_manager import AWSManager
-from processing.image_processor import download_images_sync , parsing_data_for_llm 
+from processing.image_processor import download_images , parsing_data_for_llm 
 from caption.models.product import ImageManager, ProductManager, Base64DataForLLM
 from caption.fashion_caption_generator import FashionCaptionGenerator
 from db.repository.fashion import FashionRepository
@@ -33,14 +33,27 @@ class StatisticManager:
     success_count : int = 0 
     fail_count : int = 0
     
-    def add_success(self):
-        self.success_count += 1
+    def add_success(self, count:int=0):
+        self.success_count += count
     
-    def add_fail(self):
-        self.fail_count += 1
+    def add_fail(self, count:int=0):
+        self.fail_count += count
     
     def add_total(self , count:int):
         self.total_count += count
+
+def setup_dependencies(page_size:int|None=None):
+    try:
+        aws_manager = AWSManager()    
+        # dynamodb 의 pagesize 조정 필요.
+        if page_size:
+            aws_manager.dynamodb_manager.page_size = page_size
+        fashion_repository_local = create_fashion_repo(use_atlas=False)
+        fashion_caption_generator = FashionCaptionGenerator()
+        return CaptionDependency(aws_manager, fashion_repository_local, fashion_caption_generator, target_size=512)
+    except Exception as e:
+        logger.error(f"Error setting up dependencies: {e}")
+        raise e
     
 def parsing_caption_result(result:dict , representative_assets:Any):
     '''캡션 생성 결과 파싱 함수'''
@@ -73,15 +86,16 @@ async def process_single_item(item:dict, dep:CaptionDependency):
         images = dep.asw_manager.get_product_images_from_paginator(converted_item)
 
         # 이미지 다운로드 
-        await download_images_sync(images)
+        await download_images(images)
 
+        # 다운로드 된 이미지 파싱 
         base64_data_for_llm = await asyncio.to_thread(
             parsing_data_for_llm,
             images,
             target_size=dep.target_size
         )
 
-        # mongodb 에서 product_id 로 제품 조회
+        # mongodb 에서 product_id 로 제품 조회(dynamodb 에는 있지만 mongodb에는 없는 경우 있는지 체크할 필요가?)
         doc = dep.fashion_repository_local.find_by_id(product_id)
         has_size = True if doc.get("size_detail_info") else False
 
@@ -139,25 +153,16 @@ async def process_all_pages(paginator , deps:CaptionDependency):
             statistic.add_success(success_count)
             statistic.add_fail(fail_count)
 
-    return statistic
+            break
 
-def setup_dependencies():
-    try:
-        aws_manager = AWSManager()    
-        # dynamodb 의 pagesize 조정 필요. 
-        fashion_repository_local = create_fashion_repo(use_atlas=False)
-        fashion_caption_generator = FashionCaptionGenerator()
-        return CaptionDependency(aws_manager, fashion_repository_local, fashion_caption_generator, target_size=512)
-    except Exception as e:
-        logger.error(f"Error setting up dependencies: {e}")
-        raise e
+    return statistic
 
 async def main():
     load_dotenv()
-    dep = setup_dependencies()
+    dep = setup_dependencies(page_size=2)
     try:
         # pagenator 지정 
-        pagenator = dep.asw_manager.dynamodb_manager.get_product_pagenator(partition={"key":"sub_category_curation_status","value":"3002#COMPLETED","type":"S"},GSI_NAME = "CurationStatus-SubCategory-GSI")
+        pagenator = dep.asw_manager.dynamodb_manager.get_product_pagenator(partition={"key":"sub_category_curation_status","value":"1002#COMPLETED","type":"S"},GSI_NAME = "CurationStatus-SubCategory-GSI")
 
         # 모든 페이지 처리
         statistic = await process_all_pages(pagenator , dep)
