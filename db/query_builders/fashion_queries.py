@@ -15,8 +15,14 @@ class FashionQueryBuilder:
         self.vector_search_config = self.config.get_vector_search_config()
         
 
-    def caption_status_filter(self , caption_status: str="COMPLETED") -> dict:
-        return {"caption_info.caption_status": caption_status}
+    # def caption_status_filter(self , caption_status: str="COMPLETED") -> dict:
+    #     return {"caption_info.caption_status": caption_status}
+
+    def data_status_filter(self , data_status:str) -> dict:
+        if data_status not in ["CR_SUB", "CR_DET", "IMG_DOWN", "AWS_UPL", "RE_COMP", "CA_COMP", "EB_COMP"]:
+            raise ValueError(f"data_status의 값이 올바르지 않습니다. : {data_status} \
+                             \n 허용된 값 : CR_SUB, CR_DET, IMG_DOWN, AWS_UPL, RE_COMP, CA_COMP, EB_COMP")
+        return {"data_status": data_status}
     
     #TODO : 벡터 검색 효율성 및 정확성을 위한 사전 필터링 인자 추가 
     def vector_search_pipeline(self,

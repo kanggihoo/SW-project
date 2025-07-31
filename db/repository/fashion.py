@@ -149,9 +149,14 @@ class FashionRepository(BaseRepository):
         
         return self.find_products(filter_query=filter_dict)
     
-    def find_by_caption_status(self , caption_status: str) -> List[Dict]:
-        """캡션 상태별 상품 조회"""
-        query = self.query_builder.caption_status_filter(caption_status)
+    # def find_by_caption_status(self , caption_status: str) -> List[Dict]:
+    #     """캡션 상태별 상품 조회"""
+    #     query = self.query_builder.caption_status_filter(caption_status)
+    #     return self.find(query)
+
+    def find_by_data_status(self , data_status: str) -> List[Dict]:
+        """데이터 상태별 상품 조회"""
+        query = self.query_builder.data_status_filter(data_status)
         return self.find(query)
     
     def vector_search(self , query: str , limit: int) -> List[Dict]:

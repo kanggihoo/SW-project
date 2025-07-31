@@ -99,12 +99,13 @@ async def process_single_item(item:dict, dep:CaptionDependency):
         doc = dep.fashion_repository_local.find_by_id(product_id)
         has_size = True if doc.get("size_detail_info") else False
 
-        # 캡션 생성
+        # 캡션 생성(비동기)
         result = await dep.fashion_caption_generator.ainvoke(base64_data_for_llm , category=category , has_size=has_size)
 
         # 결과 구성 및 저장
         caption_result = parsing_caption_result(result, representative_assets)
 
+        #TODO : dynamodb, mongodb(local) 반영 
         # dynamodb 반영 (caption PENDING => COMPLETED)
         # dep.asw_manager.dynamodb_manager.update_caption_result(sub_category, product_id, "COMPLETED")
 
@@ -155,6 +156,7 @@ async def process_all_pages(paginator , deps:CaptionDependency):
             statistic.add_success(success_count)
             statistic.add_fail(fail_count)
 
+            # 테스트 용도 break
             break
 
     return statistic
