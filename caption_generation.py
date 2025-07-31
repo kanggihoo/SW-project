@@ -166,7 +166,7 @@ async def main():
     dep = setup_dependencies(page_size=2)
     try:
         # pagenator 지정 
-        pagenator = dep.asw_manager.dynamodb_manager.get_product_pagenator(partition={"key":"sub_category_curation_status","value":"1002#COMPLETED","type":"S"},GSI_NAME = "CurationStatus-SubCategory-GSI")
+        pagenator = dep.asw_manager.dynamodb_manager.get_product_pagenator(partition={"key":"sub_category_curation_status","value":"3002#COMPLETED","type":"S"},GSI_NAME = "CurationStatus-SubCategory-GSI")
 
         # 모든 페이지 처리
         statistic = await process_all_pages(pagenator , dep)
@@ -180,6 +180,8 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
     # load_dotenv()
     # db_config = Config()
     # aws_manager = AWSManager()    

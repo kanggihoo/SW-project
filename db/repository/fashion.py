@@ -2,7 +2,7 @@ from .base import BaseRepository
 from typing import Dict, Any, Optional , List , override , Iterator
 from pymongo.errors import DuplicateKeyError , BulkWriteError
 import logging
-from embedding import get_embedding_with_jina
+from embedding import JinaEmbedding
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,7 @@ class FashionRepository(BaseRepository):
         """
 
         pipeline = self.query_builder.vector_search_pipeline(user_query=query,
-                                                            embedding_factory=get_embedding_with_jina,
+                                                            embedding_factory=JinaEmbedding().get_embedding,
                                                             limit=limit,
                                                             num_candidates=100,
                                                             index_name="tmp",
