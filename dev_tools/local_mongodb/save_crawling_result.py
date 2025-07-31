@@ -24,7 +24,7 @@ import logging
 from pathlib import Path
 logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s : %(filename)s - %(lineno)d' , datefmt='%Y-%m-%d %H:%M:%S')
 import sys
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent))
 logger = logging.getLogger(__name__)
 from aws.dynamodb import DynamoDBManager
 from db import create_fashion_repo
@@ -115,30 +115,33 @@ class DataSavePipeline:
                 # 이미 S3에 업로드 되어 있는 main/sub category인 경우 => 해당 product_id가 실제로 존재하는지 확인 
                 result_dynamo = self.dynamodb_client.get_item(sub_category=sub_category, product_id=product_id)
                 if result_dynamo is None:
-                    continue
-                curation_status = result_dynamo.get("curation_status")
-                update_data = {}
-                if curation_status == "COMPLETED":
-                    # 누군가가 curation 작업을 완료 한 경우 : 대표 이미지 조회 
-                    representative_assets = result_dynamo.get("representative_assets")
-                    update_data["representative_assets"] = representative_assets
-                    update_data["data_status"] = DataSaveStatus.RE_COMP.value
-                    updates_map[index] = update_data
-                elif curation_status == "PASS" or curation_status == "PENDING":
-                    # dynamodb에 데이터가 존재하는 경우 
-                    update_data["data_status"] = DataSaveStatus.AWS_UPL.value
+                    logger.error(f"❌ {product_id} 데이터가 dynamoDB에 존재하지 않습니다.")
+                    update_data["data_status"] = DataSaveStatus.CR_DET.value
                     updates_map[index] = update_data
                 else:
-                    logger.error(f"❌ curation_status 값이 올바르지 않습니다. : {curation_status}")
+                    curation_status = result_dynamo.get("curation_status")
+                    update_data = {}
+                    if curation_status == "COMPLETED":
+                        # 누군가가 curation 작업을 완료 한 경우 : 대표 이미지 조회 
+                        representative_assets = result_dynamo.get("representative_assets")
+                        update_data["representative_assets"] = representative_assets
+                        update_data["data_status"] = DataSaveStatus.RE_COMP.value
+                        updates_map[index] = update_data
+                    elif curation_status == "PASS" or curation_status == "PENDING":
+                        # dynamodb에 데이터가 존재하는 경우 
+                        update_data["data_status"] = DataSaveStatus.AWS_UPL.value
+                        updates_map[index] = update_data
+                    else:
+                        logger.error(f"❌ curation_status 값이 올바르지 않습니다. : {curation_status}")
                     
-            else: # 처음 크롤링한 결과를 반영하는 경우 
-                update_data["data_status"] = DataSaveStatus.CR_DET.value
-                updates_map[index] = update_data
+            # else: # 처음 크롤링한 결과를 반영하는 경우 
+            #     update_data["data_status"] = DataSaveStatus.CR_DET.value
+            #     updates_map[index] = update_data
             
         if updates_map:
             update_df = pd.DataFrame.from_dict(updates_map, orient="index")
             batch_df.update(update_df)
-            logger.info(f"배치 완료 : {batch_index} - {batch_index+BATCH_SIZE}")
+        logger.info(f"배치 완료 : {batch_index} - {batch_index+BATCH_SIZE}")
         
         # mongodb 에 저장 
         mongo_operations = [] 
@@ -348,12 +351,12 @@ class DataSavePipeline:
 
 if __name__ == "__main__":
     data_save_pipeline = DataSavePipeline()
-    sub_category = "피케-카라티셔츠"
     main_category = "상의"
+    sub_category = "민소매티셔츠"
+    is_already_uploaded = False
     BASE_DIR = Path("/Users/kkh/Desktop/musinsa-crawling/data")
     detail_json_file_name = f"musinsa_product_detail_{main_category}_{sub_category}.json"
     detail_json_file_path = BASE_DIR / detail_json_file_name
-    is_already_uploaded = True
     data_save_pipeline.save_crawling_data(
         file_path=detail_json_file_path,
         is_already_uploaded=is_already_uploaded
