@@ -25,6 +25,7 @@ dev = [
     "google-genai>=1.25.0",
     "matplotlib>=3.10.3",
     "pytest>=8.4.1",
+    "tabulate>=0.9.0",
 ]
 
 [tool.pytest.ini_options]
