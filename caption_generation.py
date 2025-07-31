@@ -19,13 +19,21 @@ logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(lev
 logger = logging.getLogger(__name__)
 
 
+
+@dataclass
+class ImageSize:
+    deep_caption_size : int 
+    color_caption_size : int
+    text_caption_size : int
+
 @dataclass
 class CaptionDependency:
     '''캡션 생성에 필요한 의존성 관리 클래스'''
     asw_manager : AWSManager
     fashion_repository_local : FashionRepository
     fashion_caption_generator : FashionCaptionGenerator
-    target_size : int
+    size : ImageSize 
+
 
 @dataclass
 class StatisticManager:
@@ -42,7 +50,7 @@ class StatisticManager:
     def add_total(self , count:int):
         self.total_count += count
 
-def setup_dependencies(page_size:int|None=None):
+def setup_dependencies(page_size:int|None=None , deep_caption_size:int=512 , color_caption_size:int=224 , text_caption_size:int=512):
     try:
         aws_manager = AWSManager()    
         # dynamodb 의 pagesize 조정 필요.
@@ -50,7 +58,8 @@ def setup_dependencies(page_size:int|None=None):
             aws_manager.dynamodb_manager.page_size = page_size
         fashion_repository_local = create_fashion_repo(use_atlas=False)
         fashion_caption_generator = FashionCaptionGenerator()
-        return CaptionDependency(aws_manager, fashion_repository_local, fashion_caption_generator, target_size=512)
+        size = ImageSize(deep_caption_size=deep_caption_size, color_caption_size=color_caption_size, text_caption_size=text_caption_size)
+        return CaptionDependency(aws_manager, fashion_repository_local, fashion_caption_generator, size)
     except Exception as e:
         logger.error(f"Error setting up dependencies: {e}")
         raise e
@@ -92,7 +101,7 @@ async def process_single_item(item:dict, dep:CaptionDependency):
         base64_data_for_llm = await asyncio.to_thread(
             parsing_data_for_llm,
             images,
-            target_size=dep.target_size
+            image_sizes=dep.size 
         )
 
         # mongodb 에서 product_id 로 제품 조회(dynamodb 에는 있지만 mongodb에는 없는 경우 있는지 체크할 필요가?)
@@ -180,6 +189,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
     # load_dotenv()
