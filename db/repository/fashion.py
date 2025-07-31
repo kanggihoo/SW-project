@@ -1,8 +1,9 @@
 from .base import BaseRepository
-from typing import Dict, Any, Optional , List , override
+from typing import Dict, Any, Optional , List , override , Iterator
 from pymongo.errors import DuplicateKeyError , BulkWriteError
 import logging
-from embedding import get_embedding_with_jina
+from embedding import JinaEmbedding
+
 logger = logging.getLogger(__name__)
 
 '''
@@ -30,8 +31,6 @@ class FashionRepository(BaseRepository):
         """상품 ID로 조회"""
         try:
             product = self.collection.find_one({"_id": doc_id})
-            # if product:
-            #     return self._process_product_output(product)
             return product
         except Exception as e:
             logger.error(f"Error finding product by ID {doc_id}: {e}")
@@ -107,7 +106,7 @@ class FashionRepository(BaseRepository):
             return False
     
     @override
-    def find(self , query: dict) -> List[Dict]:
+    def find(self , query: dict) -> Iterator[Dict]:
         """쿼리에 맞는 문서 조회"""
         return self.collection.find(query)
     
@@ -150,15 +149,58 @@ class FashionRepository(BaseRepository):
         
         return self.find_products(filter_query=filter_dict)
     
-    def find_by_caption_status(self , caption_status: str) -> List[Dict]:
-        """캡션 상태별 상품 조회"""
-        query = self.query_builder.caption_status_filter(caption_status)
+    # def find_by_caption_status(self , caption_status: str) -> List[Dict]:
+    #     """캡션 상태별 상품 조회"""
+    #     query = self.query_builder.caption_status_filter(caption_status)
+    #     return self.find(query)
+
+    def find_by_data_status(self , data_status: str) -> List[Dict]:
+        """데이터 상태별 상품 조회"""
+        query = self.query_builder.data_status_filter(data_status)
         return self.find(query)
     
-    def vector_search(self , query: str) -> List[Dict]:
-        """벡터 검색"""
-        pipeline = self.query_builder.vector_search_pipeline(user_query=query , embedding_factory=get_embedding_with_jina)
+    def vector_search(self , query: str , limit: int) -> List[Dict]:
+        """벡터 검색
+        Args:
+            query (str): 검색 쿼리
+            limit (int): 검색 결과 개수
+
+        Returns:
+            List[Dict]: 검색 결과 데이터
+        """
+
+        pipeline = self.query_builder.vector_search_pipeline(user_query=query,
+                                                            embedding_factory=JinaEmbedding().get_embedding,
+                                                            limit=limit,
+                                                            num_candidates=100,
+                                                            index_name="tmp",
+                                                            embedding_field_path="embedding.comprehensive_description.vector"
+                                                            )
         return list(self.collection.aggregate(pipeline))
+    
+    def health_check(self) -> Dict[str, Any]:
+        """리포지토리 헬스체크"""
+        health_info = {
+            "connected": False,
+            "collection_exists": False,
+            "connection_string": self.connection_string,
+            "database_name": self.database_name,
+            "collection_name": self.collection_name,
+            "error": None
+        }
+        
+        try:
+            # 연결 상태 확인
+            health_info["connected"] = self.is_connected()
+            health_info["collection_exists"] = self.collection_name in self.db_manager._db.list_collection_names()
+            health_info["connection_string"] = self.connection_string
+            health_info["database_name"] = self.database_name
+            health_info["collection_name"] = self.collection_name                    
+        except Exception as e:
+            health_info["error"] = str(e)
+            logger.error(f"Health check failed: {e}")
+        
+        return health_info
     
     # def get_product_stats(self) -> Dict[str, Any]:
     #     """상품 통계 정보"""

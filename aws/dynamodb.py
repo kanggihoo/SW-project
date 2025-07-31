@@ -266,6 +266,16 @@ class DynamoDBManager:
     # =============================================================================
     # 유틸리티 함수
     # =============================================================================
+    @property
+    def page_size(self):
+        return self.pagenator_config['PageSize']
+    
+    @page_size.setter
+    def page_size(self, page_size:int):
+        """dynamodb 의 pagesize 조정 함수"""
+        self.pagenator_config['PageSize'] = page_size
+
+
     def close_connection(self):
         if self.client:
             self.client.close()

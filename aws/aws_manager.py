@@ -116,6 +116,7 @@ class AWSManager:
         self.aws_manager = None
         logger.info("AWS 서비스 연결 종료")
 
+
     def _parse_representative_assets(self, representative_assets:dict) -> tuple[bool, list[ImageManager]]:
         images = []
         success = True

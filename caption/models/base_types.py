@@ -3,7 +3,9 @@ VLM 출력을 위한 기본 타입 정의 모듈
 """
 from enum import Enum
 
-
+# =============================================================================
+# 색상 타입
+# =============================================================================
 class PrimaryColor(str, Enum):
     """대표 색상 타입"""
     WHITE = "화이트"
@@ -40,6 +42,10 @@ class Saturation(str, Enum):
     VERY_HIGH = "아주 높음"
 
 
+# =============================================================================
+# 상의 속성 타입
+# =============================================================================
+
 class Neckline(str, Enum):
     """상의 넥라인 타입"""
     ROUND = "라운드넥"
@@ -61,7 +67,7 @@ class SleeveLength(str, Enum):
     LONG = "긴소매"
 
 
-class PatternType(str, Enum):
+class TopPatternType(str, Enum):
     """상의 패턴 타입"""
     SOLID = "무지/솔리드"
     STRIPE = "스트라이프"
@@ -76,7 +82,7 @@ class PatternType(str, Enum):
     OTHER = "기타"
 
 
-class ClosureType(str, Enum):
+class TopClosureType(str, Enum):
     """상의 여밈 방식 타입"""
     NONE = "여밈 없음"
     BUTTON = "버튼/단추"
@@ -84,8 +90,47 @@ class ClosureType(str, Enum):
     SNAP = "스냅 버튼"
     STRING = "스트링/끈"
 
+# =============================================================================
+# 하의 속성 타입
+# =============================================================================
 
-class FitType(str, Enum):
+class BottomFitType(str, Enum):
+    """하의 핏 타입"""
+    STRAIGHT = "스트레이트 핏"
+    SLIM = "슬림 핏"
+    TAPERED = "테이퍼드 핏"
+    WIDE = "와이드 핏"
+    BOOTS = "부츠컷 핏"
+    BAGGY = "배기 핏"
+    JOGGER = "조거 핏"
+
+class BottomClosureType(str, Enum):
+    """하의 여밈 방식 타입"""
+    NONE = "여밈 없음"
+    BUTTON = "버튼"
+    ZIPPER = "지퍼"
+    STRING = "스트링"
+    HOOK = "후크"
+class BottomLengthType(str, Enum):
+    """하의 기장 타입"""
+    SHORT = "숏 바지"
+    CROP = "크롭 바지"
+    LONG = "롱 바지"
+
+class BottomPatternType(str, Enum):
+    """하의 패턴 타입"""
+    SOLID = "무지"
+    STRIPE = "스트라이프"
+    CHECK = "체크"
+    CAMOUFLAGE = "카모플라쥬"
+    WASHING = "워싱 (데님 전용)"
+    OTHER = "기타 패턴"
+
+
+# =============================================================================
+# Fit , Style , TPO 타입
+# =============================================================================
+class TopFitType(str, Enum):
     """상의 핏 타입"""
     SLIM = "슬림 핏"
     REGULAR = "레귤러 핏/스탠다드 핏"
@@ -94,12 +139,12 @@ class FitType(str, Enum):
 
 class StyleTag(str, Enum):
     """의류 스타일 태그"""
-    MODERN = "모던/미니멀"
+    MODERN = "모던"
     BASIC = "심플 베이직"
     CASUAL = "캐주얼"
     STREET = "스트릿"
     FORMAL = "포멀"
-    SPORTY = "스포티/애슬레저"
+    SPORTY = "스포티"
     OUTDOOR = "아웃도어"
     VINTAGE = "레트로"
     UNIQUE = "유니크"
@@ -108,12 +153,12 @@ class StyleTag(str, Enum):
 class TPOTag(str, Enum):
     """의류 TPO 태그"""
     DAILY = "데일리"
-    OFFICE = "오피스/비즈니스"
-    FORMAL = "격식/하객"
-    DATE = "데이트/주말"
-    TRAVEL = "여행/휴가"
-    PARTY = "파티/모임"
+    OFFICE = "오피스"
+    FORMAL = "격식"
+    DATE = "데이트"
+    TRAVEL = "여행"
+    PARTY = "파티"
     EXERCISE = "운동"
-    HOME = "홈웨어/라운지"
+    HOME = "홈웨어"
 
 

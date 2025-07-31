@@ -4,7 +4,8 @@
 
 from typing import Annotated
 from pydantic import BaseModel, Field
-from .top_product_attributes import  StructuredAttributes , ImageCaptions
+from .top_product_attributes import StructuredAttributes as TopStructuredAttributes, ImageCaptions as TopImageCaptions
+from .bottom_product_attributes import StructuredAttributes as BottomStructuredAttributes, ImageCaptions as BottomImageCaptions
 from .product_color_attributes import ColorInfo
 from .text_image_attributes import MultiSizeInfo
 
@@ -32,13 +33,21 @@ from .text_image_attributes import MultiSizeInfo
 # VLM 단계별 출력 모델들
 class DeepCaptioningTopOutput(BaseModel):
     """상의의 모든 구조화된 속성과 이미지 캡션을 포함한 종합 분석 결과"""
-    structured_attributes: Annotated[StructuredAttributes, Field(
+    structured_attributes: Annotated[TopStructuredAttributes, Field(
         description="상의의 모든 구조화된 속성 정보. 공통 속성(소매길이, 넥라인), 정면/후면별 디자인 요소(패턴, 여밈), 주관적 속성(핏, 스타일, TPO)을 체계적으로 분류하여 저장"
     )]
-    image_captions: Annotated[ImageCaptions, Field(
+    image_captions: Annotated[TopImageCaptions, Field(
         description="상의의 다양한 용도별 이미지 캡션 모음. 정면/후면 전용 설명, 디자인 디테일, 스타일 분위기, TPO 상황, 종합 설명 등 6가지 관점의 상세한 텍스트 캡션"
     )]
 
+class DeepCaptioningBottomOutput(BaseModel):
+    """하의의 모든 구조화된 속성과 이미지 캡션을 포함한 종합 분석 결과"""
+    structured_attributes: Annotated[BottomStructuredAttributes, Field(
+        description="하의의 모든 구조화된 속성 정보. 공통 속성(기장 길이), 정면/후면별 디자인 요소(패턴, 여밈), 주관적 속성(핏, 스타일, TPO)을 체계적으로 분류하여 저장"
+    )]
+    image_captions: Annotated[BottomImageCaptions, Field(
+        description="하의의 다양한 용도별 이미지 캡션 모음. 정면/후면 전용 설명, 디자인 디테일, 스타일 분위기, TPO 상황, 종합 설명 등 6가지 관점의 상세한 텍스트 캡션"
+    )]
 
 class SimpleAttributeOutput(BaseModel):
     """단순 속성 추출 단계 출력 - 주어진 의류의 색상 정보만을 전문적으로 분석한 결과"""
@@ -46,7 +55,7 @@ class SimpleAttributeOutput(BaseModel):
         description="의류의 색상 분석 결과. 대표 색상명, 정확한 HEX 코드, 색상 속성 태그(채도/명도)를 포함한 완전한 색상 정보"
     )]
 
-class TextImageOCROutput(BaseModel):
+class TextImageOCROutput_Full(BaseModel):
     """텍스트 이미지에서 추출된 의류 정보 종합"""
     material_info: Annotated[str|None, Field(
         default=None,
@@ -64,6 +73,22 @@ class TextImageOCROutput(BaseModel):
         default=None,
         description="의류의 소개 문구, 주요특징을 종합하여 요약한 상품 설명"
     )]
+
+class TextImageOCROutput_NoSize(BaseModel):
+    """텍스트 이미지에서 추출된 의류 정보 종합"""
+    material_info: Annotated[str|None, Field(
+        default=None,
+        description="의류의 소재 구성 정보 (예: '면 100%', '울 80%, 나일론 20%', '폴리에스터 65%, 레이온 30%, 스판덱스 5%')"
+    )]
+    care_info: Annotated[str|None, Field(
+        default=None,
+        description="의류 세탁 및 관리 방법"
+    )]
+    product_description: Annotated[str|None, Field(
+        default=None,
+        description="의류의 소개 문구, 주요특징을 종합하여 요약한 상품 설명"
+    )]
+
 
 
 # class CombinedVLMOutput(BaseModel):

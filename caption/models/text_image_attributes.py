@@ -60,6 +60,8 @@ class MultiSizeInfo(BaseModel):
     @classmethod
     def parse_size_measurements(cls, v):
         """size_measurements 필드를 검증하고 변환"""
+        print(f"[DEBUG] 입력값: {repr(v)}, 타입: {type(v)}")  # 디버깅 추가
+        
         if v is None:
             return None
         
@@ -70,18 +72,20 @@ class MultiSizeInfo(BaseModel):
         # 문자열인 경우 JSON 파싱 시도
         if isinstance(v, str):
             try:
-                parsed = json.loads(v)
+                # 문자열 앞뒤 공백, 끝 쉼표 제거 
+                cleaned = v.strip()
+                if cleaned.endswith(","):
+                    cleaned = cleaned[:-1]
+                
+                # JSON 파싱 
+                parsed = json.loads(cleaned)
                 if isinstance(parsed, dict):
                     return parsed
                 else:
-                    # JSON이지만 딕셔너리가 아닌 경우 None 반환
-                    return None
-            except (json.JSONDecodeError, ValueError):
-                # JSON 파싱 실패시 None 반환
-                return None
+                    return v
+            except (json.JSONDecodeError, ValueError) as e:
+                return v 
         
-        # 다른 타입인 경우 None 반환
-        return None
 
 
 # class CareInfo(BaseModel):
