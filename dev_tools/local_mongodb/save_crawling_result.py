@@ -38,7 +38,7 @@ class ProcessingDataStage(Enum):
     DOWN = "image_download" # 이미지 다운로드 
     AWS = "aws_upload" # aws s3에 저장 
     RE = "representative_image" # 대표 이미지 정보 저장 
-    EMB = "emb_generation" # 임베딩 정보 저장 
+    EB = "embedding_generation" # 임베딩 정보 저장 
     
 class DataSaveStatus(Enum):
     CR_SUM = "CR_SUM" # 크롤링 summary 완료 
@@ -47,7 +47,7 @@ class DataSaveStatus(Enum):
     AWS_UPL = "AWS_UPL" # 다운로드 한 이미지 aws에 업로드 완료 
     RE_COMP = "RE_COMP" # 대표 이미지 정보 저장 완료
     CA_COMP = "CA_COMP" # 선정된 대표 이미지에 대해 캡션 정보 저장 완료 
-    EMB_COMP = "EMB_COMP" # 캡션 완료된 제품에 대한 임베딩 정보 저장 완료 
+    EB_COMP = "EB_COMP" # 캡션 완료된 제품에 대한 임베딩 정보 저장 완료 
     
 class DataSavePipeline:
     def __init__(self) :
@@ -285,7 +285,6 @@ class DataSavePipeline:
             "product_id",
             "product_price",
             "product_original_price",
-            "product_discount_price",
             "product_brand_name",
             "product_name",
             "num_likes",
