@@ -1,12 +1,11 @@
 import logging
 from db.config import Config
 from db import create_fashion_repo
-from embedding import get_embedding_with_jina
 from datetime import datetime
 import asyncio
 import aiohttp
 from typing import Iterator
-from embedding.embedding import JinaEmbedding
+from embedding import JinaEmbedding
 #TODO : 그냥 data_status로만 가져올지, 아니면 main , sub , data_status 조합으로 가져올지 ? (인덱스는 있음)
 
 
@@ -40,15 +39,16 @@ async def consumer(queue:asyncio.Queue,session:aiohttp.ClientSession , semaphore
                     "embedding": {
                         embedding_type: {
                             "model_name": emb_result["model_name"],
-                            "demension": emb_result["dimensions"],
+                            "dimension": emb_result["dimensions"],
                             "vector": emb_result["embeddings"][0],
-                            "status": "COMPLETED",
-                            "generated_at": datetime.now().isoformat()
+                            "modified_at": datetime.now().isoformat()
                         }
                     },
                 }
                 result["data_status"] = "EB_COMP"
-                product_id = doc["product_id"]
+                product_id = doc.get("product_id")
+                if product_id is None:
+                    product_id = doc.get("_id")
                 mongo_local.update_by_id(product_id, result)
             success_count += 1
         except Exception as e:
@@ -96,7 +96,7 @@ async def generate_embedding(q_maxsize:int,
     await queue.put(None)
     
     #모든 소비자 태스크가 실제로 종료될 때까지 기다립니다.
-    results = await asyncio.gather(*consumers , return_exceptions=True)
+    results = await asyncio.gather(*consumers)
     for result in results:
         success_count += result[0]
         failed_count += result[1]
@@ -109,10 +109,12 @@ async def main():
                                           max_concurrent_requests=5,
                                           session=session)
         logger.info(f"Total results: {results[0]} , Success results: {results[1]} , Failed results: {results[2]}")
+    
+    logger.info("Done")
         
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(filename)s - %(lineno)d')
+    logger = logging.getLogger("main")
     mongo_local = create_fashion_repo(use_atlas=False)
     jina_embedding = JinaEmbedding()
     asyncio.run(main())

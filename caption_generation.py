@@ -116,11 +116,11 @@ async def process_single_item(item:dict, dep:CaptionDependency):
 
         #TODO : dynamodb, mongodb(local) 반영 
         # dynamodb 반영 (caption PENDING => COMPLETED)
-        # dep.asw_manager.dynamodb_manager.update_caption_result(sub_category, product_id, "COMPLETED")
+        dep.asw_manager.dynamodb_manager.update_caption_result(sub_category, product_id, "COMPLETED")
 
         # local mongodb 에 저장 및 data_status 업데이트 (CA_COMP)
-        # caption_result["data_status"] = "CA_COMP"
-        # dep.fashion_repository_local.update_by_id(product_id, caption_result)
+        caption_result["data_status"] = "CA_COMP"
+        dep.fashion_repository_local.update_by_id(product_id, caption_result)
         
         logger.debug(f"caption generation completed - main_category : {main_category} , sub_category : {sub_category} , 제품 id : {product_id} ")
         return True
@@ -192,72 +192,4 @@ if __name__ == "__main__":
 
 
 
-    # load_dotenv()
-    # db_config = Config()
-    # aws_manager = AWSManager()    
-    # fashion_repository_local = create_fashion_repo(use_atlas=False)
-
-    # fashion_caption_generator = FashionCaptionGenerator()
-    # pagenator = aws_manager.dynamodb_manager.get_product_pagenator(partition={"key":"sub_category_curation_status","value":"3002#COMPLETED","type":"S"},GSI_NAME = "CurationStatus-SubCategory-GSI")
-    # total_count = 0
-    # success_count = 0
-    # fail_count = 0
-    # for page in pagenator:
-    #     items = page.get('Items')
-    #     logger.debug(f"현재 총 제품 수 : {page.get('Count')}")
-    #     total_count += page.get('Count')
-    #     if items:
-    #         #TODO 여기 for문은 좀더 효율적으로 돌릴 수 있을 거 같은데(어차피 dynamodb에서 paginator로 가져오기 때문에 20개정도 동시에 다 돌리면 되지 않을까?) 
-    #         for i in items:
-    #             try:
-    #                 item = aws_manager.dynamodb_manager._convert_dynamodb_item_to_python(i)
-    #                 logger.info(f"main_category : {item.get('main_category')} , sub_category : {item.get('sub_category')} , 제품 id : {item.get('product_id')} ")
-    #                 main_category = item.get('main_category')
-    #                 sub_category = item.get('sub_category')
-    #                 product_id = item.get('product_id')
-    #                 representative_assets = item.get('representative_assets')
-                    
-    #                 category = "상의" if main_category.lower() == "top" else "하의"
-    #                 images = aws_manager.get_product_images_from_paginator(item)
-    #                 # logger.info(f"이미지 정보 리스트 : {images}")  
-    #                 logger.info(f"category : {category}")
-    #                 download_images_sync(images)
-    #                 base64_data_for_llm = parsing_data_for_llm(images, target_size=512)
-    #                 #해당 제품이 사이즈 정보 있는지 확인 (local mongodb 에서 확인, _id로 접근)
-    #                 doc = fashion_repository_local.find_by_id(product_id)
-
-    #                 has_size = True if doc.get("size_detail_info") else False
-    #                 result = fashion_caption_generator.invoke(base64_data_for_llm , category=category , has_size=has_size)
-                    
-    #                 deep_caption = result.get("deep_caption").model_dump()
-    #                 color_images = result.get("color_images").model_dump()
-    #                 text_images = result.get("text_images").model_dump_json() if result.get("text_images") else None
-
-    #                 caption_result = {
-    #                     "caption_info": {
-    #                         "caption_status": "COMPLETED",
-    #                         "deep_caption": deep_caption,
-    #                         "color_images": color_images,
-    #                         "text_images": text_images,
-    #                     },
-    #                     "representative_assets": representative_assets
-    #                 }
-                    
-    #                 #dynamodb 반영 (caption PENDING => COMPLETED)
-    #                 # aws_manager.dynamodb_manager.update_caption_result(sub_category, product_id, "COMPLETED")
-            
-    #                 #local mongodb 에 저장 
-    #                 fashion_repository_local.update_by_id(product_id , caption_result)
-    #                 success_count+=1
-    #                 sys.exit()
-    
-    #             except Exception as e:
-    #                 logger.error(f"Error caption generation: {e}")
-    #                 fail_count+=1
-    #                 sys.exit()
-    # logger.info("caption generation completed")
-    # logger.info(f"총 제품 수 : {total_count}")
-    # logger.info(f"성공 제품 수 : {success_count}")
-    # logger.info(f"실패 제품 수 : {fail_count}")
-
-              
+   
