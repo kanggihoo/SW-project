@@ -90,27 +90,27 @@ class ImageCaptions(BaseModel):
     """하의 이미지 캡션 모음"""
     front_text_specific: Annotated[str, Field(
         ..., 
-        description="정면 이미지 전용 상세 설명문. 정면에서 보이는 색상, 디자인 요소, 패턴, 여밈 방식 등을 포함한 구체적인 설명문"
+        description="정면 누끼 이미지 전용 상세 설명문으로 색상, 디자인 요소, 패턴, 여밈 방식 등을 포함"
     )]
     back_text_specific: Annotated[str, Field(
         ..., 
-        description="후면 이미지 전용 상세 설명문. 후면에서 보이는 색상, 디자인 요소, 패턴, 여밈 방식 등을 포함한 구체적인 설명문"
+        description="후면 누끼 이미지 전용 상세 설명문으로 색상, 디자인 요소, 패턴, 여밈 방식 등을 포함"
     )]
     design_details_description: Annotated[str, Field(
         ..., 
-        description="하의의 모든 디자인 디테일을 종합한 설명문. 색상, 소재, 장식 요소, 패턴, 여밈 방식 등을 포함한 설명문"
+        description="하의의 모든 디자인 디테일을 종합한 설명문으로 색상, 소재, 장식 요소, 패턴, 여밈 방식 등을 포함"
     )]
     style_description: Annotated[str, Field(
         ..., 
-        description="하의의 스타일을 설명하는 텍스트. 색상 정보는 제외하고 디자인적 특성과 스타일적 느낌만 포함한 설명문"
+        description="색상 정보를 제외한 주어진 하의에 대한 디테일한 스타일에 대한 설명문"
     )]
     tpo_context_description: Annotated[str, Field(
         ..., 
-        description="하의의 착용 상황과 맥락을 설명하는 텍스트. 색상 정보는 제외하고 어울리는 상황과 분위기만 포함한 설명문"
+        description="색상 정보를 제외한 해당 의류를 착용하기 어울리는 상황과 분위기애 대한 설명문"
     )]
     comprehensive_description: Annotated[str, Field(
         ...,
-        description="하의의 모든 정보를 종합한 완전한 설명문. 공통 속성, 색상 정보, 디자인 요소를 모두 포함한 통합 설명문"
+        description="하의의 모든 정보를 종합한 완전한 설명문으로 공통 속성, 색상 정보, 디자인 요소를 모두 포함"
     )]
 
 

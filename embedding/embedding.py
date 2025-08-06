@@ -47,7 +47,7 @@ class JinaEmbedding:
             session (aiohttp.ClientSession): 세션
         Returns:
             dict[str , Any]: 임베딩 결과 딕셔너리
-            - model_name (str): 모델 이름
+            - model_version (str): 모델 이름
             - dimensions (int): 임베딩 차원
             - embeddings (list[float]): 임베딩 결과 리스트
         """
