@@ -1,6 +1,8 @@
 from .base_sync import BaseRepository
 from typing import Dict, Any, Optional , List , override , Iterator
-from pymongo.errors import DuplicateKeyError , BulkWriteError
+from pymongo.errors import DuplicateKeyError , BulkWriteError , WriteError
+from pymongo.client_session import ClientSession
+from pymongo.operations import InsertOne 
 import logging
 from embedding import JinaEmbedding
 
@@ -109,6 +111,285 @@ class FashionRepository(BaseRepository):
     def find(self , query: dict) -> Iterator[Dict]:
         """쿼리에 맞는 문서 조회"""
         return self.collection.find(query)
+    
+    # ============================================================================
+    # Bulk Write 기능
+    # ============================================================================
+    def bulk_insert_documents(self, 
+                              session: ClientSession,
+                              documents: List[Dict[str, Any]], 
+                              ordered: bool = False) -> Dict[str, Any]:
+        """
+        MongoDB bulk write를 이용한 대량 문서 삽입
+        
+        Args:
+            documents (List[Dict[str, Any]]): 삽입할 문서 리스트
+            ordered (bool): 순서대로 처리할지 여부 (False면 병렬 처리)
+            
+        Returns:
+            Dict[str, Any]: 삽입 결과 정보
+                {
+                    "success": bool,
+                    "inserted_count": int,
+                    "error_count": int,
+                    "errors": List[Dict],
+                    "inserted_ids": List[str],
+                    "execution_time": float
+                }
+        """
+        import time
+
+        start_time = time.time()
+        result_info = {
+            "success": False,
+            "inserted_count": 0,
+            "error_count": 0,
+            "errors": [],
+            "inserted_ids": [],
+            "execution_time": 0.0
+        }
+
+        if not documents:
+            raise ValueError("No documents provided for bulk insert")
+
+        def txn(sess):
+            logger.info(f"Starting bulk insert transaction for {len(documents)} documents")
+            operations = [InsertOne(doc) for doc in documents]
+            bulk_result = self.collection.bulk_write(
+                operations,
+                ordered=ordered,
+                session=sess
+            )
+            return bulk_result
+
+        try:
+            bulk_result = session.with_transaction(txn)
+            result_info["success"] = True
+            result_info["inserted_count"] = bulk_result.inserted_count
+            # inserted_ids는 bulk_write의 InsertManyResult와 달리 insert_one/bulk_write에서는 제공되지 않음
+            # pymongo 최신 버전에서도 bulk_write는 inserted_ids를 제공하지 않으므로 빈 리스트로 둠
+            result_info["inserted_ids"] = []
+            logger.info(f"Bulk insert completed successfully: {bulk_result.inserted_count} documents inserted")
+        except BulkWriteError as bwe:
+            result_info["error_count"] = len(bwe.details.get('writeErrors', []))
+            result_info["inserted_count"] = bwe.details.get('nInserted', 0)
+            for write_error in bwe.details.get('writeErrors', []):
+                error_info = {
+                    "type": "bulk_write_error",
+                    "index": write_error.get('index'),
+                    "code": write_error.get('code'),
+                    "message": write_error.get('errmsg', 'Unknown bulk write error'),
+                    "document_id": write_error.get('op', {}).get('_id', 'Unknown')
+                }
+                result_info["errors"].append(error_info)
+            logger.error(f"Bulk write error: {result_info['error_count']} errors, {result_info['inserted_count']} inserted")
+        except WriteError as we:
+            result_info["error_count"] = 1
+            error_info = {
+                "type": "write_error",
+                "code": we.code,
+                "message": str(we),
+                "details": getattr(we, 'details', {})
+            }
+            result_info["errors"].append(error_info)
+            logger.error(f"Write error during bulk insert: {we}")
+        except Exception as e:
+            result_info["error_count"] = len(documents)
+            error_info = {
+                "type": "unexpected_error",
+                "message": str(e),
+                "error_class": type(e).__name__
+            }
+            result_info["errors"].append(error_info)
+            logger.error(f"Unexpected error during bulk insert: {e}")
+
+        result_info["execution_time"] = time.time() - start_time
+
+        if result_info["success"]:
+            logger.info(f"Bulk insert completed in {result_info['execution_time']:.2f}s")
+        else:
+            logger.error(f"Bulk insert failed after {result_info['execution_time']:.2f}s")
+
+        return result_info
+    
+    def bulk_update_documents(self, 
+                              session: ClientSession,
+                              document_ids: List[str], 
+                              update_data: Dict[str, Any],
+                              ordered: bool = False) -> Dict[str, Any]:
+        """
+        MongoDB bulk write를 이용한 대량 문서 업데이트
+        
+        Args:
+            session (ClientSession): MongoDB 세션 (None일 수 있음)
+            document_ids (List[str]): 업데이트할 문서 ID 리스트
+            update_data (Dict[str, Any]): 업데이트할 데이터
+            ordered (bool): 순서대로 처리할지 여부 (False면 병렬 처리)
+            
+        Returns:
+            Dict[str, Any]: 업데이트 결과 정보
+                {
+                    "success": bool,
+                    "modified_count": int,
+                    "error_count": int,
+                    "errors": List[Dict],
+                    "execution_time": float
+                }
+        """
+        import time
+        from pymongo.operations import UpdateOne
+
+        start_time = time.time()
+        result_info = {
+            "success": False,
+            "modified_count": 0,
+            "error_count": 0,
+            "errors": [],
+            "execution_time": 0.0
+        }
+
+        if not document_ids:
+            raise ValueError("No document IDs provided for bulk update")
+
+        try:
+            operations = [UpdateOne({"_id": doc_id}, {"$set": update_data}) for doc_id in document_ids]
+            
+            logger.info(f"Starting bulk update for {len(document_ids)} documents (no session)")
+            bulk_result = self.collection.bulk_write(
+                operations,
+                ordered=ordered
+            )
+            
+            result_info["success"] = True
+            result_info["modified_count"] = bulk_result.modified_count
+            logger.info(f"Bulk update completed successfully: {bulk_result.modified_count} documents modified")
+            
+        except BulkWriteError as bwe:
+            result_info["error_count"] = len(bwe.details.get('writeErrors', []))
+            result_info["modified_count"] = bwe.details.get('nModified', 0)
+            for write_error in bwe.details.get('writeErrors', []):
+                error_info = {
+                    "type": "bulk_write_error",
+                    "index": write_error.get('index'),
+                    "code": write_error.get('code'),
+                    "message": write_error.get('errmsg', 'Unknown bulk write error'),
+                    "document_id": write_error.get('op', {}).get('_id', 'Unknown')
+                }
+                result_info["errors"].append(error_info)
+            logger.error(f"Bulk write error: {result_info['error_count']} errors, {result_info['modified_count']} modified")
+        except WriteError as we:
+            result_info["error_count"] = 1
+            error_info = {
+                "type": "write_error",
+                "code": we.code,
+                "message": str(we),
+                "details": getattr(we, 'details', {})
+            }
+            result_info["errors"].append(error_info)
+            logger.error(f"Write error during bulk update: {we}")
+        except Exception as e:
+            result_info["error_count"] = len(document_ids)
+            error_info = {
+                "type": "unexpected_error",
+                "message": str(e),
+                "error_class": type(e).__name__
+            }
+            result_info["errors"].append(error_info)
+            logger.error(f"Unexpected error during bulk update: {e}")
+
+        result_info["execution_time"] = time.time() - start_time
+
+        if result_info["success"]:
+            logger.info(f"Bulk update completed in {result_info['execution_time']:.2f}s")
+        else:
+            logger.error(f"Bulk update failed after {result_info['execution_time']:.2f}s")
+
+        return result_info
+    
+    # def bulk_insert_with_validation(self, documents: List[Dict[str, Any]], 
+    #                                validation_rules: Optional[Dict] = None) -> Dict[str, Any]:
+    #     """
+    #     데이터 검증을 포함한 대량 삽입
+        
+    #     Args:
+    #         documents (List[Dict[str, Any]]): 삽입할 문서 리스트
+    #         validation_rules (Optional[Dict]): 검증 규칙
+            
+    #     Returns:
+    #         Dict[str, Any]: 삽입 결과 정보
+    #     """
+    #     # 데이터 검증
+    #     valid_documents = []
+    #     validation_errors = []
+        
+    #     for i, doc in enumerate(documents):
+    #         validation_result = self._validate_document(doc, validation_rules)
+    #         if validation_result["valid"]:
+    #             valid_documents.append(doc)
+    #         else:
+    #             validation_errors.append({
+    #                 "index": i,
+    #                 "document_id": doc.get("_id", f"index_{i}"),
+    #                 "errors": validation_result["errors"]
+    #             })
+        
+    #     # 검증 실패한 문서가 있으면 오류 정보와 함께 반환
+    #     if validation_errors:
+    #         return {
+    #             "success": False,
+    #             "inserted_count": 0,
+    #             "error_count": len(validation_errors),
+    #             "errors": validation_errors,
+    #             "inserted_ids": [],
+    #             "execution_time": 0.0,
+    #             "validation_failed": True
+    #         }
+        
+    #     # 검증된 문서들로 bulk insert 실행
+    #     return self.bulk_insert_documents(valid_documents)
+    
+    # def _validate_document(self, document: Dict[str, Any], 
+    #                       validation_rules: Optional[Dict] = None) -> Dict[str, Any]:
+    #     """
+    #     문서 검증
+        
+    #     Args:
+    #         document (Dict[str, Any]): 검증할 문서
+    #         validation_rules (Optional[Dict]): 검증 규칙
+            
+    #     Returns:
+    #         Dict[str, Any]: 검증 결과
+    #     """
+    #     errors = []
+        
+    #     # 기본 검증 규칙
+    #     default_rules = {
+    #         "required_fields": ["_id"],
+    #         "forbidden_fields": []
+    #     }
+        
+    #     rules = {**default_rules, **(validation_rules or {})}
+        
+    #     # 필수 필드 검증
+    #     for field in rules.get("required_fields", []):
+    #         if field not in document or document[field] is None:
+    #             errors.append(f"Required field '{field}' is missing or null")
+        
+    #     # 금지된 필드 검증
+    #     for field in rules.get("forbidden_fields", []):
+    #         if field in document:
+    #             errors.append(f"Forbidden field '{field}' is present")
+        
+    #     # 문서 크기 검증 (MongoDB 16MB 제한)
+    #     import sys
+    #     doc_size = sys.getsizeof(document)
+    #     if doc_size > 16 * 1024 * 1024:  # 16MB
+    #         errors.append(f"Document size ({doc_size} bytes) exceeds 16MB limit")
+        
+    #     return {
+    #         "valid": len(errors) == 0,
+    #         "errors": errors
+    #     }
     
     # ============================================================================
     # 패션 도메인 특화 메서드들
@@ -285,62 +566,3 @@ class FashionRepository(BaseRepository):
     # # ============================================================================
     # # 내부 헬퍼 메서드들 (데이터 처리 및 검증)
     # # ============================================================================
-    # def _validate_product_data(self, product_data: Dict[str, Any]) -> bool:
-    #     """상품 데이터 유효성 검증"""
-    #     required_fields = ["product_id", "category_main", "category_sub"]
-        
-    #     for field in required_fields:
-    #         if field not in product_data or not product_data[field]:
-    #             logger.error(f"Required field missing: {field}")
-    #             return False
-        
-    #     return True
-    
-    # def _process_product_input(self, product_data: Dict[str, Any]) -> Dict[str, Any]:
-    #     """입력 상품 데이터 전처리 (생성 시)"""
-    #     processed_data = product_data.copy()
-        
-    #     # product_id를 _id로 매핑
-    #     if "product_id" in processed_data:
-    #         processed_data["_id"] = processed_data["product_id"]
-        
-    #     return processed_data
-    
-    # def _process_product_output(self, product_data: Dict[str, Any]) -> Dict[str, Any]:
-    #     """출력 상품 데이터 후처리 (조회 시)"""
-    #     processed_data = product_data.copy()
-        
-    #     # MongoDB ObjectId를 문자열로 변환
-    #     if "_id" in processed_data:
-    #         processed_data["_id"] = str(processed_data["_id"])
-        
-    #     return processed_data
-    
-    # def _process_update_data(self, update_data: Dict[str, Any]) -> Dict[str, Any]:
-    #     """업데이트 데이터 전처리"""
-    #     # 업데이트에서는 _id 변경 금지
-    #     processed_data = update_data.copy()
-        
-    #     # _id나 product_id 변경 방지
-    #     processed_data.pop("_id", None)
-    #     processed_data.pop("product_id", None)
-        
-    #     return processed_data
-    
-    # def _prepare_bulk_data(self, products_data: List[Dict[str, Any]]) -> Tuple[List[Dict], List[Dict]]:
-    #     """일괄 처리용 데이터 검증 및 전처리"""
-    #     valid_products = []
-    #     errors = []
-        
-    #     for i, product in enumerate(products_data):
-    #         if self._validate_product_data(product):
-    #             processed_product = self._process_product_input(product)
-    #             valid_products.append(processed_product)
-    #         else:
-    #             errors.append({
-    #                 "index": i,
-    #                 "product_id": product.get("product_id", "Unknown"),
-    #                 "error": "Validation failed"
-    #             })
-        
-    #     return valid_products, errors

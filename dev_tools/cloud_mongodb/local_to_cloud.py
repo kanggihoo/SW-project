@@ -5,7 +5,7 @@ import logging
 from db import create_fashion_repo
 from pymongo import UpdateOne
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(filename)s - %(lineno)d' , datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
 
 local = create_fashion_repo(use_atlas=False)
@@ -144,64 +144,84 @@ def data_processing(doc):
 
 def test_processing():
     doc = local.find_by_id("4026789")
-    print(doc["_id"])
     result = data_processing(doc)
+    result["_id"] = doc["_id"]
     return result
 
+def migrate_data_with_status_update(batch_size:int = 50):
+    """Cloud로 데이터 마이그레이션 후 local status 업데이트"""
+    cursor = local.find_by_data_status("EB_COMP")
+    docs = []
+    successful_uploads = []
+    
+    with cloud.db_manager.client.start_session() as session:
+        try:
+            for doc in cursor:
+                processed_doc = data_processing(doc)
+                processed_doc["_id"] = doc["_id"]
+                docs.append(processed_doc)
+                
+                if len(docs) >= BATCH_SIZE:
+                    # Cloud 업로드
+                    result = cloud.bulk_insert_documents(session, docs)
+                    
+                    if result and result.get("success", False):
+                        # 성공한 문서들의 ID 수집
+                        batch_ids = [doc["_id"] for doc in docs]
+                        successful_uploads.extend(batch_ids)
+                        
+                        # Local status 업데이트 (session 없이)
+                        local_update_result = local.bulk_update_documents(
+                            session=None,
+                            document_ids=batch_ids,
+                            update_data={"data_status": "CL_COMP"}
+                        )
+                        
+                        if local_update_result.get("success", False):
+                            logger.info(f"✅ 배치 처리 완료: {len(docs)}개 문서")
+                            logger.info(f"   - Cloud 업로드: {result['inserted_count']}개")
+                            logger.info(f"   - Local 업데이트: {local_update_result['modified_count']}개")
+                        else:
+                            logger.error(f"❌ Local 업데이트 실패: {local_update_result['error_count']}개 오류")
+                    else:
+                        logger.error(f"❌ Cloud 업로드 실패: {len(docs)}개 문서")
+                    
+                    docs = []
+            
+            # 남은 문서들 처리
+            if docs:
+                result = cloud.bulk_insert_documents(session, docs)
+                
+                if result and result.get("success", False):
+                    batch_ids = [doc["_id"] for doc in docs]
+                    successful_uploads.extend(batch_ids)
+                    
+                    local_update_result = local.bulk_update_documents(
+                        session=None,
+                        document_ids=batch_ids,
+                        update_data={"data_status": "CL_COMP"}
+                    )
+                    
+                    if local_update_result.get("success", False):
+                        logger.info(f"✅ 마지막 배치 처리 완료: {len(docs)}개 문서")
+                        logger.info(f"   - Cloud 업로드: {result['inserted_count']}개")
+                        logger.info(f"   - Local 업데이트: {local_update_result['modified_count']}개")
+                    else:
+                        logger.error(f"❌ 마지막 배치 Local 업데이트 실패: {local_update_result['error_count']}개 오류")
+                else:
+                    logger.error(f"❌ 마지막 배치 Cloud 업로드 실패: {len(docs)}개 문서")
+                    
+        except Exception as e:
+            logger.error(f"❌ 마이그레이션 중 예외 발생: {e}")
+            # 세션 롤백
+            session.abort_transaction()
+            raise
+
 if __name__ == "__main__":
-    import pprint
-    result = test_processing()
-    result["embedding"]["comprehensive_description"]["vector"] = result["embedding"]["comprehensive_description"]["vector"][:10]
-    pprint.pprint(result , indent=4)
-
-# for doc in result_cursor:
-#     processed_doc = data_processing(doc.copy())
-#     update_data = {k:v for k ,v in processed_doc.items() if k != "_id"}
-#     operations.append(UpdateOne({"_id": doc["_id"]}, {"$set": update_data} , upsert=True))
-#     local_id_to_update.append(processed_doc["_id"])
-
-#     if len(operations) >= BATCH_SIZE:
-#         try:
-#             #TODO : 예외처리가 좀더 필요할거 같은데 , 2번의 bulk_write 중 하나라도 실패하면 어디서 실패하는지? 어떻게 알지 
-#             result = cloud.collection.bulk_write(operations , ordered=False)
-#             # 성공한 작업들 로깅
-#             logger.info(f"✅ Cloud DB에  {BATCH_SIZE} 개 bulk_write 성공:")
-#             logger.info(f"   - 수정된 문서: {result.modified_count}")
-#             logger.info(f"   - 삽입된 문서: {result.upserted_count}")
-#             logger.info(f"   - 매칭된 문서: {result.matched_count}")
-#             # 로컴에서도 데이터 반영 
-#             local_update_operations = [UpdateOne({"_id": local_id}, {"$set": {"data_status": "CL_COMP"}}) for local_id in local_id_to_update]
-#             local.collection.bulk_write(local_update_operations , ordered=False)
-
-#             logger.info(f"✅ Local DB에  {BATCH_SIZE} 개 bulk_write 성공(data_status 업데이트):")
-#             logger.info(f"   - 수정된 문서: {result.modified_count}")
-#             logger.info(f"   - 삽입된 문서: {result.upserted_count}")
-#             logger.info(f"   - 매칭된 문서: {result.matched_count}")
-#         except Exception as e:
-#             logger.error(f"❌ 배치 중 예외 발생: {e}")
-        
-#         finally:
-#             operations = []
-#             local_id_to_update = []
-
-# if operations:
-#     try:
-#         result = cloud.collection.bulk_write(operations , ordered=False)
-#         logger.info(f"✅ Cloud DB에  {len(operations)} 개 bulk_write 성공:")
-#         logger.info(f"   - 수정된 문서: {result.modified_count}")
-#         logger.info(f"   - 삽입된 문서: {result.upserted_count}")
-#         logger.info(f"   - 매칭된 문서: {result.matched_count}")
-
-#         local_update_operations = [UpdateOne({"_id": local_id}, {"$set": {"data_status": "CL_COMP"}}) for local_id in local_id_to_update]
-#         local.collection.bulk_write(local_update_operations , ordered=False)
-
-#         logger.info(f"✅ Local DB에  {len(local_id_to_update)} 개 bulk_write 성공(data_status 업데이트):")
-#         logger.info(f"   - 수정된 문서: {result.modified_count}")
-#         logger.info(f"   - 삽입된 문서: {result.upserted_count}")
-#         logger.info(f"   - 매칭된 문서: {result.matched_count}")
-#     except Exception as e:
-#         logger.error(f"❌ 배치 중 예외 발생: {e}")
-
+    # 새로운 함수 사용
+    migrate_data_with_status_update(batch_size=10)
+    
+   
         
         
         

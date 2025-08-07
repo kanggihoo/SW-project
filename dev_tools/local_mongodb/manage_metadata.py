@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from dev_tools.local_mongodb.config import Config
-from db.repository.fashion import FashionRepository
+from db.repository.fashion_sync import FashionRepository
 
 from typing import Optional, Dict, List, Any
 from datetime import datetime
