@@ -7,6 +7,7 @@ from typing import Annotated
 #===================================================================
 class SearchRequest(BaseModel):
     messages : str = Field(..., description="검색 쿼리")
+    limit : int = Field(default=1, description="검색 결과 개수")
 
 
 

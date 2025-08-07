@@ -22,8 +22,9 @@ async def search_product(
     """
     try:
         query = request.messages
+        limit = request.limit
         # SearchService를 통해 비동기적으로 검색 수행
-        search_result = await search_service.search_by_query(query, limit=10) # limit은 예시
+        search_result = await search_service.search_by_query(query, limit=limit) # limit은 예시
         
         # 결과를 API 응답 모델에 맞게 변환
         response_data = SearchResultItem(
