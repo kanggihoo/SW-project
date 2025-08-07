@@ -1,41 +1,69 @@
 # from app.config.dependencies import S3ManagerDep , RepositoryDep
 import logging
-from typing import Any
-
+from typing import Any, Optional, List
+from db.repository.fashion_async import AsyncFashionRepository
+from aws.aws_manager import S3Manager
+from embedding.embedding import JinaEmbedding
+import asyncio
+import aiohttp
+from fastapi import HTTPException
 logger = logging.getLogger(__name__)
 
 class SearchService:
-    def __init__(self , s3_manager , repository):
+    def __init__(self, s3_manager: S3Manager, repository: AsyncFashionRepository, jina_embedding: JinaEmbedding):
         self.s3_manager = s3_manager
         self.repository = repository
+        self.jina_embedding = jina_embedding
 
-    def vector_search_one(self, query: str)->dict:
+    async def search_by_query(self, query: str, limit: int = 1) -> dict:
         """
-        벡터 검색 결과 중 가장 유사도가 높은 데이터를 반환
+        쿼리를 기반으로 벡터 검색을 수행합니다.
         Args:
             query (str): 검색 쿼리
-            limit (int, optional): 검색 결과 개수. Defaults to 5.
+            limit (int): 결과 개수
         Returns:
-            result : dict
-                query : str
-                data : dict
-                total_count : int
-                message : str
-
+            dict: 검색 결과
         """
-        result = {"query" : query , "data" : {} , "total_count" : 0 , "message" : "Search completed successfully"}
         try:
-            max_similarity_data= self.repository.vector_search(query , limit = 1)[0]
-            representative_image_url = self._generate_representative_image_url(max_similarity_data)
-            max_similarity_data["image_url"] = representative_image_url
-            result["data"] = max_similarity_data
-            result["total_count"] = 1
-            result["message"] = "Search completed successfully"
-            return result
+            # 1. LLM을 이용한 쿼리 재작성 및 필터 생성 (현재는 입력 쿼리 그대로 사용)
+            rewritten_query_list, pre_filter_list = [query], [None]
+
+            # 2. 임베딩 생성
+            async with aiohttp.ClientSession() as session:
+                embedding_data = await self.jina_embedding.get_embedding(rewritten_query_list, session)
+                embeddings = embedding_data.get("embeddings", [])
+            
+            if not embeddings:
+                raise ValueError("Embedding generation failed")
+
+            # 3. 병렬 벡터 검색 실행
+            tasks = []
+            for idx, (rq, pf) in enumerate(zip(rewritten_query_list, pre_filter_list)):
+                task = self.repository.vector_search(embeddings[idx], limit=limit, pre_filter=pf)
+                tasks.append(task)
+            
+            vector_search_results = await asyncio.gather(*tasks)
+
+            # 4. 결과 처리 및 S3 URL 생성
+            processed_results = []
+            for result_list in vector_search_results:
+                for item in result_list:
+                    item["image_url"] = self._generate_representative_image_url(item)
+                    processed_results.append(item)
+            
+            logger.info(f"Processed {len(processed_results)} results for query: '{query}'")
+
+            return {
+                "query": query,
+                "data": processed_results,
+                "total_count": len(processed_results),
+                "message": "Search completed successfully"
+            }
+
         except Exception as e:
-            logger.error(f"Vector search failed for query '{query}': {e}")
-            result["message"] = "Search failed"
-            return result
+            logger.error(f"Error in search_by_query: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"An unexpected error occurred during search: {e}") from e
+ 
         
     # def vector_search_multiple(self, query: str, limit: int = None) -> dict[str, Any]:
     #     """
@@ -72,7 +100,14 @@ class SearchService:
     def _generate_representative_image_url(self , data:dict)->str:
         try:
             
-    
+            '''
+            대표이미지 : product_skus.image_urls[0]
+            product_id = products.product_id or data.get("_id")
+            main_category = products.skus.main_category 
+            sub_category = products.skus.sub_category
+
+            
+            '''
             representative_image = data.get("representative_assets")["color_variant"][0]
             product_id = data.get("product_id")
             main_category = data.get("category_main")

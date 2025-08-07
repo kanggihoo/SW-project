@@ -1,12 +1,18 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-
+from fastapi.exceptions import RequestValidationError , HTTPException
 import logging
 
 logger = logging.getLogger(__name__)
 
 import json
+
+async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.error(f"HTTPException: {exc.status_code} {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"success": False, "message": "Internal Server Error"}
+    )
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """

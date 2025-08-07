@@ -1,47 +1,43 @@
-from fastapi import APIRouter
-from fastapi import Body
-from typing import Annotated, List, Dict, Any
-from pydantic import Field
-from app.config.dependencies import RepositoryDep, AWSManagerDep, DynamoDBManagerDep , S3ManagerDep , SearchServiceDep
-from pydantic import BaseModel
+from fastapi import APIRouter, Body, HTTPException
+from typing import Annotated
+from app.config.dependencies import SearchServiceDep
+from app.model.saarch_api import SearchRequest, SearchResponse, SearchResultItem
+
 router = APIRouter(
     prefix="/search",
     tags=["search"],
 )
 
-class SearchRequest(BaseModel):
-    messages : str = Field(..., description="검색 쿼리")
-
-class SearchResultItem(BaseModel):
-    query : str
-    data : dict
-    total_count : int
-    message : str
-
-class BaseResponse(BaseModel):
-    success : Annotated[bool , Field(default=True)]
-    message : Annotated[str , Field(default="Success")]
-class SearchResponse(BaseResponse):
-    """검색 결과 응답 모델"""
-    data : SearchResultItem
-       
-@router.post("/" , response_model=SearchResponse)
+@router.post("/", response_model=SearchResponse)
 async def search_product(
-    search_service:SearchServiceDep,
-    request: Annotated[SearchRequest , Body()]
+    search_service: SearchServiceDep,
+    request: Annotated[SearchRequest, Body()]
 ):
+    """
+    사용자 쿼리를 기반으로 상품을 검색합니다.
+    - 쿼리 분석 (향후 확장)
+    - 임베딩 생성
+    - 벡터 검색 수행
+    - 결과 반환
+    """
     try:
-        #TODO: 지금 atlas에 저장된 데이터의 representative_image_s3_key 가 이상함.
-        # response = repository.find_all({"sub_category":"1005"})
-        # data = []
-        # for item in response:
-        #     url = s3_manager.generate_presigned_url(item["representative_image_s3_key"]) 
-        #     item["representative_image_url"] = url
-        #     data.append(item)
-            # item["representative_image_url"] = url
         query = request.messages
-        result = search_service.vector_search_one(query)
-        return SearchResponse(data=SearchResultItem(**result))
+        # SearchService를 통해 비동기적으로 검색 수행
+        search_result = await search_service.search_by_query(query, limit=10) # limit은 예시
+        
+        # 결과를 API 응답 모델에 맞게 변환
+        response_data = SearchResultItem(
+            query=search_result["query"],
+            data=search_result["data"],
+            total_count=search_result["total_count"],
+            message=search_result["message"]
+        )
+        return SearchResponse(success=True, data=response_data)
+
+    except HTTPException as e:
+        # 서비스에서 발생한 HTTPException을 그대로 전달
+        raise e
     except Exception as e:
-        return SearchResponse(success=False, message=str(e) , data=SearchResultItem(query=query, data={}, total_count=0, message="Search failed"))
+        # 그 외 예상치 못한 예외 처리
+        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {e}")
 

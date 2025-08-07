@@ -1,4 +1,4 @@
-from .base import BaseRepository
+from .base_sync import BaseRepository
 from typing import Dict, Any, Optional , List , override , Iterator
 from pymongo.errors import DuplicateKeyError , BulkWriteError
 import logging
@@ -159,25 +159,28 @@ class FashionRepository(BaseRepository):
         query = self.query_builder.data_status_filter(data_status)
         return self.find(query)
     
-    def vector_search(self , query: str , limit: int) -> List[Dict]:
+    async def vector_search(self , embedding: list[float] , limit: int, pre_filter: Optional[Dict] = None ) -> List[Dict]:
         """벡터 검색
         Args:
             query (str): 검색 쿼리
             limit (int): 검색 결과 개수
+            pre_filter (Optional[Dict], optional): 사전 필터링 조건. Defaults to None.
 
         Returns:
             List[Dict]: 검색 결과 데이터
         """
 
-        pipeline = self.query_builder.vector_search_pipeline(user_query=query,
-                                                            embedding_factory=JinaEmbedding().get_embedding,
-                                                            limit=limit,
-                                                            num_candidates=100,
-                                                            index_name="tmp",
-                                                            embedding_field_path="embedding.comprehensive_description.vector"
-                                                            )
+        pipeline = self.query_builder.vector_search_pipeline(
+                                                                embedding=embedding,
+                                                                limit=limit,
+                                                                pre_filter=pre_filter,
+                                                                num_candidates=100,
+                                                                index_name="tmp",
+                                                                embedding_field_path="embedding.comprehensive_description.vector"
+                                                                )
+        # TODO : 여기 부분 비동기 처리 해야함. 
         return list(self.collection.aggregate(pipeline))
-    
+       
     def health_check(self) -> Dict[str, Any]:
         """리포지토리 헬스체크"""
         health_info = {
