@@ -29,33 +29,32 @@ class Settings(BaseSettings):
         case_sensitive=True,
         # 환경변수를 우선적으로 사용
         env_prefix="",
-        # 환경변수가 없을 때 .env 파일도 확인
-        env_nested_delimiter="__"
+        extra="ignore"
     )
     
-    def __init__(self, **kwargs):
-        # 환경변수 직접 확인 및 로그
-        required_vars = ['MONGODB_ATLAS_URI']
-        missing_vars = []
+    # def __init__(self, **kwargs):
+    #     # 환경변수 직접 확인 및 로그
+    #     required_vars = ['MONGODB_ATLAS_URI']
+    #     missing_vars = []
         
-        for var in required_vars:
-            env_value = os.environ.get(var)
-            if not env_value:
-                missing_vars.append(var)
-            else:
-                print(f"✓ {var}: {env_value[:20]}...")
+    #     for var in required_vars:
+    #         env_value = os.environ.get(var)
+    #         if not env_value:
+    #             missing_vars.append(var)
+    #         else:
+    #             print(f"✓ {var}: {env_value[:20]}...")
         
-        if missing_vars:
-            print(f"❌ 누락된 환경변수: {', '.join(missing_vars)}")
-            print("현재 환경변수 목록:")
-            for key, value in os.environ.items():
-                if any(x in key.upper() for x in ['MONGO', 'API', 'ATLAS']):
-                    print(f"  {key}: {value[:20] if value else 'None'}...")
+    #     if missing_vars:
+    #         print(f"❌ 누락된 환경변수: {', '.join(missing_vars)}")
+    #         print("현재 환경변수 목록:")
+    #         for key, value in os.environ.items():
+    #             if any(x in key.upper() for x in ['MONGO', 'API', 'ATLAS']):
+    #                 print(f"  {key}: {value[:20] if value else 'None'}...")
             
-            # 환경변수가 누락된 경우 명확한 에러 메시지
-            raise ValueError(f"필수 환경변수가 설정되지 않았습니다: {', '.join(missing_vars)}")
+    #         # 환경변수가 누락된 경우 명확한 에러 메시지
+    #         raise ValueError(f"필수 환경변수가 설정되지 않았습니다: {', '.join(missing_vars)}")
         
-        super().__init__(**kwargs)
+    #     super().__init__(**kwargs)
 
 
 @lru_cache

@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import Depends
 
 # 필요 모듈 import 
-from .settings import get_settings , Settings
+from .settings import get_settings
 from db import create_fashion_repo
 from db.repository.fashion import FashionRepository
 from aws.aws_manager import AWSManager
@@ -18,14 +18,9 @@ logger = logging.getLogger(__name__)
 # DB 관련 의존성 
 # =============================================================================
 @lru_cache()
-def get_cached_settings() -> Settings:
-    """캐쉬된 설정 반환"""
-    return get_settings()
-
-@lru_cache()
 def get_fashion_repo()->FashionRepository:
     """캐쉬된 설정 반환"""
-    settings = get_cached_settings()    
+    settings = get_settings()    
     return create_fashion_repo(settings.USE_ATLAS)
 
 def get_fashion_repo_dependency() -> FashionRepository:
@@ -101,7 +96,7 @@ def cleanup_dependencies():
         logger.error(f"Error during dependency cleanup: {e}")
 
 def health_check_dependencies() -> dict:
-    """의존성들의 헬스체크"""
+    """api 서버가 사용하는 모든 의존성에 대한 health check"""
     health_status = {
         "database": False,
         "aws": False,

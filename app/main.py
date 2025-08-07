@@ -7,12 +7,11 @@ import logging
 from .router import websocket
 from .api.v1.api import api_router
 from .config.dependencies import get_fashion_repo , get_aws_manager
-load_dotenv()
-
-#TODO : 에러처리 추가 
+from .config.exceptions import validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 
 # 로깅설정
-logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s : %(filename)s - %(lineno)d' , datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s : %(filename)s - %(lineno)d' , datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -37,7 +36,10 @@ app = FastAPI(
     title="Clothing Recommendation API",
     description="An API for clothing recommendations using LangGraph",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    exception_handlers={
+        RequestValidationError: validation_exception_handler
+    }
 )
 
 app.include_router(websocket.router)
