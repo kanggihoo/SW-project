@@ -11,31 +11,14 @@ mongo_local = create_fashion_repo(use_atlas=False)
 
 
 
-result = mongo_local.collection.aggregate([
-    {
-        "$match": {
-            "main_category" : {"$exists" : False}
-        }
-    },
-    {
-        "$group": {
-            "_id": {
-                "main_category": "$category_main",
-                "sub_category": "$category_sub"
-            },
-            "count": {"$sum": 1}
-        }
-    },
-    {
-        "$project": {
-            "_id": 0,
-            "main_category": "$_id.main_category",
-            "sub_category": "$_id.sub_category",
-            "count": 1
-        }
-    }
-])
+result =mongo_local.collection.find({
+    "$expr": {
+        "$ne": [
+            { "$size": { "$ifNull": ["$representative_assets.color_variant", []] } },
+            { "$size": { "$ifNull": ["$caption_info.color_images.color_info", []] } }
+    ]
+  }
+})
 
 for doc in result:
-    print(doc)
-
+    print(doc["_id"])

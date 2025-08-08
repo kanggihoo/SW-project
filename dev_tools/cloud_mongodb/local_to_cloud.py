@@ -87,14 +87,21 @@ def _color_info_parsing(doc , product_id , result):
     image_urls = []
     color_info:list = doc["caption_info"]["color_images"]["color_info"]
     representative_assets:list = doc["representative_assets"]
-
+    #TODO : 여기서 이미지 개수 다르면 임시 방편으로 pass 해버려야 겠는데 
     sku_id = [product_id + "_" + c["name"] for c in color_info]
     for idx, c in enumerate(color_info):
         color_name.append(c["name"])
         color_hex.append(c["hex"])
         color_brightness.append(c["attributes"]["brightness"])
         color_saturation.append(c["attributes"]["saturation"])
-        image_urls.append(representative_assets["color_variant"][idx])
+        #TODO : 실제 이미지 개수랑 모델이 인식한 거랑 다른 경우에 대한 예외처리필요(한 이미지에 2개 옷있으면 색상을 2개 반환해버림)
+        try:
+            image_urls.append(representative_assets["color_variant"][idx])
+        except:
+            logger.error(f"color_variant 에 대응하는 이미지 없음 : {product_id} , {idx}")
+            logger.error(f"color_variant 개수 : {len(representative_assets['color_variant'])}")
+            logger.error(f"모델이 인식한 color 개수 : {len(color_info)}")
+            raise Exception(f"color_variant 에 대응하는 이미지 없음 : {product_id} , {idx}")
 
     result["sku_id"] = sku_id
     result["color_name"] = color_name
@@ -161,7 +168,7 @@ def migrate_data_with_status_update(batch_size:int = 50):
                 processed_doc["_id"] = doc["_id"]
                 docs.append(processed_doc)
                 
-                if len(docs) >= BATCH_SIZE:
+                if len(docs) >= batch_size:
                     # Cloud 업로드
                     result = cloud.bulk_insert_documents(session, docs)
                     

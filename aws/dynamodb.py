@@ -5,7 +5,7 @@ from boto3.dynamodb.types import TypeSerializer
 from pathlib import Path
 from typing import Iterator , Any
 from pydantic import validate_call 
-
+from datetime import datetime, timezone
 # logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 class DynamoDBManager:
@@ -102,9 +102,11 @@ class DynamoDBManager:
                 'sub_category': sub_category,
                 'product_id': product_id
             })
-            update_expression = "SET caption_status = :status"
+            update_expression = "SET caption_status = :status, curation_caption_status = :curation_caption_status, caption_updated_at = :caption_updated_at"
             expression_attribute_values = {
-                ':status': {'S': update_result}
+                ':status': {'S': update_result},
+                ':curation_caption_status': {'S': f"{update_result}#{update_result}"},
+                ':caption_updated_at': {'S': datetime.now(timezone.utc).isoformat()}
             }
             self.client.update_item(
                 TableName=self.table_name,
@@ -133,7 +135,8 @@ class DynamoDBManager:
     # =============================================================================
 
     def get_product_pagenator(self ,
-                              partition:dict|None = None ,
+                              partition:dict ,
+                              sort_key:dict ,
                               sub_category:int|None = None,
                               GSI_NAME:str|None = None,
                               projection_fields:list[str]=None,
@@ -206,6 +209,19 @@ class DynamoDBManager:
                 partition_type = partition.get("type")
                 key_condition_parts.append(f'{partition_key} = :{partition_key}')
                 expression_values[f':{partition_key}'] = {partition_type: partition_value}
+
+                # 정렬 키 : 
+                if sort_key:
+                    sort_key_key = sort_key.get("key")
+                    sort_key_value = sort_key.get("value")
+                    sort_key_type = sort_key.get("type")
+                    sort_key_operator = sort_key.get("operator")
+                    if sort_key_operator == "begins_with":
+                        key_condition_parts.append(f'begins_with({sort_key_key} , :{sort_key_key})')
+                        expression_values[f':{sort_key_key}'] = {sort_key_type: sort_key_value}
+                    else:
+                        key_condition_parts.append(f'{sort_key_key} {sort_key_operator} :{sort_key_key}')
+                        expression_values[f':{sort_key_key}'] = {sort_key_type: sort_key_value}
                 
             else:
                 # 파티션 키: sub_category

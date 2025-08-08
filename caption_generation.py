@@ -5,7 +5,7 @@ from aws.aws_manager import AWSManager
 from processing.image_processor import download_images , parsing_data_for_llm 
 from caption.models.product import ImageManager, ProductManager, Base64DataForLLM
 from caption.fashion_caption_generator import FashionCaptionGenerator
-from db.repository.fashion import FashionRepository
+from db.repository.fashion_sync import FashionRepository
 from db.config.database import DatabaseManager
 from db import create_fashion_repo
 from db.config import Config
@@ -114,7 +114,6 @@ async def process_single_item(item:dict, dep:CaptionDependency):
         # 결과 구성 및 저장
         caption_result = parsing_caption_result(result, representative_assets)
 
-        #TODO : dynamodb, mongodb(local) 반영 
         # dynamodb 반영 (caption PENDING => COMPLETED)
         dep.asw_manager.dynamodb_manager.update_caption_result(sub_category, product_id, "COMPLETED")
 
@@ -166,16 +165,23 @@ async def process_all_pages(paginator , deps:CaptionDependency):
             statistic.add_fail(fail_count)
 
             # 테스트 용도 break
-            break
 
     return statistic
 
 async def main():
     load_dotenv()
-    dep = setup_dependencies(page_size=2)
+    dep = setup_dependencies(page_size=5)
     try:
         # pagenator 지정 
-        pagenator = dep.asw_manager.dynamodb_manager.get_product_pagenator(partition={"key":"sub_category_curation_status","value":"3002#COMPLETED","type":"S"},GSI_NAME = "CurationStatus-SubCategory-GSI")
+        '''
+        GSI 이름 : Curation-CaptionStatus--SubCategory-GSI
+        partition_key : curation_caption_status (COMPLETED#PENDING)
+        sort_key : sub_main_id (3002#TOP#000000)
+        
+        '''
+        pagenator = dep.asw_manager.dynamodb_manager.get_product_pagenator(partition={"key":"curation_caption_status","value":"COMPLETED#PENDING","type":"S"},
+                                                                           sort_key={"key":"sub_main_id","value":"1002","type":"S" , "operator":"begins_with"},
+                                                                           GSI_NAME = "Curation-CaptionStatus--SubCategory-GSI" , )
 
         # 모든 페이지 처리
         statistic = await process_all_pages(pagenator , dep)

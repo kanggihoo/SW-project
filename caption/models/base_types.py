@@ -23,7 +23,6 @@ class PrimaryColor(str, Enum):
     DENIM = "데님"
     METALLIC = "메탈릭"
     MULTICOLOR = "멀티컬러"
-    OTHER = "기타"
     
 class Brightness(str, Enum):
     """명도 (5단계)"""

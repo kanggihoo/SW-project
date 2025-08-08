@@ -43,11 +43,11 @@ class SearchService:
                 tasks.append(task)
             
             vector_search_results = await asyncio.gather(*tasks)
-
             # 4. 결과 처리 및 S3 URL 생성
             processed_results = []
             for result_list in vector_search_results:
                 for item in result_list:
+
                     item["image_url"] = self._generate_representative_image_url(item)
                     processed_results.append(item)
             
@@ -108,10 +108,10 @@ class SearchService:
 
             
             '''
-            representative_image = data.get("representative_assets")["color_variant"][0]
-            product_id = data.get("product_id")
-            main_category = data.get("category_main")
-            sub_category = data.get("category_sub")
+            representative_image = data.get("product_skus")["image_urls"][0]
+            product_id = data["_id"]
+            main_category = data.get("product_skus")["main_category"]
+            sub_category = data.get("product_skus")["sub_category"]
             if not all([main_category , sub_category , product_id , representative_image]):
                 logger.warning("Missing required fields for S3 key generation")
                 return None

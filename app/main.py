@@ -8,7 +8,7 @@ from .config.exceptions import validation_exception_handler, http_exception_hand
 from fastapi.exceptions import RequestValidationError, HTTPException
 
 # 로깅설정
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s', datefmt='%H:%M:%S')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s - %(filename)s - %(lineno)d', datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager

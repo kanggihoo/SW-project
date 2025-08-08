@@ -153,16 +153,17 @@ def dynamodb():
     )
 
 class TestDynamoDBManager:
-    def test_get_product_pagenator(self, dynamodb):
+    def test_get_product_pagenator(self, dynamodb:DynamoDBManager):
         logger.info("sd")
-        print("sdsds")
         pagenator = dynamodb.get_product_pagenator(
-            partition={"key":"curation_status","value":"COMPLETED","type":"S"},
-            GSI_NAME = "CurationStatus-RecommendationOrder-GSI"
+            partition={"key":"curation_caption_status","value":"COMPLETED#PENDING","type":"S"},
+            sort_key={"key":"sub_main_id","value":"3002","type":"S" , "operator":"begins_with"},
+            GSI_NAME = "Curation-CaptionStatus--SubCategory-GSI" , 
         )
         for page in pagenator:
             logger.info(page)
             for item in page.get("Items"):
                 print(item)
+                break
 
         

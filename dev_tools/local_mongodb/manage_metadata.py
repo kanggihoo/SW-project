@@ -41,7 +41,7 @@ class ProductMetaManager:
                                                     database_name=self.db_config["DATABASE_NAME"],
                                                     collection_name=self.db_config["COLLECTION_NAME"])
         
-        self.all_possible_statuses = ['CR_DET', 'IMG_DOWN', 'AWS_UPL', 'RE_COMP', 'CA_COMP', 'EB_COMP']
+        self.all_possible_statuses = ['CR_DET', 'IMG_DOWN', 'AWS_UPL', 'RE_COMP', 'CA_COMP', 'EB_COMP' , 'CL_COMP']
     
     def show_terminal(self):
                                     
@@ -124,6 +124,11 @@ class ProductMetaManager:
                         "$cond": [{ "$eq": ["$status_breakdown.status", "EB_COMP"] }, "$status_breakdown.count", 0]
                     }
                 },
+                "CL_COMP": {
+                    "$sum": {
+                        "$cond": [{ "$eq": ["$status_breakdown.status", "CL_COMP"] }, "$status_breakdown.count", 0]
+                    }
+                },
                 "total_count": { "$first": "$total_overall_count" } 
             }
         },
@@ -137,6 +142,7 @@ class ProductMetaManager:
                 "RE_COMP": 1,
                 "CA_COMP": 1,
                 "EB_COMP": 1,
+                "CL_COMP": 1,
                 "total_count": 1
             }
         }
@@ -144,7 +150,7 @@ class ProductMetaManager:
         result = list(self.db.collection.aggregate(pipeline))
         # # # tabulate 라이브러리를 사용하여 DataFrame을 텍스트 표로 변환
         df = pd.DataFrame(result)
-        df = df[['main_category', 'sub_category', 'CR_DET', 'AWS_UPL', 'RE_COMP', 'CA_COMP', 'EB_COMP', 'total_count']]
+        df = df[['main_category', 'sub_category', 'CR_DET', 'AWS_UPL', 'RE_COMP', 'CA_COMP', 'EB_COMP', 'CL_COMP', 'total_count']]
         df = df.sort_values(by=['main_category', 'sub_category'], ascending=True)
         
         print(tabulate(df, headers='keys', tablefmt='grid'))

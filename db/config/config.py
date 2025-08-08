@@ -38,10 +38,12 @@ class Config_(dict):
                 "DEFAULT_NUM_CANDIDATES": 100,
                 "DEFAULT_LIMIT": 10,
                 "DEFAULT_PROJECT_FIELDS": {
-                    "product_id":1,
-                    "category_main":1,
-                    "category_sub":1,
-                    "representative_assets":1,
+                    "product_skus" : 1,
+                    "products": 1
+                    # "product_id":1,
+                    # "category_main":1,
+                    # "category_sub":1,
+                    # "representative_assets":1,
                 }
             }
         }
