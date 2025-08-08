@@ -15,24 +15,24 @@ async def download_images(images:list[ImageManager]):
         await downloader.download_images(images)
 
 
-def download_images_sync(images:list[ImageManager]):
-    """
-    동기 환경에서 여러 제품의 이미지들을 다운로드하는 래퍼 함수
+# def download_images_sync(images:list[ImageManager]):
+#     """
+#     동기 환경에서 여러 제품의 이미지들을 다운로드하는 래퍼 함수
     
-    Args:
-        products: ProductManager 객체 리스트
-    """
-    asyncio.run(download_images(images))
+#     Args:
+#         products: ProductManager 객체 리스트
+#     """
+#     asyncio.run(download_images(images))
     
         
         
-def parsing_data_for_llm(images:list[ImageManager] , target_size:int )->Base64DataForLLM:
+def parsing_data_for_llm(images:list[ImageManager] , image_sizes:'ImageSize')->Base64DataForLLM:
     """
     이미지 데이터를 LLM에 전달하기 위한 데이터 파싱
     
     Args:
         images: ImageManager 객체 리스트
-        target_size: 이미지 크기
+        image_sizes: ImageSize 객체(딥캡션, 색상, 텍스트 이미지 크기 정보)
         
     Returns:
         Base64DataForLLM: 딥캡션, 색상, 텍스트 이미지 데이터를 Base64로 변환한 데이터
@@ -60,11 +60,11 @@ def parsing_data_for_llm(images:list[ImageManager] , target_size:int )->Base64Da
         color_images = [image[0] for image in sorted(color_images, key=lambda x: x[1])]
     result["fail"] = fail
     if len(deep_caption_images) == 3 and len(color_images): 
-        result["deep_caption"] = images_to_base64(deep_caption_images, target_size=target_size , type="image")
-        result["color_images"] = images_to_base64(color_images, target_size=target_size, type="image")
+        result["deep_caption"] = images_to_base64(deep_caption_images, target_size=image_sizes.deep_caption_size , type="image")
+        result["color_images"] = images_to_base64(color_images, target_size=image_sizes.color_caption_size, type="image")
         if text_images:
-            result["text_images"] = images_to_base64(text_images, target_size=target_size, type="text")
-        else:
+            result["text_images"] = images_to_base64(text_images, target_size=image_sizes.text_caption_size, type="text")
+        else:   
             result["text_images"] =""
         result["success"] = True
         result["color_count"] = len(color_images)

@@ -33,14 +33,17 @@ class Config_(dict):
             "VECTOR_SEARCH_SETTINGS" : {
                 "DEFAULT_VECTOR_INDEX": "tmp",
                 "EMBEDDING_FIELD_PATH": "embedding.comprehensive_description.vector",
+                "EMBEDDING_DIMENSIONS": 1024,
                 "DEFAULT_SIMILARITY": "cosine",
                 "DEFAULT_NUM_CANDIDATES": 100,
                 "DEFAULT_LIMIT": 10,
                 "DEFAULT_PROJECT_FIELDS": {
-                    "product_id":1,
-                    "category_main":1,
-                    "category_sub":1,
-                    "representative_assets":1,
+                    "product_skus" : 1,
+                    "products": 1
+                    # "product_id":1,
+                    # "category_main":1,
+                    # "category_sub":1,
+                    # "representative_assets":1,
                 }
             }
         }

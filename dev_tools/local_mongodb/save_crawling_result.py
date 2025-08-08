@@ -24,7 +24,7 @@ import logging
 from pathlib import Path
 logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s : %(filename)s - %(lineno)d' , datefmt='%Y-%m-%d %H:%M:%S')
 import sys
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent))
 logger = logging.getLogger(__name__)
 from aws.dynamodb import DynamoDBManager
 from db import create_fashion_repo
@@ -38,7 +38,7 @@ class ProcessingDataStage(Enum):
     DOWN = "image_download" # 이미지 다운로드 
     AWS = "aws_upload" # aws s3에 저장 
     RE = "representative_image" # 대표 이미지 정보 저장 
-    EMB = "emb_generation" # 임베딩 정보 저장 
+    EB = "embedding_generation" # 임베딩 정보 저장 
     
 class DataSaveStatus(Enum):
     CR_SUM = "CR_SUM" # 크롤링 summary 완료 
@@ -47,7 +47,7 @@ class DataSaveStatus(Enum):
     AWS_UPL = "AWS_UPL" # 다운로드 한 이미지 aws에 업로드 완료 
     RE_COMP = "RE_COMP" # 대표 이미지 정보 저장 완료
     CA_COMP = "CA_COMP" # 선정된 대표 이미지에 대해 캡션 정보 저장 완료 
-    EMB_COMP = "EMB_COMP" # 캡션 완료된 제품에 대한 임베딩 정보 저장 완료 
+    EB_COMP = "EB_COMP" # 캡션 완료된 제품에 대한 임베딩 정보 저장 완료 
     
 class DataSavePipeline:
     def __init__(self) :
@@ -115,30 +115,33 @@ class DataSavePipeline:
                 # 이미 S3에 업로드 되어 있는 main/sub category인 경우 => 해당 product_id가 실제로 존재하는지 확인 
                 result_dynamo = self.dynamodb_client.get_item(sub_category=sub_category, product_id=product_id)
                 if result_dynamo is None:
-                    continue
-                curation_status = result_dynamo.get("curation_status")
-                update_data = {}
-                if curation_status == "COMPLETED":
-                    # 누군가가 curation 작업을 완료 한 경우 : 대표 이미지 조회 
-                    representative_assets = result_dynamo.get("representative_assets")
-                    update_data["representative_assets"] = representative_assets
-                    update_data["data_status"] = DataSaveStatus.RE_COMP.value
-                    updates_map[index] = update_data
-                elif curation_status == "PASS" or curation_status == "PENDING":
-                    # dynamodb에 데이터가 존재하는 경우 
-                    update_data["data_status"] = DataSaveStatus.AWS_UPL.value
+                    logger.error(f"❌ {product_id} 데이터가 dynamoDB에 존재하지 않습니다.")
+                    update_data["data_status"] = DataSaveStatus.CR_DET.value
                     updates_map[index] = update_data
                 else:
-                    logger.error(f"❌ curation_status 값이 올바르지 않습니다. : {curation_status}")
+                    curation_status = result_dynamo.get("curation_status")
+                    update_data = {}
+                    if curation_status == "COMPLETED":
+                        # 누군가가 curation 작업을 완료 한 경우 : 대표 이미지 조회 
+                        representative_assets = result_dynamo.get("representative_assets")
+                        update_data["representative_assets"] = representative_assets
+                        update_data["data_status"] = DataSaveStatus.RE_COMP.value
+                        updates_map[index] = update_data
+                    elif curation_status == "PASS" or curation_status == "PENDING":
+                        # dynamodb에 데이터가 존재하는 경우 
+                        update_data["data_status"] = DataSaveStatus.AWS_UPL.value
+                        updates_map[index] = update_data
+                    else:
+                        logger.error(f"❌ curation_status 값이 올바르지 않습니다. : {curation_status}")
                     
-            else: # 처음 크롤링한 결과를 반영하는 경우 
-                update_data["data_status"] = DataSaveStatus.CR_DET.value
-                updates_map[index] = update_data
+            # else: # 처음 크롤링한 결과를 반영하는 경우 
+            #     update_data["data_status"] = DataSaveStatus.CR_DET.value
+            #     updates_map[index] = update_data
             
         if updates_map:
             update_df = pd.DataFrame.from_dict(updates_map, orient="index")
             batch_df.update(update_df)
-            logger.info(f"배치 완료 : {batch_index} - {batch_index+BATCH_SIZE}")
+        logger.info(f"배치 완료 : {batch_index} - {batch_index+BATCH_SIZE}")
         
         # mongodb 에 저장 
         mongo_operations = [] 
@@ -282,7 +285,6 @@ class DataSavePipeline:
             "product_id",
             "product_price",
             "product_original_price",
-            "product_discount_price",
             "product_brand_name",
             "product_name",
             "num_likes",
@@ -348,131 +350,16 @@ class DataSavePipeline:
 
 if __name__ == "__main__":
     data_save_pipeline = DataSavePipeline()
-    sub_category = "피케-카라티셔츠"
     main_category = "상의"
+    sub_category = "민소매티셔츠"
+    is_already_uploaded = False
     BASE_DIR = Path("/Users/kkh/Desktop/musinsa-crawling/data")
     detail_json_file_name = f"musinsa_product_detail_{main_category}_{sub_category}.json"
     detail_json_file_path = BASE_DIR / detail_json_file_name
-    is_already_uploaded = True
     data_save_pipeline.save_crawling_data(
         file_path=detail_json_file_path,
         is_already_uploaded=is_already_uploaded
     )
-
-#     # 초기 설정
-#     ddb_config = Config().get_dynamodb_config()
-#     dynamodb_client = DynamoDBManager(ddb_config["region_name"],ddb_config["table_name"] , ddb_config)
-#     mongodb = create_fashion_repo(use_atlas=False)
-#     # =============================================================================
-#     # 데이터 경로 설정 
-#     # =============================================================================
-#     BASE_DIR = Path("/Users/kkh/Desktop/musinsa-crawling/data")
-#     main_category = "상의"
-#     sub_category = "셔츠-블라우스"
-#     detail_json_file_name = f"musinsa_product_detail_{main_category}_{sub_category}.json"
-#     detail_json_path = BASE_DIR / detail_json_file_name
-
-#     # =============================================================================
-#     # 데이터 로드 및 초기 전처리 
-#     # ============================================================================
-#     product_detail_df = load_json_to_df(detail_json_path)
-#     product_detail_df = _process_df(product_detail_df)
-#     total = len(product_detail_df)
-#     # =============================================================================
-#     # 반복문을 통해 dynamodb로 부터 데이터 조회 
-#     # =============================================================================
-#     BATCH_SIZE = 1000
-#     # with tqdm(total=len(product_detail_df), desc="데이터 조회 중") as pbar:
-#     for batch_index in range(0, total, BATCH_SIZE):
-#         batch_df = product_detail_df.iloc[batch_index:batch_index+BATCH_SIZE]
-#         updates_map = {}
-#         for row in batch_df.itertuples(index=True):
-#             index = row.Index
-#             product_id = str(row[1])
-#             sub_category = int(row.sub_category)
-#             result_dynamo = dynamodb_client.get_item(sub_category=sub_category, product_id=product_id)
-#             if result_dynamo is None:
-#                 continue
-#             curation_status = result_dynamo.get("curation_status")
-#             update_data = {}
-#             if curation_status == "COMPLETED":
-#                 # 누군가가 curation 작업을 완료 한 경우 : 대표 이미지 조회 
-#                 representative_assets = result_dynamo.get("representative_assets")
-#                 update_data["representative_assets"] = representative_assets
-#                 update_data["data_status"] = "RE_COMP"
-#                 updates_map[index] = update_data
-#             elif curation_status == "PASS" or curation_status == "PENDING":
-#                 # dynamodb에 데이터가 존재하는 경우 
-#                 update_data["data_status"] = "AWS_UPL"
-#                 updates_map[index] = update_data
-#             else:
-#                 raise ValueError(f"curation_status 값이 올바르지 않습니다. : {curation_status}")
-
-#         if updates_map:
-#             update_df = pd.DataFrame.from_dict(updates_map, orient="index")
-#             batch_df.update(update_df)
-#             logger.info(f"배치 완료 : {batch_index} - {batch_index+BATCH_SIZE}")
-
-#         # mongodb 에 저장 
-#         mongo_operations = [] 
-#         batch_docs = batch_df.to_dict(orient="records")
-
-#         for doc in batch_docs:
-#             filter_query = {"_id": str(doc["_id"])}
-#             update_data = {k:v for k ,v in doc.items() if k != "_id"}
-#             update_operation = {"$set" : update_data}
-#             mongo_operations.append(
-#                 UpdateOne(filter_query, update_operation , upsert=True)
-#             )
-
-#         if mongo_operations:
-#             try:
-#                 # ordered=False로 설정하여 일부 실패해도 계속 진행
-#                 result = mongodb.collection.bulk_write(mongo_operations, ordered=False)
-                
-#                 # 성공한 작업들 로깅
-#                 logger.info(f"✅ 배치 {batch_index}-{batch_index+BATCH_SIZE} bulk_write 성공:")
-#                 logger.info(f"   - 수정된 문서: {result.modified_count}")
-#                 logger.info(f"   - 삽입된 문서: {result.upserted_count}")
-#                 logger.info(f"   - 매칭된 문서: {result.matched_count}")
-                
-#                 # 실패한 작업들 처리
-#                 if hasattr(result, 'bulk_api_result') and 'writeErrors' in result.bulk_api_result:
-#                     failed_docs = []
-#                     for error in result.bulk_api_result['writeErrors']:
-#                         error_index = error['index']
-#                         error_doc = batch_docs[error_index]
-#                         failed_docs.append({
-#                             '_id': str(error_doc['_id']),
-#                             'error_code': error['code'],
-#                             'error_message': error['errmsg']
-#                         })
-#                         logger.error(f"❌ 문서 저장 실패 - _id: {error_doc['_id']}, 오류: {error['errmsg']}")
-                    
-#                     # 실패한 문서들을 별도 파일로 저장
-#                     if failed_docs:
-#                         failed_file_path = f"failed_docs_batch_{batch_index}_{batch_index+BATCH_SIZE}.json"
-#                         with open(failed_file_path, 'w', encoding='utf-8') as f:
-#                             json.dump(failed_docs, f, ensure_ascii=False, indent=2)
-#                         logger.warning(f"⚠️ 실패한 문서 {len(failed_docs)}개를 {failed_file_path}에 저장했습니다.")
-                
-#             except Exception as e:
-#                 logger.error(f"❌ 배치 {batch_index}-{batch_index+BATCH_SIZE} bulk_write 중 예외 발생: {e}")
-#                 # 예외 발생 시에도 실패한 문서들을 저장
-#                 failed_docs = []
-#                 for i, doc in enumerate(batch_docs):
-#                     failed_docs.append({
-#                         '_id': str(doc['_id']),
-#                         'error_code': 'EXCEPTION',
-#                         'error_message': str(e)
-#                     })
-                
-#                 failed_file_path = f"failed_docs_batch_{batch_index}_{batch_index+BATCH_SIZE}_exception.json"
-#                 with open(failed_file_path, 'w', encoding='utf-8') as f:
-#                     json.dump(failed_docs, f, ensure_ascii=False, indent=2)
-#                 logger.error(f"❌ 배치 전체 실패 - {len(failed_docs)}개 문서를 {failed_file_path}에 저장했습니다.")
-            
-#             logger.info(f"배치 완료 : {batch_index} - {batch_index+BATCH_SIZE}")
 
 
   

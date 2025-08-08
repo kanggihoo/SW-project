@@ -26,7 +26,7 @@ class DatabaseManager:
         self.timeout_ms = timeout_ms
 
         # 연결 객체들
-        self._client:MongoClient = None
+        self.client:MongoClient = None
         self._db:Database = None
         self._connection_status:bool = False
 
@@ -65,7 +65,7 @@ class DatabaseManager:
     
     def _create_client(self):
         """MongoClient 생성"""
-        self._client:MongoClient = MongoClient(
+        self.client:MongoClient = MongoClient(
             self.connection_string,
             serverSelectionTimeoutMS=self.timeout_ms,
             connectTimeoutMS=self.timeout_ms,
@@ -75,15 +75,15 @@ class DatabaseManager:
 
     def _connect_to_database(self):
         """데이터베이스 연결"""
-        if not self._client:
+        if not self.client:
             raise ConnectionError("MongoClient is not initialized")
-        self._db = self._client[self.database_name]
+        self._db = self.client[self.database_name]
 
     def _verify_connection(self):
         """연결 상태 검증"""
         try:
             # 간단한 ping 테스트
-            self._client.admin.command('ping')
+            self.client.admin.command('ping')
             
             # 데이터베이스 접근 테스트
             collection_count = len(self._db.list_collection_names())
@@ -98,22 +98,22 @@ class DatabaseManager:
         return self._db[self.collection_name]
     
     def is_connected(self):
-        if not self._connection_status or self._client is None:
+        if not self._connection_status or self.client is None:
             return False
         try:
-            self._client.admin.command('ping')
+            self.client.admin.command('ping')
             return True
         except :
             self._connection_status = False
             return False
     
     def reset_connection(self):
-        self._client.close()
-        self._client = self._initialize_connection()
+        self.client.close()
+        self.client = self._initialize_connection()
 
     def close(self):
-        if self._client:
-            self._client.close()
+        if self.client:
+            self.client.close()
             logger.info("MongoDB client closed")
         self._connection_status = False
     
@@ -123,7 +123,7 @@ class DatabaseManager:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self._client.close()
+        self.client.close()
         logger.info("All contexts closed, MongoDB client closed")
     
     

@@ -123,7 +123,7 @@ class FashionCaptionGenerator:
 
         return prompt | structured_model , prompt
 
-    def invoke(
+    async def ainvoke(
         self,
         base64_data_for_llm: Base64DataForLLM,
         category: str,
@@ -149,7 +149,7 @@ class FashionCaptionGenerator:
             # 병렬 실행 및 결과 반환
             dynamic_parallel_chain = self._build_dynamic_chain(llm_input , has_size=has_size , category=category)
             logger.info("이미지 분석 시작...")
-            results = dynamic_parallel_chain.invoke(llm_input , config=config)
+            results = await dynamic_parallel_chain.ainvoke(llm_input , config=config)
             logger.info("이미지 분석 완료")
 
             return results

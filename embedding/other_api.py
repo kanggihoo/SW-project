@@ -1,44 +1,3 @@
-import requests
-import os
-from pymongo.collection import Collection
-
-# TODO: 여기에 정의 된 임베딩 관련 API는 따로 모듈화 
-def get_embedding_with_jina(texts: list[str] ,
-                            model_name:str="jina-embeddings-v3" ,
-                            task="retrieval.query",
-                            dimensions:int=1024,
-                            embedding_type :str = "float" ,
-                            api_key:str|None=None) -> list[float|int]:
-    """주어진 text를 임베딩 하는 함수
-    Args:
-        texts (list[str]): 임베딩 할 텍스트 리스트
-        dimensions (int, optional): 임베딩 차원. Defaults to 1024.(32~1024)
-        embedding_type (str, optional): 임베딩 타입. Defaults to "float", ["ubinary" , "binary" ]
-        model_name (str, optional): 임베딩 모델 이름. Defaults to "jina-embeddings-v3".
-        api_key (str | None, optional): _description_. Defaults to None.
-
-    Returns:
-        list[float]: 임베딩 결과 리스트
-    """
-    url = 'https://api.jina.ai/v1/embeddings'
-    if not api_key:
-        api_key = os.getenv("JINA_API_KEY")
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {api_key}'
-    }
-    data = {
-        "model": model_name,
-        "task": task,
-        "embedding_type": embedding_type,
-        "dimensions": dimensions,
-        "input": texts
-    }
-    response = requests.post(url, json=data, headers=headers)
-    print(response.json())
-    return [emb.get("embedding") for emb in response.json().get("data")]
-
-
 def get_embedding_with_openai(texts: list[str] ,
                               model_name:str="text-embedding-3-small" ,
                               api_key:str|None=None) -> list[float]:
@@ -83,5 +42,3 @@ def generate_bson_vector(vector, vector_dtype):
     # Generate BSON vector from the sample float32 embedding
     # bson_float32_embedding = generate_bson_vector(embedding, BinaryVectorDtype.FLOAT32)
     return Binary.from_vector(vector, vector_dtype)
-
-

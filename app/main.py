@@ -1,43 +1,56 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
 import logging
 from .router import websocket
 from .api.v1.api import api_router
-from .config.dependencies import get_fashion_repo , get_aws_manager
-load_dotenv()
-
-#TODO : 에러처리 추가 
+from .config.dependencies import get_async_fashion_repo_dependency, get_aws_manager
+from .config.exceptions import validation_exception_handler, http_exception_handler
+from fastapi.exceptions import RequestValidationError, HTTPException
 
 # 로깅설정
-logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s : %(filename)s - %(lineno)d' , datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s - %(filename)s - %(lineno)d', datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 애플리케이션 시작 시 리소스 초기화
+    logger.info("Lifespan started: Initializing resources...")
     try:
-        fashion_repo = get_fashion_repo()
+        # 의존성 주입을 통해 repo를 한 번만 생성하도록 유도
+        app.state.db_repo = await get_async_fashion_repo_dependency()
+        logger.info("MongoDB connection established.")
     except Exception as e:
         logger.error(f"MongoDB connection error: {e}")
+        app.state.db_repo = None
+
     try:
-        aws_manager = get_aws_manager()
+        app.state.aws_manager = get_aws_manager()
+        logger.info("AWS Manager initialized.")
     except Exception as e:
         logger.error(f"AWS connection error: {e}")
-    logger.info("lifespan started")
+        app.state.aws_manager = None
+
     yield
 
-    logger.info("Shutting down...")
-    fashion_repo.close_connection()
-    aws_manager.close_connection()
-    logger.info("lifespan ended")
+    # 애플리케이션 종료 시 리소스 정리
+    logger.info("Lifespan ended: Shutting down resources...")
+    if app.state.db_repo:
+        await app.state.db_repo.close()
+        logger.info("MongoDB connection closed.")
+    if app.state.aws_manager:
+        # AWSManager에 close_connection 메서드가 있다면 호출
+        # app.state.aws_manager.close_connection()
+        logger.info("AWS resources cleaned up.")
 
 app = FastAPI(
     title="Clothing Recommendation API",
     description="An API for clothing recommendations using LangGraph",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    exception_handlers={
+        RequestValidationError: validation_exception_handler,
+        HTTPException: http_exception_handler
+    }
 )
 
 app.include_router(websocket.router)
