@@ -155,4 +155,4 @@ class FashionCaptionGenerator:
             return results
 
         except Exception as e:
-            logger.error(f"이미지 분석 중 오류 발생: {e}")
+            raise Exception(f"이미지 캡션 생성 중 오류 발생(ainvoke 메서드 동작하는 과정): {e}") 

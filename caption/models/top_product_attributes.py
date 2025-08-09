@@ -34,7 +34,7 @@ class CommonAttributes(BaseModel):
     neckline: Annotated[Neckline, Field(
         ..., 
         description="상의 목부분 디자인 선택",
-        examples=["라운드넥", "브이넥", "터틀넥/폴라", "카라", "후드"]
+        examples=["라운드넥", "브이넥","유넥", "터틀넥/폴라", "카라","헨리넥" "후드", "스퀘어넥", "보트넥"]
     )]
 
 

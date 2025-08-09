@@ -5,7 +5,7 @@ class Config(dict):
     def __init__(self):
         _model_dict = {
             "DEFAULT_CAPTION_MODEL": "gemini-2.5-flash-lite-preview-06-17",
-            "DEFAULT_COLOR_MODEL": "gemini-2.5-flash-lite-preview-06-17",
+            "DEFAULT_COLOR_MODEL": "gemini-2.5-flash",
             "DEFAULT_OCR_MODEL": "gemini-1.5-flash-8b",
             "DEFAULT_IMAGE_SIZE": 224,
             "DEFAULT_CAPTION_TEMPERATURE": 0.1,

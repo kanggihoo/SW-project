@@ -20,16 +20,16 @@ class ColorAttribute(BaseModel):
 
 class ColorInfo(BaseModel):
     """의류 색상 정보"""
-    name: Annotated[PrimaryColor, Field(
-        ..., 
-        description="의류의 주요 색상타입 선택",
-        examples=["블루", "핑크", "블랙", "화이트", "그레이", "레드", "그린", "옐로우", "오렌지", "퍼플", "브라운", "베이지", "데님", "메탈릭", "멀티컬러"]
-    )]
     hex: Annotated[str, Field(
         ..., 
         description="의류의 주요 색상에 대한 HEX 코드 (6자리 16진수)",
         pattern=r"^#[0-9A-Fa-f]{6}$",
         examples=["#4A90E2", "#FFC0CB", "#000000", "#FFFFFF", "#808080", "#FF0000"]
+    )]
+    name: Annotated[PrimaryColor, Field(
+        ..., 
+        description="의류의 주요 색상타입 선택",
+        examples=["블루", "핑크", "블랙", "화이트", "그레이", "레드", "그린", "옐로우", "오렌지", "퍼플", "브라운", "베이지", "데님", "메탈릭", "멀티컬러"]
     )]
     attributes: Annotated[ColorAttribute, Field(..., description="의류의 주요 색상에 대한 채도,명도 특성을 나타내는 속성 태그들")]
 
