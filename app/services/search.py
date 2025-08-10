@@ -4,30 +4,40 @@ from typing import Any, Optional, List
 from db.repository.fashion_async import AsyncFashionRepository
 from aws.aws_manager import S3Manager
 from embedding.embedding import JinaEmbedding
+from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
 import asyncio
 import aiohttp
 from fastapi import HTTPException
 logger = logging.getLogger(__name__)
 
 class SearchService:
-    def __init__(self, s3_manager: S3Manager, repository: AsyncFashionRepository, jina_embedding: JinaEmbedding):
+    def __init__(self, s3_manager: S3Manager, repository: AsyncFashionRepository, jina_embedding: JinaEmbedding, query_analyzer: MultiStepAnalyzer):
         self.s3_manager = s3_manager
         self.repository = repository
         self.jina_embedding = jina_embedding
+        self.query_analyzer = query_analyzer
 
     async def search_by_query(self, query: str, limit: int = 1) -> dict:
         """
-        쿼리를 기반으로 벡터 검색을 수행합니다.
-        Args:
-            query (str): 검색 쿼리
-            limit (int): 결과 개수
-        Returns:
-            dict: 검색 결과
+        쿼리를 분석하고, 분석된 결과를 기반으로 벡터 검색을 수행합니다.
         """
         try:
-            # 1. LLM을 이용한 쿼리 재작성 및 필터 생성 (현재는 입력 쿼리 그대로 사용)
-            rewritten_query_list, pre_filter_list = [query], [None]
+            #TODO: 에러 처리? 
+            # 1. Query Analyzer를 이용한 쿼리 분석
+            analyzed_results = await self.query_analyzer.analyze_and_format(query)
+            logger.info(f"analyzed_results: {analyzed_results}")
 
+            if analyzed_results:
+                rewritten_query_list = [item["rewritten_query"] for item in analyzed_results]
+                pre_filter_list = [{k:v for k,v in item.items() if k != "rewritten_query" and v is not None and v} for item in analyzed_results]
+            else:
+                # 분석 결과가 없으면 원래 쿼리로 검색
+                rewritten_query_list = [query]
+                pre_filter_list = [None]
+
+            logger.info(f"rewritten_query_list: {rewritten_query_list}")
+            logger.info(f"pre_filter_list: {pre_filter_list}")
+            
             # 2. 임베딩 생성
             async with aiohttp.ClientSession() as session:
                 embedding_data = await self.jina_embedding.get_embedding(rewritten_query_list, session)
@@ -36,13 +46,18 @@ class SearchService:
             if not embeddings:
                 raise ValueError("Embedding generation failed")
 
+            logger.info(f"embeddings: {len(embeddings)} , dim: {len(embeddings[0])}")
+            
             # 3. 병렬 벡터 검색 실행
             tasks = []
-            for idx, (rq, pf) in enumerate(zip(rewritten_query_list, pre_filter_list)):
-                task = self.repository.vector_search(embeddings[idx], limit=limit, pre_filter=pf)
+            for emd, pf in zip(embeddings, pre_filter_list):
+                task = self.repository.vector_search(embedding=emd, limit=limit, pre_filter=pf)
                 tasks.append(task)
             
             vector_search_results = await asyncio.gather(*tasks)
+            
+            logger.info(f"vector_search_results completed")
+            
             # 4. 결과 처리 및 S3 URL 생성
             processed_results = []
             for result_list in vector_search_results:
@@ -127,6 +142,3 @@ class SearchService:
     def _generate_s3_url(self , s3_key:str):
         s3_url = self.s3_manager.generate_presigned_url(s3_key)
         return s3_url
-        
-    
-    

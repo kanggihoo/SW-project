@@ -87,54 +87,53 @@ class MultiStepAnalyzer:
         main_chain = first_chain | RunnableLambda(dynamic_router, name="DynamicRouter")
         return main_chain
 
-    def analyze(self, query: str) -> dict:
+    async def analyze(self, query: str) -> dict:
         """
-        Analyzes the user query and returns a dictionary of structured results,
+        Analyzes the user query asynchronously and returns a dictionary of structured results,
         with each key corresponding to an identified item.
         """
         chain = self._create_full_chain()
-        return chain.invoke({"query": query})
+        return await chain.ainvoke({"query": query})
 
-    def analyze_and_format(self, query: str) -> list[dict]:
+    async def analyze_and_format(self, query: str) -> list[dict]:
         """
-        사용자 쿼리를 분석하고, 분석 결과를 리스트로 반환합니다.
+        Analyzes the user query asynchronously and formats the result to return a list of dictionaries.
 
         Args:
-            query (str): 사용자 쿼리 문자열
+            query (str): The user query string.
 
         Returns:
-            list[dict]: 분석 결과 리스트 (상의 , 하의에 따른 TopFilter , BottomFilter에 대응하는 python 딕셔너리)
+            A list of dictionaries with the analysis results.
         example:
-            [
-                {
-                    "item_type": "상의",
-                    "analysis": {
-                        "sub_category": "셔츠",
-                        "color": "블랙",
-                        "style_tags": "베이직",
-                        "tpo_tags": "데일리",
-                        "fit": "슬림 핏",
-                        "pattern_type": "무지/솔리드",
-                        "rewritten_query": "블랙 베이직 셔츠 구매"
-                    }
-                },
-                {
-                ...
-                }
-            ]
+        ```
+        [
+            {
+                "main_category": "상의",
+                "sub_category": "셔츠",
+                "color": "블랙",
+                "style_tags": "베이직",
+                "tpo_tags": "데일리",
+                "fit": "슬림 핏",
+                "pattern_type": "무지/솔리드",
+                "rewritten_query": "블랙 베이직 셔츠 구매"
+                
+            },
+            ...
+        ]
+        ```
         """
-        analysis_result = self.analyze(query)
+        analysis_result = await self.analyze(query)
         
         formatted_result = []
         for key, value in analysis_result.items():
             if not value:
                 continue
             item_type = key.split('_')[0]
-            analysis_json = value.model_dump(mode="json") if hasattr(value, 'model_dump') else value
+            analysis_result = value.model_dump(mode="json") if hasattr(value, 'model_dump') else value
             
             formatted_item = {
-                "item_type": item_type,
-                "analysis": analysis_json
+                "main_category": item_type,
+                **analysis_result
             }
             formatted_result.append(formatted_item)
         

@@ -84,7 +84,7 @@ class TopFilter(BaseModel):
                    - 가능한 값: '민소매', '반소매', '5부/7부', '긴소매'.
                    - 쿼리에 해당 정보가 없으면 None으로 설정."""
     )]
-    rewritten_queries : Annotated[str, Field(
+    rewritten_query : Annotated[str, Field(
         description="""추출된 필터 값과 사용자의 원래 쿼리 내용을 조합하여 자연스러운 문장 형태로 재작성된 쿼리."""
     )]
 
@@ -129,7 +129,7 @@ class BottomFilter(BaseModel):
                    - 가능한 값: '숏 바지', '크롭 바지', '롱 바지'.
                    - 쿼리에 해당 정보가 없으면 None으로 설정."""
     )]
-    rewritten_queries: Annotated[str, Field(
+    rewritten_query : Annotated[str, Field(
         description="""추출된 필터 값과 사용자의 원래 쿼리 내용을 조합하여 자연스러운 문장 형태로 재작성된 쿼리."""
     )]
 

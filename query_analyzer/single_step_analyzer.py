@@ -26,7 +26,7 @@ class SingleStepAnalyzer:
             c.  **규칙 준수**:
                 - 쿼리에 **명시적으로 언급된 정보만 추출**하고, 절대 유추하거나 가정하지 마세요.
                 - 해당하는 정보가 없으면 **반드시 `None` 또는 빈 리스트(`[]`)로 설정**해야 합니다.
-            d.  **쿼리 재작성**: 분석된 태그 정보와 사용자의 원래 의도를 종합하여, 해당 아이템만을 위한 자연스러운 검색용 문장(`rewritten_queries`)을 생성합니다.
+            d.  **쿼리 재작성**: 분석된 태그 정보와 사용자의 원래 의도를 종합하여, 해당 아이템만을 위한 자연스러운 검색용 문장(`rewritten_query`)을 생성합니다.
         3. **최종 종합**: 분석이 완료된 모든 아이템 객체들을 `analyzed_items` 리스트에 순서대로 추가하여 최종 결과를 완성합니다.
 
         ## 중요 예시
@@ -48,7 +48,7 @@ class SingleStepAnalyzer:
               "fit": null,
               "pattern_type": "스트라이프",
               "length": null,
-              "rewritten_queries": "출근룩으로 입기 좋은 스트라이프 셔츠"
+              "rewritten_query": "출근룩으로 입기 좋은 스트라이프 셔츠"
             },
             {
               "sub_category": null,
@@ -63,7 +63,7 @@ class SingleStepAnalyzer:
               "fit": null,
               "pattern_type": null,
               "length": null,
-              "rewritten_queries": "스트라이프 셔츠 위에 걸칠 검정색 출근용 자켓"
+              "rewritten_query": "스트라이프 셔츠 위에 걸칠 검정색 출근용 자켓"
             },
             {
               "sub_category": "슈트팬츠-슬랙스",
@@ -78,7 +78,7 @@ class SingleStepAnalyzer:
               "fit": null,
               "pattern_type": "무지",
               "length": null,
-              "rewritten_queries": "출근룩에 어울리는 베이지색 슬랙스"
+              "rewritten_query": "출근룩에 어울리는 베이지색 슬랙스"
             }
           ]
         }
@@ -91,16 +91,30 @@ class SingleStepAnalyzer:
 
         return prompt | self.llm.with_structured_output(SingleCallAnalysisResult)
 
-    def analyze(self, query: str) -> SingleCallAnalysisResult:
-        """Analyzes the user query and returns the structured result."""
-        return self.chain.invoke({"query": query})
+    async def analyze(self, query: str) -> SingleCallAnalysisResult:
+        """Analyzes the user query asynchronously and returns the structured result."""
+        return await self.chain.ainvoke({"query": query})
 
-    def analyze_and_format(self, query: str) -> list[dict]:
+    async def analyze_and_format(self, query: str) -> list[dict]:
         """
-        Analyzes the user query and formats the result to return a list of dictionaries,
+        Analyzes the user query asynchronously and formats the result to return a list of dictionaries,
         each containing the item_type and the analysis details.
+        example:
+        ```
+        [
+            {
+                "main_category": "상의",
+                "sub_category": "셔츠",
+                "color": "블랙",
+                "style_tags": ["베이직"],
+                "tpo_tags": ["데일리"],
+                "fit": "슬림 핏",
+                "pattern_type": "무지/솔리드",
+                "rewritten_query": "블랙 베이직 셔츠 구매"
+            },
+            ...
         """
-        analysis_result = self.analyze(query)
+        analysis_result = await self.analyze(query)
         
         if not analysis_result or not analysis_result.analyzed_items:
             return []
@@ -117,8 +131,8 @@ class SingleStepAnalyzer:
             analysis_data = item.model_dump(mode='json')
             
             formatted_result.append({
-                "item_type": item_type,
-                "analysis": analysis_data
+                "main_category": item_type,
+                **analysis_data
             })
             
         return formatted_result

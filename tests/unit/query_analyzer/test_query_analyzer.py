@@ -16,7 +16,8 @@ def multi_step_analyzer():
     analyzer = MultiStepAnalyzer("openrouter", "google/gemini-flash-1.5" , "openrouter" , "google/gemini-flash-1.5")
     return analyzer
 
-def test_single_step(single_step_analyzer :SingleStepAnalyzer):
+@pytest.mark.asyncio
+async def test_single_step(single_step_analyzer :SingleStepAnalyzer):
     """단일 단계 분석기 테스트"""
     print("=== 단일 단계 분석기 테스트 ===")
     
@@ -27,14 +28,14 @@ def test_single_step(single_step_analyzer :SingleStepAnalyzer):
     
     try:
         # 분석 실행
-        result = single_step_analyzer.analyze_and_format(query)
+        result = await single_step_analyzer.analyze_and_format(query)
         print("분석 결과:")
         print(result , type(result))
     except Exception as e:
         print(f"분석 중 오류 발생: {e}")
 
-
-def test_multi_step(multi_step_analyzer:MultiStepAnalyzer):
+@pytest.mark.asyncio
+async def test_multi_step(multi_step_analyzer:MultiStepAnalyzer):
     """다중 단계 분석기 테스트"""
     print("\n=== 다중 단계 분석기 테스트 ===")    
     # 테스트 쿼리
@@ -42,7 +43,7 @@ def test_multi_step(multi_step_analyzer:MultiStepAnalyzer):
     
     try:
         # 분석 실행
-        result = multi_step_analyzer.analyze_and_format(query)
+        result = await multi_step_analyzer.analyze_and_format(query)
         print("분석 결과:")
         print(result , type(result))
     except Exception as e:
