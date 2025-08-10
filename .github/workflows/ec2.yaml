@@ -113,6 +113,8 @@ jobs:
             OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
             USE_ATLAS="${{ secrets.USE_ATLAS }}"
             GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
+            OPENROUTER_API_KEY="${{ secrets.OPENROUTER_API_KEY }}"
+            OPENROUTER_BASE_URL="${{ secrets.OPENROUTER_BASE_URL }}"
             # 필요하다면 여기에 추가 환경 변수를 정의하세요.
             EOF
             chmod 600 "$PROJECT_DIR/.env" # .env 파일 권한 설정 (소유자만 읽기/쓰기 가능)
