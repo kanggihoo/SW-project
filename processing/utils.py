@@ -4,51 +4,57 @@ from typing import List, Union
 from PIL import Image, ImageOps
 
 
+
+from PIL import Image, ImageDraw, ImageOps, ImageFont
+from typing import List
+
 def preprocess_and_concat_images(
-    pil_images: List[Image.Image], 
+    pil_images: List[Image.Image],
     target_size: int = 224,
-    type: str = "image"
+    type: str = "image",
+    border_width: int = 5,
+    border_color: str = "lightgray",
+    add_index: bool = True,
+    font_size: int = 28,
+    font_color: str = "yellow"
 ) -> Image.Image:
     """
-    여러 이미지를 전처리하고 하나로 이어붙이는 함수
-    
-    Args:
-        pil_images: PIL Image 객체 리스트
-        target_size: 각 이미지의 목표 크기 (정사각형) - image type의 경우
-                    또는 목표 width 크기 - text type의 경우
-        type: 이미지 처리 방식 ("image" 또는 "text")
-                - "image": 비율 유지 + 패딩으로 정사각형 만든 후 가로로 합치기
-                - "text": width를 target_size에 맞추고 height는 비율 유지, 세로로 합치기
-    
-    Returns:
-        합쳐진 PIL Image 객체
-    
-    Raises:
-        FileNotFoundError: 이미지 파일을 찾을 수 없는 경우
-        ValueError: 잘못된 type 값인 경우
+    여러 이미지를 전처리하고 이어붙이는 함수.
+    type="image"이고 add_index=True일 때만 테두리와 인덱스를 추가합니다.
     """
     if type not in ['image', 'text']:
         raise ValueError("type은 'image' 또는 'text'여야 합니다.")
-    
+
     processed_images = []
-    
-    # 각 이미지 전처리
-    for pil_image in pil_images:
+
+    # 폰트는 type="image"이고 add_index=True일 때만 필요하므로 이때 로드합니다.
+    font = None
+    if type == "image" and add_index:
+        # 사용하시는 폰트 경로를 그대로 사용합니다.
+        font_path = "/Users/kkh/Library/Fonts/MesloLGS NF Regular.ttf"
+        font = ImageFont.truetype(font_path, font_size)
+
+    for i, pil_image in enumerate(pil_images):
         try:
-            if pil_image.mode != 'RGB':
-                image = pil_image.convert('RGB')
-            else:
-                image = pil_image
-            
+            image = pil_image.convert('RGB') if pil_image.mode != 'RGB' else pil_image
+
             if type == "image":
-                # 기존 방식: aspect ratio 유지하면서 목표 크기에 맞춰 패딩 추가
-                processed = ImageOps.pad(
-                    image, 
-                    (target_size, target_size), 
-                    color=(0, 0, 0)  # 검정색 패딩
-                )
+                # 1. 이미지를 정사각형으로 패딩합니다.
+                processed = ImageOps.pad(image, (target_size, target_size), color=(0, 0, 0))
+
+                # 2. add_index가 True일 때만 테두리와 인덱스를 추가합니다.
+                if add_index:
+                    # 테두리 추가
+                    processed = ImageOps.expand(processed, border=border_width, fill=border_color)
+                    
+                    # 인덱스 텍스트 추가
+                    draw = ImageDraw.Draw(processed)
+                    index_text = str(i + 1)
+                    text_position = (border_width + 5, border_width + 5)
+                    draw.text(text_position, index_text, font=font, fill=font_color)
+
             else:  # type == "text"
-                # width를 target_size로 고정하고 height는 비율 유지
+                # 테두리나 인덱스 없이, 너비에 맞춰 리사이즈만 수행합니다.
                 width, height = image.size
                 aspect_ratio = height / width
                 new_height = int(target_size * aspect_ratio)
@@ -57,25 +63,31 @@ def preprocess_and_concat_images(
             processed_images.append(processed)
         except Exception as e:
             raise Exception(f"이미지 전처리 중 오류 발생: {e}")
-    
-    # 이미지 이어붙이기
+
+    if not processed_images:
+        return None
+
+    # --- 이미지 이어붙이기 ---
     if type == "image":
-        # 가로로 이어붙이기
-        total_width = target_size * len(processed_images)
-        combined = Image.new('RGB', (total_width, target_size))
+        # 첫 번째 이미지의 크기를 기준으로 전체 캔버스 크기를 계산합니다.
+        # 이렇게 하면 add_index 여부에 따라 크기가 달라져도 코드가 올바르게 동작합니다.
+        img_width, img_height = processed_images[0].size
+        total_width = img_width * len(processed_images)
+        combined = Image.new('RGB', (total_width, img_height))
         
         for i, img in enumerate(processed_images):
-            combined.paste(img, (i * target_size, 0))
+            combined.paste(img, (i * img_width, 0))
     else:  # type == "text"
-        # 세로로 이어붙이기
+        # 텍스트 타입은 너비는 고정, 높이는 가변적입니다.
+        img_width = target_size
         total_height = sum(img.size[1] for img in processed_images)
-        combined = Image.new('RGB', (target_size, total_height))
+        combined = Image.new('RGB', (img_width, total_height))
         
         current_height = 0
         for img in processed_images:
             combined.paste(img, (0, current_height))
             current_height += img.size[1]
-    
+            
     return combined
 
 
@@ -170,6 +182,11 @@ def images_to_base64(
     base64_string = pil_to_base64(combined_image)
     
     return base64_string
+
+
+
+
+
 
 
 

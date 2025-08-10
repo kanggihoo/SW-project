@@ -3,6 +3,9 @@ from .image_downloader import ImageDownloader
 from caption.models.product import ImageManager
 from .utils import images_to_base64
 from caption.models.product import Base64DataForLLM
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def download_images(images:list[ImageManager]):
     """
@@ -42,35 +45,37 @@ def parsing_data_for_llm(images:list[ImageManager] , image_sizes:'ImageSize')->B
     color_images = []
     text_images = []
     fail = 0
-    for image in images:
-        if image.pil_image is None:
-            fail += 1
-            continue
-        if image.type == "front":
-            deep_caption_images[0] = image.pil_image
-        elif image.type == "back":
-            deep_caption_images[1] = image.pil_image
-        elif image.type == "model":
-            deep_caption_images[2] = image.pil_image
-        elif image.type == "color_variant":
-            color_images.append((image.pil_image, image.folder_path))
-        elif image.type == "text":
-            text_images.append(image.pil_image)
-    if color_images:
-        color_images = [image[0] for image in sorted(color_images, key=lambda x: x[1])]
-    result["fail"] = fail
-    if len(deep_caption_images) == 3 and len(color_images): 
-        result["deep_caption"] = images_to_base64(deep_caption_images, target_size=image_sizes.deep_caption_size , type="image")
-        result["color_images"] = images_to_base64(color_images, target_size=image_sizes.color_caption_size, type="image")
-        if text_images:
-            result["text_images"] = images_to_base64(text_images, target_size=image_sizes.text_caption_size, type="text")
-        else:   
-            result["text_images"] =""
-        result["success"] = True
-        result["color_count"] = len(color_images)
-    else:
-        result["success"] = False
-    return Base64DataForLLM(**result)
+    try:
+        for image in images:
+            if image.pil_image is None:
+                fail += 1
+                continue
+            if image.type == "front":
+                deep_caption_images[0] = image.pil_image
+            elif image.type == "back":
+                deep_caption_images[1] = image.pil_image
+            elif image.type == "model":
+                deep_caption_images[2] = image.pil_image
+            elif image.type == "color_variant":
+                color_images.append((image.pil_image, image.folder_path))
+            elif image.type == "text":
+                text_images.append(image.pil_image)
+        color_images = [image[0] for image in color_images]
+        result["fail"] = fail
+        if len(deep_caption_images) == 3 and len(color_images): 
+            result["deep_caption"] = images_to_base64(deep_caption_images, target_size=image_sizes.deep_caption_size , type="image")
+            result["color_images"] = images_to_base64(color_images, target_size=image_sizes.color_caption_size, type="image")
+            if text_images:
+                result["text_images"] = images_to_base64(text_images, target_size=image_sizes.text_caption_size, type="text")
+            else:   
+                result["text_images"] =""
+            result["success"] = True
+            result["color_count"] = len(color_images)
+        return Base64DataForLLM(**result)
+    except Exception as e:
+        logger.error(f"When covert pil image to base64 raise error , parsing data for LLM: {e}")
+        return Base64DataForLLM(deep_caption="", color_images="")
+    
         
         
         

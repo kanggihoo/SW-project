@@ -12,6 +12,8 @@ from aws.s3 import S3Manager
 from aws.dynamodb import DynamoDBManager
 from app.services.search import SearchService
 from embedding.embedding import JinaEmbedding
+from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
+from query_analyzer.single_step_analyzer import SingleStepAnalyzer
 import logging 
 logger = logging.getLogger(__name__)
 # =============================================================================
@@ -51,15 +53,44 @@ def get_aws_manager_dependency()->AWSManager:
     return get_aws_manager()
 
 # =============================================================================
+# Jina Embedding 관련 의존성
+# =============================================================================
+@lru_cache()
+def get_jina_embedding_dependency() -> JinaEmbedding:
+    """JinaEmbedding 의존성 반환"""
+    return JinaEmbedding()
+
+# =============================================================================
+# Query Analyzer 관련 의존성 (신규 추가)
+# =============================================================================
+@lru_cache()
+def get_query_analyzer_dependency() -> MultiStepAnalyzer:
+    """QueryAnalyzer 의존성 반환"""
+    # TODO: 모델명과 프로바이더는 나중에 설정(settings.py)에서 관리하는 것이 좋습니다.
+    
+    return SingleStepAnalyzer(
+        model_provider="openrouter",
+        model_name="google/gemini-2.5-flash-lite"
+    )
+    return MultiStepAnalyzer(
+        model_provider1="openrouter",
+        model_name1="google/gemini-2.5-flash-lite",
+        model_provider2="openrouter",
+        model_name2="google/gemini-2.5-flash-lite"
+    )
+
+# =============================================================================
 # 서비스 관련 의존성 (비동기)
 # =============================================================================
 async def get_search_service_dependency(
+        
     s3_manager: Annotated[S3Manager, Depends(get_s3_manager_dependency)],
-    repository: Annotated[AsyncFashionRepository, Depends(get_async_fashion_repo_dependency)]
+    repository: Annotated[AsyncFashionRepository, Depends(get_async_fashion_repo_dependency)],
+    jina_embedding: Annotated[JinaEmbedding, Depends(get_jina_embedding_dependency)],
+    query_analyzer: Annotated[MultiStepAnalyzer, Depends(get_query_analyzer_dependency)]
 ) -> SearchService:
     """SearchService 의존성 반환 (비동기)"""
-    embedding = JinaEmbedding()
-    return SearchService(s3_manager, repository, embedding)
+    return SearchService(s3_manager, repository, jina_embedding, query_analyzer)
 
 # =============================================================================
 # 의존성 타입 어노테이션 정의
@@ -72,6 +103,9 @@ RepositoryDep = Annotated[AsyncFashionRepository, Depends(get_async_fashion_repo
 AWSManagerDep = Annotated[AWSManager, Depends(get_aws_manager_dependency)]
 S3ManagerDep = Annotated[S3Manager, Depends(get_s3_manager_dependency)]
 DynamoDBManagerDep = Annotated[DynamoDBManager, Depends(get_dynamodb_manager_dependency)]
+
+# Query Analyzer 관련
+QueryAnalyzerDep = Annotated[MultiStepAnalyzer, Depends(get_query_analyzer_dependency)]
 
 # 서비스 관련
 SearchServiceDep = Annotated[SearchService, Depends(get_search_service_dependency)]

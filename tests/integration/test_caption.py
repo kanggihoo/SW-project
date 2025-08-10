@@ -9,51 +9,74 @@ from io import BytesIO
 from langchain_core.runnables import RunnableLambda , RunnableConfig
 
 from aws.aws_manager import AWSManager
-from processing.image_processor import download_images_sync , parsing_data_for_llm
+from processing.image_processor import download_images , parsing_data_for_llm
 from caption.models.product import ImageManager, ProductManager, Base64DataForLLM
 from caption.fashion_caption_generator import FashionCaptionGenerator
 from caption.prompt.text_image_ocr_prompt_template import TextImageOCRPrompt
 from caption.config import Config
+from db import create_fashion_repo
+from db.repository.fashion_sync import FashionRepository
+from dataclasses import dataclass
+from caption_generation import parsing_caption_result , setup_dependencies , CaptionDependency
 
-
+# logging.basicConfig(level=logging.INFO , format='%(asctime)s - %(name)s - %(levelname)s - %(message)s : %(filename)s - %(lineno)d' , datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
 
+@dataclass
+class ImageSize:
+    deep_caption_size : int 
+    color_caption_size : int
+    text_caption_size : int
+
 # 기존 로깅 설정 fixture 유지
-@pytest.fixture(autouse=True , scope="session")
-def setup_logging():
-    root = logging.getLogger()
-    root.handlers = []
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s : %(filename)s - %(lineno)d')
-    handler.setFormatter(formatter)
-    root.addHandler(handler)
+# @pytest.fixture(autouse=True , scope="session")
+# def setup_logging():
+#     root = logging.getLogger()
+#     root.handlers = []
+#     handler = logging.StreamHandler(sys.stdout)
+#     handler.setLevel(logging.DEBUG)
+#     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s : %(filename)s - %(lineno)d')
+#     handler.setFormatter(formatter)
+    # root.addHandler(handler)
     
+@pytest.fixture(scope="session")
+def fashion_repo() -> FashionRepository:
+    return create_fashion_repo()
 
 # AWS Manager fixture
 @pytest.fixture(scope="session")
-def aws_manager():
+def aws_manager() -> AWSManager:
     return AWSManager()
 
 class TestImagePipeline:
+
     @pytest.fixture
-    def first_item(self, aws_manager: AWSManager, item_index: int=1)->dict:
+    def caption_dependency(self):
+        def _get_dependency(deep_caption_size:int=512, color_caption_size:int=224, text_caption_size:int=512):
+            return setup_dependencies()
+        return _get_dependency
+
+    @pytest.fixture
+    def first_item_from_dynamodb(self, aws_manager: AWSManager)->dict:
         """제품 데이터를 가져오는 fixture
         
         Args:
             item_index (int, optional): 가져올 아이템의 인덱스. Defaults to 0.
         """
-        paginator = aws_manager.dynamodb_manager.get_product_pagenator(
-            partition={"key":"sub_category_curation_status","value":"1005#COMPLETED","type":"S"},
-            GSI_NAME = "CurationStatus-SubCategory-GSI"
-        )
+        def _get_item(sub_category:int, product_id:str)->dict:
+            item = aws_manager.dynamodb_manager.get_item(
+                sub_category=sub_category,
+                product_id=product_id
+            )
+            return item
         
-        first_page = next(iter(paginator))
-        item = first_page['Items'][item_index]
-        item = aws_manager.dynamodb_manager._convert_dynamodb_item_to_python(item)
-        logger.info(f"first_item product_id: {item['product_id']}")
-
-        return item
+        return _get_item
+    
+    @pytest.fixture
+    def first_item_from_fashion_repo(self, fashion_repo:FashionRepository)->dict:
+        def _get_item(product_id:str)->dict:
+            return fashion_repo.find_by_id(product_id)
+        return _get_item
 
     @pytest.fixture
     def product_images_url(self, aws_manager: AWSManager, first_item:dict)->list[ImageManager]:
@@ -62,42 +85,17 @@ class TestImagePipeline:
         assert images is not None and len(images) > 0
         return images
     
-    @pytest.fixture
-    def product_pil_images(self, product_images_url:list[ImageManager])->list[ImageManager]:
-        """s3 url로 부터 PIL 이미지 정보 ImageManager에 저장"""
-        #CHECK : 동기함수 말고 await 키워드로도 비동기함수 바로 호출하도록 가능할 수도 ?
-        download_images_sync(product_images_url)
-        return product_images_url
-    
-    @pytest.fixture
-    def base64_data_for_llm(self, product_pil_images:list[ImageManager])->Base64DataForLLM:
-        return parsing_data_for_llm(product_pil_images, target_size=512)
-    
-   
-    def test_1_paginator_validation(self, aws_manager: AWSManager):
-        """1단계: DynamoDB 페이지네이터 검증 테스트"""
-        paginator = aws_manager.dynamodb_manager.get_product_pagenator(
-            partition={"key":"sub_category_curation_status","value":"1005#COMPLETED","type":"S"},
-            GSI_NAME = "CurationStatus-SubCategory-GSI"
-        )
+    # @pytest.fixture
+    # async def product_pil_images(self, product_images_url:list[ImageManager])->list[ImageManager]:
+    #     """s3 url로 부터 PIL 이미지 정보 ImageManager에 저장"""
         
-        assert paginator is not None
-        first_page = next(iter(paginator))
-        assert first_page is not None
-        assert 'Items' in first_page
-        assert 'Count' in first_page
-        assert first_page['Count'] > 0
-        
-        # first_item = first_page['Items'][1]
-        # assert 'product_id' in first_item
-        # assert 'representative_assets' in first_item
-
-    def test_2_dynamodb_product_fetch(self, first_item):
-        """2단계: DynamoDB에서 제품 데이터 조회 테스트"""
-        print(first_item)
-        assert first_item is not None
-        assert 'product_id' in first_item
-        assert 'representative_assets' in first_item
+    #     await download_images(product_images_url)
+    #     return product_images_url
+    
+    # @pytest.fixture
+    # def base64_data_for_llm(self, product_pil_images:list[ImageManager])->Base64DataForLLM:
+    #     return parsing_data_for_llm(product_pil_images, ImageSize(deep_caption_size=512, color_caption_size=224, text_caption_size=512))
+    
 
     # def test_3_image_url_extraction(self, product_images_url:list[ImageManager]):
     #     """3단계: 제품 데이터에서 이미지 URL 추출 테스트"""
@@ -138,70 +136,94 @@ class TestImagePipeline:
 
     #TODO : 지금은 하나의 pagenation을 통해 하나의 제품에 대한 테스트만 이루어져 있지만 실제 모든 pagenation을 통해 동작되는지 확인필요
     #TODO : page 맨 마지막에 에러 처리 해야 하는지 아니면 단순 for문으로 구현한다면 stopiteration 처리가 되지만 그래도 확인필요
-    def test_data_processing_for_llm(self , product_pil_images:list[ImageManager]):
-        result:Base64DataForLLM = parsing_data_for_llm(product_pil_images, target_size=224)
-        assert result.success is True
-        assert result.fail == 0
-        assert result.deep_caption is not None
-        assert result.color_images is not None
-        assert result.text_images is not None
+    # def test_data_processing_for_llm(self , product_pil_images:list[ImageManager]):
+    #     result:Base64DataForLLM = parsing_data_for_llm(product_pil_images, target_size=224)
+    #     assert result.success is True
+    #     assert result.fail == 0
+    #     assert result.deep_caption is not None
+    #     assert result.color_images is not None
+    #     assert result.text_images is not None
 
-        # Visualize the processed images
-        image_types = {
-            "Deep Caption Images": result.deep_caption,
-            "Color Images": result.color_images,
-            "Text Images": result.text_images
-        }
+    #     # Visualize the processed images
+    #     image_types = {
+    #         "Deep Caption Images": result.deep_caption,
+    #         "Color Images": result.color_images,
+    #         "Text Images": result.text_images
+    #     }
 
-        plt.figure(figsize=(20, 5))
+    #     plt.figure(figsize=(20, 5))
 
-        plot_idx = 1
-        for type_name, img in image_types.items():
-            # base64 디코딩 및 PIL 이미지로 변환
-            if isinstance(img, str):
-                # base64 문자열을 PIL 이미지로 변환
-                img_data = base64.b64decode(img)
-                img = Image.open(BytesIO(img_data))
+    #     plot_idx = 1
+    #     for type_name, img in image_types.items():
+    #         # base64 디코딩 및 PIL 이미지로 변환
+    #         if isinstance(img, str):
+    #             # base64 문자열을 PIL 이미지로 변환
+    #             img_data = base64.b64decode(img)
+    #             img = Image.open(BytesIO(img_data))
 
-            plt.subplot(1, len(image_types), plot_idx)
-            plt.imshow(img)
-            plt.title(type_name)
-            plt.axis('off')
-            plot_idx += 1
+    #         plt.subplot(1, len(image_types), plot_idx)
+    #         plt.imshow(img)
+    #         plt.title(type_name)
+    #         plt.axis('off')
+    #         plot_idx += 1
 
-        plt.tight_layout()
-        plt.show()
+    #     plt.tight_layout()
+    #     plt.show()
 
-        logger.info(f"Deep caption image processed")
-        logger.info(f"Color image processed")
-        logger.info(f"Text image processed")
-    def test_text_image_ocr(self , base64_data_for_llm:Base64DataForLLM):
+    #     logger.info(f"Deep caption image processed")
+    #     logger.info(f"Color image processed")
+    #     logger.info(f"Text image processed")
+    @pytest.mark.asyncio
+    async def test_caption_generation(self , caption_dependency:CaptionDependency , first_item_from_dynamodb , first_item_from_fashion_repo):
         # assert base64_data_for_llm.success is True
-        fashion_caption_generator = FashionCaptionGenerator()
-        model = fashion_caption_generator.ocr_chain
-        config = Config()
-        config = RunnableConfig(
-            {
-                "tags": [config.get("DEFAULT_OCR_MODEL")],
-                "run_name": "test_text_image_ocr"
-            }
-        )
-        result = model.invoke(base64_data_for_llm.text_images, config=config)
-        print(result)
+        dep = caption_dependency()
+        # item = first_item_from_dynamodb(sub_category=1002, product_id="5121016")
+        use_dynamodb = True
+        try:
+            if use_dynamodb:
+                item = first_item_from_dynamodb(sub_category=1002, product_id="5047698")
+                logger.info(f"item : {item}")
+                
+                main_category = item.get('main_category')
+                sub_category = item.get('sub_category')
+                product_id = item.get('product_id')
+                representative_assets = item.get('representative_assets')
+                logger.info(f"main_category : {main_category} , sub_category : {sub_category} , product_id : {product_id}")
+                category = "상의" if main_category.lower() == "top" else "하의"
+                images = dep.aws_manager.get_product_images_from_paginator(item)
 
-    def test_fashion_caption_generator(self , base64_data_for_llm:Base64DataForLLM):
-        fashion_caption_generator = FashionCaptionGenerator()
-        assert base64_data_for_llm.success is True
+                await download_images(images)
+                base64_data_for_llm = parsing_data_for_llm(images, dep.size)
+                has_size = True if item.get("size_detail_info") else False
+                result = await dep.fashion_caption_generator.ainvoke(base64_data_for_llm , category=category , has_size=has_size)
+            else:
+                item = first_item_from_fashion_repo(product_id="3042516")
+                converted_item = item
+        except Exception as e:
+            logger.error(f"Error caption generation: {e} , product_id : {product_id}")
+            dep.fashion_repository_local.update_by_id(product_id, {"data_status": "CA_ERR", "error_message" : str(e)})
+            # return False
 
-        #TODO : 텍스트 이미지 없는 경우에는 ??? 
-        result = fashion_caption_generator.invoke(base64_data_for_llm , category="상의" , has_size=False)
-        assert result is not None
-        assert result["deep_caption"] is not None
-        assert result["color_images"] is not None
-        print(result["deep_caption"].model_dump())
-        print("*"*100)
-        print(result["color_images"].model_dump())
-        print("*"*100)
-        print(result.get("text_images").model_dump() if result.get("text_images") else "no text image")
+        
+        # caption_result = parsing_caption_result(result, representative_assets)
+        # print(caption_result)
+
+
+        
+
+    # def test_fashion_caption_generator(self , base64_data_for_llm:Base64DataForLLM):
+    #     fashion_caption_generator = FashionCaptionGenerator()
+    #     assert base64_data_for_llm.success is True
+
+    #     #TODO : 텍스트 이미지 없는 경우에는 ??? 
+    #     result = fashion_caption_generator.invoke(base64_data_for_llm , category="상의" , has_size=False)
+    #     assert result is not None
+    #     assert result["deep_caption"] is not None
+    #     assert result["color_images"] is not None
+    #     print(result["deep_caption"].model_dump())
+    #     print("*"*100)
+    #     print(result["color_images"].model_dump())
+    #     print("*"*100)
+    #     print(result.get("text_images").model_dump() if result.get("text_images") else "no text image")
  
 

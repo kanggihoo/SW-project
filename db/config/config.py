@@ -38,12 +38,20 @@ class Config_(dict):
                 "DEFAULT_NUM_CANDIDATES": 100,
                 "DEFAULT_LIMIT": 10,
                 "DEFAULT_PROJECT_FIELDS": {
-                    "product_skus" : 1,
-                    "products": 1
-                    # "product_id":1,
-                    # "category_main":1,
-                    # "category_sub":1,
-                    # "representative_assets":1,
+                    "products.product_id" : 1,
+                    "products.product_name" : 1,
+                    "products.current_price" : 1,
+                    "products.original_price" : 1,
+                    "products.captions.comprehensive_description" : 1,
+
+                    "product_skus.main_category" : 1,
+                    "product_skus.sub_category" : 1,
+                    "product_skus.image_urls" : 1,
+                    "product_skus.color_name" : 1,
+                    "product_skus.style_tags" : 1,
+                    "product_skus.tpo_tags" : 1,
+                    "product_skus.fit" : 1,
+                    "product_skus.common" : 1
                 }
             }
         }

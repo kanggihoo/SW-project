@@ -54,7 +54,9 @@ class FashionQueryBuilder:
         if len(embedding) != self.vector_search_config.get("EMBEDDING_DIMENSIONS"):
             raise ValueError(f"embedding 의 차원이 올바르지 않습니다. : {len(embedding)} \
                              \n 허용된 차원 : {self.vector_search_config.get('EMBEDDING_DIMENSIONS')}")
-
+        
+        pipeline = []
+        
         vector_search_stage = {
             "index": index_name,
             "queryVector": embedding,
@@ -65,13 +67,16 @@ class FashionQueryBuilder:
         }
 
         if pre_filter:
-            vector_search_stage["filter"] = pre_filter
-
-        pipeline = [
-            {
-                "$vectorSearch": vector_search_stage
+            main_category = pre_filter.get("main_category")
+            main_category ="TOP" if main_category =="상의" else "BOTTOM"
+            vector_search_stage["filter"] = {
+                "product_skus.main_category": main_category
             }
-        ]
+
+        pipeline.append({
+            "$vectorSearch": vector_search_stage
+        })
+        
         # 기본 프로젝션값 설정 
         project = {
             "$project":self.vector_search_config.get("DEFAULT_PROJECT_FIELDS")

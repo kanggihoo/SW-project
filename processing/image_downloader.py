@@ -60,6 +60,7 @@ class ImageDownloader:
             self.logger.error(f"Timeout while downloading image: {image.s3_url}")
         except aiohttp.ClientError as e:
             self.logger.error(f"Network error while downloading image: {image.s3_url}, error: {e}")
+            raise aiohttp.ClientError(f"Network error while downloading image: {image.s3_url}, error: {e}")
         except Exception as e:
             self.logger.error(f"Unexpected error while downloading image: {image.s3_url}, error: {e}", exc_info=True)
 
@@ -74,7 +75,11 @@ class ImageDownloader:
             self.session = aiohttp.ClientSession()
             
         tasks = [self._get_pil_image_from_s3_url(image, timeout) for image in images]
-        await asyncio.gather(*tasks)  # We don't need to return anything since we modify images in place
+        try:
+            await asyncio.gather(*tasks)  # We don't need to return anything since we modify images in place
+        except Exception as e:
+            raise 
+            self.logger.error(f"Unexpected error while downloading images: {e}", exc_info=True)
 
     async def close(self):
         """Explicitly close the session if not using context manager"""
