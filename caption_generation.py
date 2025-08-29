@@ -83,7 +83,7 @@ def parsing_caption_result(result:dict , representative_assets:Any):
     
 async def process_single_item(item:dict, dep:CaptionDependency):
     try:
-        converted_item = dep.asw_manager.dynamodb_manager._convert_dynamodb_item_to_python(item)
+        converted_item = dep.aws_manager.dynamodb_manager._convert_dynamodb_item_to_python(item)
         main_category = converted_item.get('main_category')
         sub_category = converted_item.get('sub_category')
         product_id = converted_item.get('product_id')
@@ -92,7 +92,7 @@ async def process_single_item(item:dict, dep:CaptionDependency):
         logger.info(f"Processing - main_category : {main_category} , sub_category : {sub_category} , 제품 id : {product_id} ")
 
         category = "상의" if main_category.lower() == "top" else "하의"
-        images = dep.asw_manager.get_product_images_from_paginator(converted_item)
+        images = dep.aws_manager.get_product_images_from_paginator(converted_item)
 
         # 이미지 다운로드 (다운로드간 오류 발생시 riase)
         await download_images(images)
@@ -116,7 +116,7 @@ async def process_single_item(item:dict, dep:CaptionDependency):
         
 
             # dynamodb 반영 (caption_status PENDING => COMPLETED , curation_caption_status 업데이트 , caption_updated_at 업데이트)
-            dep.asw_manager.dynamodb_manager.update_caption_result(sub_category, product_id, "COMPLETED")
+            dep.aws_manager.dynamodb_manager.update_caption_result(sub_category, product_id, "COMPLETED")
 
             # local mongodb 에 저장 및 data_status 업데이트 (CA_COMP)
             caption_result["data_status"] = "CA_COMP"
@@ -172,6 +172,18 @@ async def process_all_pages(paginator , deps:CaptionDependency):
 
     return statistic
 
+# async def process_all_cursor(cursor , deps:CaptionDependency , batch_size:int):
+#     '''모든 페이지 처리 함수'''
+#     statistic = StatisticManager()
+
+#     #TODO : 여기서는 동시처리를 위해 cursor를 page 단위로 나누어서 처리
+#     cur_size = 0
+#     tasks = []
+#     logger.info(f"Processing {len(cursor)} items concurrently...")
+#     for doc in cursor:
+#         await process_single_item(doc , deps)
+
+
 async def main():
     load_dotenv()
     dep = setup_dependencies(page_size=5)
@@ -183,7 +195,7 @@ async def main():
         sort_key : sub_main_id (3002#TOP#000000)
         
         '''
-        pagenator = dep.asw_manager.dynamodb_manager.get_product_pagenator(partition={"key":"curation_caption_status","value":"COMPLETED#PENDING","type":"S"},
+        pagenator = dep.aws_manager.dynamodb_manager.get_product_pagenator(partition={"key":"curation_caption_status","value":"COMPLETED#COMPLETED","type":"S"},
                                                                            sort_key={"key":"sub_main_id","value":"1002","type":"S" , "operator":"begins_with"},
                                                                            GSI_NAME = "Curation-CaptionStatus--SubCategory-GSI" , )
 
@@ -196,6 +208,17 @@ async def main():
     except Exception as e:
         logger.error(f"Error caption pagenator 지정시 오류 발생 : {e}")
         raise e
+
+# async def retry_caption_generation():
+#     # local mongodb에서 문제가 생긴 제품에 대해서 진행
+#     load_dotenv()
+#     dep = setup_dependencies()
+#     docs = dep.fashion_repository_local.find_by_id()
+#     statistic = await process_all_cursor(docs , dep , batch_size=5)
+
+#     logger.info(f"총 제품 수 : {statistic.total_count}")
+#     logger.info(f"성공 제품 수 : {statistic.success_count}")
+#     logger.info(f"실패 제품 수 : {statistic.fail_count}")
 
 if __name__ == "__main__":
     asyncio.run(main())
