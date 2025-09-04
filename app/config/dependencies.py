@@ -28,7 +28,7 @@ def get_async_repo_provider():
 async def get_async_fashion_repo_dependency() -> AsyncFashionRepository:
     """AsyncFashionRepository 의존성 반환"""
     repo_provider = get_async_repo_provider()
-    return await repo_provider()
+    return repo_provider()
 
 # =============================================================================
 # AWS 관련 의존성 
@@ -80,6 +80,16 @@ def get_query_analyzer_dependency() -> MultiStepAnalyzer:
     )
 
 # =============================================================================
+# Musinsa API Wrapper 관련 의존성
+# =============================================================================
+from app.services.musinsa import MusinsaAPIWrapper
+from fastapi import Request
+
+def get_musinsa_api_wrapper(request: Request) -> MusinsaAPIWrapper:
+    """MusinsaAPIWrapper 의존성 반환. app.state에 저장된 싱글톤 인스턴스를 사용합니다."""
+    return request.app.state.musinsa_api_wrapper
+
+# =============================================================================
 # 서비스 관련 의존성 (비동기)
 # =============================================================================
 async def get_search_service_dependency(
@@ -109,6 +119,7 @@ QueryAnalyzerDep = Annotated[MultiStepAnalyzer, Depends(get_query_analyzer_depen
 
 # 서비스 관련
 SearchServiceDep = Annotated[SearchService, Depends(get_search_service_dependency)]
+MusinsaAPIWrapperDep = Annotated[MusinsaAPIWrapper, Depends(get_musinsa_api_wrapper)]
 
 
 # =============================================================================

@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 import logging
 from .router import websocket
 from .api.v1.api import api_router
-from .config.dependencies import get_async_fashion_repo_dependency, get_aws_manager
+from .config.dependencies import get_async_fashion_repo_dependency, get_aws_manager, MusinsaAPIWrapper
 from .config.exceptions import validation_exception_handler, http_exception_handler
 from fastapi.exceptions import RequestValidationError, HTTPException
 
@@ -30,6 +30,13 @@ async def lifespan(app: FastAPI):
         logger.error(f"AWS connection error: {e}")
         app.state.aws_manager = None
 
+    try:
+        app.state.musinsa_api_wrapper = MusinsaAPIWrapper()
+        logger.info("Musinsa API Wrapper initialized.")
+    except Exception as e:
+        logger.error(f"Musinsa API Wrapper initialization error: {e}")
+        app.state.musinsa_api_wrapper = None
+
     yield
 
     # 애플리케이션 종료 시 리소스 정리
@@ -41,6 +48,9 @@ async def lifespan(app: FastAPI):
         # AWSManager에 close_connection 메서드가 있다면 호출
         # app.state.aws_manager.close_connection()
         logger.info("AWS resources cleaned up.")
+    if app.state.musinsa_api_wrapper:
+        await app.state.musinsa_api_wrapper.close()
+        logger.info("Musinsa API Wrapper closed.")
 
 app = FastAPI(
     title="Clothing Recommendation API",
@@ -53,7 +63,7 @@ app = FastAPI(
     }
 )
 
-app.include_router(websocket.router)
+# app.include_router(websocket.router)
 app.include_router(api_router)
 
 @app.get("/" , tags=["root"])

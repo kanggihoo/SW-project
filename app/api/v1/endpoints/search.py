@@ -2,6 +2,10 @@ from fastapi import APIRouter, Body, HTTPException
 from typing import Annotated
 from app.config.dependencies import SearchServiceDep
 from app.model.saarch_api import SearchRequest, SearchResponse, SearchResultItem
+import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/search",
@@ -21,6 +25,7 @@ async def search_product(
     - 결과 반환
     """
     try:
+        start_time = time.time()
         query = request.messages
         limit = request.limit
         # SearchService를 통해 비동기적으로 검색 수행
@@ -33,6 +38,7 @@ async def search_product(
             total_count=search_result["total_count"],
             message=search_result["message"]
         )
+        logger.info(f"search_api_response_time: {time.time() - start_time}")
         return SearchResponse(success=True, data=response_data)
 
     except HTTPException as e:
