@@ -65,7 +65,7 @@ class FashionQueryBuilder:
             "numCandidates": num_candidates,
             "limit": limit,
         }
-
+        #TODO: 지금은 main_category 만 필터링 하고 있는데 추후 필터링 조건 추가가능(sub_category인 경우에는 실제 db에는 숫자로 저장하고 있어서 변환과정 필요)
         if pre_filter:
             main_category = pre_filter.get("main_category")
             main_category ="TOP" if main_category =="상의" else "BOTTOM"

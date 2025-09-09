@@ -6,7 +6,6 @@ from aws.aws_manager import S3Manager
 from embedding.embedding import JinaEmbedding
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
 import asyncio
-import aiohttp
 from fastapi import HTTPException
 logger = logging.getLogger(__name__)
 
@@ -39,9 +38,8 @@ class SearchService:
             logger.info(f"pre_filter_list: {pre_filter_list}")
             
             # 2. 임베딩 생성
-            async with aiohttp.ClientSession() as session:
-                embedding_data = await self.jina_embedding.get_embedding(rewritten_query_list, session)
-                embeddings = embedding_data.get("embeddings", [])
+            embedding_data = await self.jina_embedding.get_embedding(rewritten_query_list)
+            embeddings = embedding_data.get("embeddings", [])
             
             if not embeddings:
                 raise ValueError("Embedding generation failed")
