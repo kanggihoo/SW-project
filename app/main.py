@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 import logging
+import httpx 
 from .router import websocket
 from .api.v1.api import api_router
-from .config.dependencies import get_async_fashion_repo_dependency, get_aws_manager, MusinsaAPIWrapper
+from .config.dependencies import get_async_repo_provider , get_aws_manager, MusinsaAPIWrapper, get_jina_embedding
 from .config.exceptions import validation_exception_handler, http_exception_handler
 from fastapi.exceptions import RequestValidationError, HTTPException
 
@@ -16,8 +17,15 @@ async def lifespan(app: FastAPI):
     # 애플리케이션 시작 시 리소스 초기화
     logger.info("Lifespan started: Initializing resources...")
     try:
+        http_session = httpx.AsyncClient()
+        app.state.http_session = http_session # 필요하다면 app.state에 저장
+        logger.info("httpx.AsyncClient initialized.")
+    except Exception as e:
+        logger.error(f"httpx.AsyncClient initialization error: {e}")
+        app.state.http_session = None
+    try:
         # 의존성 주입을 통해 repo를 한 번만 생성하도록 유도
-        app.state.db_repo = await get_async_fashion_repo_dependency()
+        app.state.db_repo = await get_async_repo_provider()
         logger.info("MongoDB connection established.")
     except Exception as e:
         logger.error(f"MongoDB connection error: {e}")
@@ -29,7 +37,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"AWS connection error: {e}")
         app.state.aws_manager = None
-
+    try:
+        app.state.jina_embedding = get_jina_embedding(session=http_session)
+        logger.info("Jina Embedding initialized.")
+    except Exception as e:
+        logger.error(f"Jina Embedding initialization error: {e}")
+        app.state.jina_embedding = None
     try:
         app.state.musinsa_api_wrapper = MusinsaAPIWrapper()
         logger.info("Musinsa API Wrapper initialized.")
@@ -51,6 +64,9 @@ async def lifespan(app: FastAPI):
     if app.state.musinsa_api_wrapper:
         await app.state.musinsa_api_wrapper.close()
         logger.info("Musinsa API Wrapper closed.")
+    if app.state.http_session:
+        await app.state.http_session.aclose()
+        logger.info("httpx.AsyncClient closed.")
 
 app = FastAPI(
     title="Clothing Recommendation API",

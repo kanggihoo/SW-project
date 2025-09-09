@@ -1,7 +1,7 @@
 # 메인 의존성 정의 
 from functools import lru_cache
 from typing import Annotated
-from fastapi import Depends
+from fastapi import Depends , Request
 
 # 필요 모듈 import 
 from .settings import get_settings
@@ -15,53 +15,52 @@ from embedding.embedding import JinaEmbedding
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
 from query_analyzer.single_step_analyzer import SingleStepAnalyzer
 import logging 
+import httpx
 logger = logging.getLogger(__name__)
 # =============================================================================
 # DB 관련 의존성 (비동기)
 # =============================================================================
-@lru_cache()
-def get_async_repo_provider():
-    # 이 함수는 실제 repo가 아닌, repo를 생성하는 비동기 함수를 반환합니다.
-    # FastAPI는 Depends에서 이 비동기 함수를 호출하고 결과를 캐시합니다.
-    return get_async_fashion_repo
 
-async def get_async_fashion_repo_dependency() -> AsyncFashionRepository:
+def get_async_repo_provider() -> AsyncFashionRepository:
+    return get_async_fashion_repo()
+
+async def get_async_fashion_repo_dependency(request: Request) -> AsyncFashionRepository:
     """AsyncFashionRepository 의존성 반환"""
-    repo_provider = get_async_repo_provider()
-    return repo_provider()
+    return request.app.state.db_repo
 
 # =============================================================================
 # AWS 관련 의존성 
 # =============================================================================
-@lru_cache()
 def get_aws_manager()->AWSManager:
     """AWSManager 의존성 반환"""
     return AWSManager()
 
-def get_s3_manager_dependency()->S3Manager:
+def get_s3_manager_dependency(request: Request)->S3Manager:
     """S3Manager 의존성 반환"""
-    aws_manager = get_aws_manager()
+    aws_manager = request.app.state.aws_manager
     return aws_manager.s3_manager
 
-def get_dynamodb_manager_dependency()->DynamoDBManager:
+def get_dynamodb_manager_dependency(request: Request)->DynamoDBManager:
     """DynamoDBManager 의존성 반환"""
-    aws_manager = get_aws_manager()
+    aws_manager = request.app.state.aws_manager
     return aws_manager.dynamodb_manager
 
-def get_aws_manager_dependency()->AWSManager:
+def get_aws_manager_dependency(request: Request)->AWSManager:
     """AWSManager 의존성 반환"""
-    return get_aws_manager()
+    return request.app.state.aws_manager
 
 # =============================================================================
 # Jina Embedding 관련 의존성
 # =============================================================================
-@lru_cache()
-def get_jina_embedding_dependency() -> JinaEmbedding:
-    """JinaEmbedding 의존성 반환"""
-    return JinaEmbedding()
+def get_jina_embedding(session: httpx.AsyncClient)->JinaEmbedding:
+    return JinaEmbedding(session=session)
+
+def get_jina_embedding_dependency(request: Request) -> JinaEmbedding:
+    """JinaEmbedding 의존성 반환""" 
+    return request.app.state.jina_embedding
 
 # =============================================================================
-# Query Analyzer 관련 의존성 (신규 추가)
+# Query Analyzer 관련 의존성 
 # =============================================================================
 @lru_cache()
 def get_query_analyzer_dependency() -> MultiStepAnalyzer:
@@ -83,7 +82,6 @@ def get_query_analyzer_dependency() -> MultiStepAnalyzer:
 # Musinsa API Wrapper 관련 의존성
 # =============================================================================
 from app.services.musinsa import MusinsaAPIWrapper
-from fastapi import Request
 
 def get_musinsa_api_wrapper(request: Request) -> MusinsaAPIWrapper:
     """MusinsaAPIWrapper 의존성 반환. app.state에 저장된 싱글톤 인스턴스를 사용합니다."""
