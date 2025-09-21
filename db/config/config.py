@@ -18,6 +18,14 @@ class Config_(dict):
                 "MONGODB_ATLAS_CONNECTION_STRING": os.getenv("MONGODB_ATLAS_URI")
             }
         }
+        
+        _mongodb_atlas_sku_dict = {
+            "MONGODB_ATLAS_SKU" : {
+                "MONGODB_ATLAS_DATABASE_NAME": "fashion_db",
+                "MONGODB_ATLAS_COLLECTION_NAME": "products_by_sku",
+                "MONGODB_ATLAS_CONNECTION_STRING": os.getenv("MONGODB_ATLAS_URI")
+            }
+        }
 
         # 연결 타임아웃 설정
         _connection_settings = {
@@ -59,11 +67,15 @@ class Config_(dict):
         # 모든 설정 통합
         self.update(_mongodb_local_dict)
         self.update(_mongodb_atlas_dict)
+        self.update(_mongodb_atlas_sku_dict)
         self.update(_connection_settings)
         self.update(_vector_search_settings)
     
     def get_atlas_config(self):
         return self.get("MONGODB_ATLAS")
+    
+    def get_atlas_sku_config(self):
+        return self.get("MONGODB_ATLAS_SKU")
     
     def get_local_config(self):
         return self.get("MONGODB_LOCAL")

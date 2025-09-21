@@ -87,7 +87,7 @@ class AsyncDatabaseManager:
 
     async def close(self):
         if self._client:
-            self._client.close()
+            await self._client.close()
             logger.info("MongoDB async client closed")
         self._connection_status = False
 
