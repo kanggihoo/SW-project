@@ -4,6 +4,7 @@ import logging
 import httpx 
 from .router import websocket
 from .api.v1.api import api_router
+from .api.v2.api import api_router as api_router_v2
 from .config.dependencies import get_async_repo_provider , get_aws_manager, MusinsaAPIWrapper, get_jina_embedding
 from .config.exceptions import validation_exception_handler, http_exception_handler
 from fastapi.exceptions import RequestValidationError, HTTPException
@@ -25,7 +26,7 @@ async def lifespan(app: FastAPI):
         app.state.http_session = None
     try:
         # 의존성 주입을 통해 repo를 한 번만 생성하도록 유도
-        app.state.db_repo = await get_async_repo_provider()
+        app.state.db_repo = await get_async_repo_provider(is_sku=True)
         logger.info("MongoDB connection established.")
     except Exception as e:
         logger.error(f"MongoDB connection error: {e}")
@@ -81,7 +82,7 @@ app = FastAPI(
 
 # app.include_router(websocket.router)
 app.include_router(api_router)
-
+app.include_router(api_router_v2)
 @app.get("/" , tags=["root"])
 async def root():
     return {"message": "Welcome to the Clothing Recommendation API"}

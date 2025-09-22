@@ -61,8 +61,11 @@ class SearchService:
             for result_list in vector_search_results:
                 for item in result_list:
 
-                    item["image_url"] = self._generate_representative_image_url(item)
+                    # item["image_url"] = self._generate_representative_image_url(item)
                     processed_results.append(item)
+            
+            #TODO: 5. 무신사 API 호출해서 기본적인 실시간 정보 업데이트 해서 가져오기 
+
             
             logger.info(f"Processed {len(processed_results)} results for query: '{query}'")
 

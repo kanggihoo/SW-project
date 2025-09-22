@@ -131,7 +131,7 @@ class DenormalizationService:
                 sku_document = {
                     "_id": sku_ids[i],  # SKU ID를 문서 ID로 사용
                     **common_data,  # 공통 데이터 복사
-                    "product_sku": product_sku  # 단일 SKU 객체
+                    "product_skus": product_sku  # 단일 SKU 객체
                 }
                 
                 sku_documents.append(sku_document)

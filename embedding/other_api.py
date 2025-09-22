@@ -84,17 +84,6 @@ client = GeminiEmbedding()
 
 
 
-# TODO: 벡터값 Binary 형태로 저장
-from bson.binary import Binary 
-from bson.binary import BinaryVectorDtype
-
-# Define a function to generate BSON vectors
-# def generate_bson_vector(vector, vector_dtype):
-#     """벡터값을 BSON 형태로 변환"""
-#     # Generate BSON vector from the sample float32 embedding
-#     # bson_float32_embedding = generate_bson_vector(embedding, BinaryVectorDtype.FLOAT32)
-#     return Binary.from_vector(vector, vector_dtype)
-
 async def main():
     from utils import normalize_vector
     from numpy.linalg import norm

@@ -5,7 +5,7 @@ from fastapi import Depends , Request
 
 # 필요 모듈 import 
 from .settings import get_settings
-from db import get_async_fashion_repo
+from db import get_async_fashion_repo , get_async_fashion_sku_repo
 from db.repository.fashion_async import AsyncFashionRepository
 from aws.aws_manager import AWSManager
 from aws.s3 import S3Manager
@@ -21,8 +21,11 @@ logger = logging.getLogger(__name__)
 # DB 관련 의존성 (비동기)
 # =============================================================================
 
-def get_async_repo_provider() -> AsyncFashionRepository:
-    return get_async_fashion_repo()
+def get_async_repo_provider(is_sku: bool = False) -> AsyncFashionRepository:
+    if is_sku:
+        return get_async_fashion_sku_repo()
+    else:
+        return get_async_fashion_repo()
 
 async def get_async_fashion_repo_dependency(request: Request) -> AsyncFashionRepository:
     """AsyncFashionRepository 의존성 반환"""
