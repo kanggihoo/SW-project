@@ -15,7 +15,7 @@ jobs:
         POSTGRES_HOST: "aws-1-ap-northeast-2.pooler.supabase.com"
         POSTGRES_PORT: "6543"
         POSTGRES_DB: "postgres"
-        HOST: "0.0.0.0" # HOST 변수 추가
+        
 
 
     steps:
@@ -121,13 +121,13 @@ jobs:
             OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
             USE_ATLAS="${{ secrets.USE_ATLAS }}"
             GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
+            POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
 
             DB_ENV=${{env.DB_ENV}}
             POSTGRES_USER=${{env.POSTGRES_USER}}
             POSTGRES_HOST=${{env.POSTGRES_HOST}}
             POSTGRES_PORT=${{env.POSTGRES_PORT}}
             POSTGRES_DB=${{env.POSTGRES_DB}}
-            HOST=${{env.HOST}}
             EOF
             chmod 600 "$PROJECT_DIR/.env" # .env 파일 권한 설정 (소유자만 읽기/쓰기 가능)
             echo "환경 변수 파일 생성/업데이트 및 권한 설정 완료."
