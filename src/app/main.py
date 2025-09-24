@@ -107,7 +107,6 @@ app = FastAPI(
     },
     openapi_tags = TAGS_METADATA,
     
-
 )
 
 # app.include_router(websocket.router)
@@ -115,6 +114,7 @@ app.include_router(api_router)
 @app.get("/" , tags=["root"])
 async def root():
     return {"message": "Welcome to the Clothing Recommendation API"}
+
 
 
 

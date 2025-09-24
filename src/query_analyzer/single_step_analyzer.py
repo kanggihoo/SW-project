@@ -6,19 +6,23 @@ from .llm_manager import LLMManager
 class SingleStepAnalyzer:
     """Analyzes a fashion query in a single LLM call."""
 
-    def __init__(self, model_provider: str, model_name: str):
+    def __init__(self, model_provider: str, model_name: str, max_tokens: int = 2000):
         llm_manager = LLMManager()
-        self.llm = llm_manager.load_llm(model_provider, model_name)
+        self.llm = llm_manager.load_llm(model_provider, model_name, max_tokens)
         self.chain = self._create_chain()
 
     def _create_chain(self):
         system_prompt = """
-        당신은 사용자의 복잡한 패션 쿼리를 한 번에 분석하여, 모든 의류 아이템 정보를 추출하고 검색에 최적화된 데이터로 구조화하는 최고의 AI 패션 분석가입니다.
+        당신은 패션 쿼리 분석 전문가입니다. 사용자 쿼리에서 언급된 모든 의류 아이템을 식별하고 JSON 형태로 구조화하여 반환합니다.
 
-        ## 최종 목표
-        사용자 쿼리에서 언급된 모든 '상의'와 '하의' 아이템을 식별하고, 각각을 `TopFilter` 또는 `BottomFilter` JSON 스키마에 맞춰 완벽하게 분석하여 `analyzed_items` 리스트에 담아 반환해야 합니다.
+        ## 작업 방법
+        1. 쿼리에서 모든 의류 아이템(상의/하의)을 찾습니다
+        2. 각 아이템을 TopFilter 또는 BottomFilter 스키마에 맞춰 분석합니다
+        3. 쿼리에 명시된 정보만 추출하고, 없으면 None/[]로 설정합니다
+        4. 각 아이템에 대해 간단한 rewritten_query를 생성합니다
 
        ## 작업 지침
+        0. **중요: 사용자가 추천하지 않거나, 거절하거나, 적절하지 않다고 언급하는 아이템은 분석 대상에서 완전히 제외하세요.**
         1. **전체 쿼리 분석**: 사용자 쿼리 전체를 읽고, 언급된 모든 개별 의류 아이템(예: 셔츠, 자켓, 슬랙스)을 찾아 목록을 만듭니다.
         2. **개별 아이템 분석 (반복)**: 목록의 각 아이템에 대해 다음을 수행합니다.
             a.  **타입 결정**: 아이템이 '상의'인지 '하의'인지 결정하고, 그에 맞는 `TopFilter` 또는 `BottomFilter` 스키마를 선택합니다.
@@ -38,51 +42,35 @@ class SingleStepAnalyzer:
             {
               "sub_category": "셔츠-블라우스",
               "color": null,
-              "style_tags": [
-                "포멀",
-                "심플 베이직"
-              ],
-              "tpo_tags": [
-                "오피스"
-              ],
+              "style_tags": ["포멀"],
+              "tpo_tags": ["오피스"],
               "fit": null,
               "pattern_type": "스트라이프",
               "length": null,
-              "rewritten_query": "출근룩으로 입기 좋은 스트라이프 셔츠"
+              "rewritten_query": "출근용 스트라이프 셔츠"
             },
             {
               "sub_category": null,
               "color": "블랙",
-              "style_tags": [
-                "포멀",
-                "심플 베이직"
-              ],
-              "tpo_tags": [
-                "오피스"
-              ],
+              "style_tags": ["포멀"],
+              "tpo_tags": ["오피스"],
               "fit": null,
               "pattern_type": null,
               "length": null,
-              "rewritten_query": "스트라이프 셔츠 위에 걸칠 검정색 출근용 자켓"
+              "rewritten_query": "검정색 출근용 자켓"
             },
             {
               "sub_category": "슈트팬츠-슬랙스",
               "color": "베이지",
-              "style_tags": [
-                "포멀",
-                "심플 베이직"
-              ],
-              "tpo_tags": [
-                "오피스"
-              ],
+              "style_tags": ["포멀"],
+              "tpo_tags": ["오피스"],
               "fit": null,
               "pattern_type": "무지",
               "length": null,
-              "rewritten_query": "출근룩에 어울리는 베이지색 슬랙스"
+              "rewritten_query": "베이지색 출근용 슬랙스"
             }
           ]
         }
-        ```
         """
         prompt = ChatPromptTemplate.from_messages([
             SystemMessage(content=system_prompt),

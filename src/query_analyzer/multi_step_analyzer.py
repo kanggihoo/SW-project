@@ -10,11 +10,11 @@ import json
 class MultiStepAnalyzer:
     """Analyzes a fashion query in two steps: identification and then detailed analysis."""
 
-    def __init__(self, model_provider1: str, model_name1: str, model_provider2: str, model_name2: str):
+    def __init__(self, model_provider1: str, model_name1: str, model_provider2: str, model_name2: str, max_tokens: int = 2000):
         # Can use different models for different steps if needed
         llm_manager = LLMManager()
-        self.llm1 = llm_manager.load_llm(model_provider1, model_name1)
-        self.llm2 = llm_manager.load_llm(model_provider2, model_name2)
+        self.llm1 = llm_manager.load_llm(model_provider1, model_name1, max_tokens)
+        self.llm2 = llm_manager.load_llm(model_provider2, model_name2, max_tokens)
 
     def _get_first_chain(self):
         """Step 1: Identify items and common context from the query."""

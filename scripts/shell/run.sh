@@ -1,0 +1,1 @@
+. ./.venv/bin/activate && echo '🚀 FastAPI Server Terminal' && uv run python3 src/run_server.py
