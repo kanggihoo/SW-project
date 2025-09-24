@@ -20,6 +20,8 @@ class BaseResponse(BaseModel):
 
 class SearchResultItem(BaseModel):
     query : Annotated[str , Field(..., description="사용자가 입력한 쿼리")]
+    rewritten_query_list : Annotated[list[str] , Field(..., description="재작성된 쿼리 리스트")]
+    pre_filter_list : Annotated[list[dict] , Field(..., description="필터 리스트")]
     data : Annotated[list[dict] , Field(..., description="검색 결과 데이터")]
     total_count : Annotated[int , Field(..., description="검색 결과 총 개수")]
 

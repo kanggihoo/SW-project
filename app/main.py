@@ -2,11 +2,18 @@ from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 import logging
 import httpx 
-from .router import websocket
-from .api.v1.api import api_router
-from .config.dependencies import get_async_repo_provider , get_aws_manager, MusinsaAPIWrapper, get_jina_embedding
-from .config.exceptions import validation_exception_handler, http_exception_handler
 from fastapi.exceptions import RequestValidationError, HTTPException
+
+from .api.v2.api import api_router as api_router_v2
+from .config.dependencies import get_async_repo_provider , get_aws_manager, MusinsaAPIWrapper
+from .config.exceptions import validation_exception_handler, http_exception_handler
+from .api.v1.api import api_router
+
+# langgraph 관련 모듈 import
+# from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+# from graph.agents import get_graph_builder , get_all_agent_info
+# from graph.memory.postgres import get_postgres_connection_pool
+
 
 # 로깅설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s - %(filename)s - %(lineno)d', datefmt='%H:%M:%S')
@@ -25,7 +32,7 @@ async def lifespan(app: FastAPI):
         app.state.http_session = None
     try:
         # 의존성 주입을 통해 repo를 한 번만 생성하도록 유도
-        app.state.db_repo = await get_async_repo_provider()
+        app.state.db_repo = await get_async_repo_provider(is_sku=True)
         logger.info("MongoDB connection established.")
     except Exception as e:
         logger.error(f"MongoDB connection error: {e}")
@@ -37,19 +44,32 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"AWS connection error: {e}")
         app.state.aws_manager = None
-    try:
-        app.state.jina_embedding = get_jina_embedding(session=http_session)
-        logger.info("Jina Embedding initialized.")
-    except Exception as e:
-        logger.error(f"Jina Embedding initialization error: {e}")
-        app.state.jina_embedding = None
+    # try:
+    #     app.state.jina_embedding = get_jina_embedding(session=http_session)
+    #     logger.info("Jina Embedding initialized.")
+    # except Exception as e:
+    #     logger.error(f"Jina Embedding initialization error: {e}")
+    #     app.state.jina_embedding = None
     try:
         app.state.musinsa_api_wrapper = MusinsaAPIWrapper()
         logger.info("Musinsa API Wrapper initialized.")
     except Exception as e:
         logger.error(f"Musinsa API Wrapper initialization error: {e}")
         app.state.musinsa_api_wrapper = None
-
+    # async with get_postgres_connection_pool() as pool:
+    #     logger.info("PostgreSQL connection pool initialized.")
+    #     checkpointer = AsyncPostgresSaver(pool)
+    #     await checkpointer.setup()
+    #     agent_names =  get_all_agent_info()
+    #     agents = {}
+    #     for agent_name in agent_names:
+    #         builder = get_graph_builder(agent_name)
+    #         agent = builder(app.state.http_session)
+    #         agent.checkpointer = checkpointer
+    #         agents[agent_name] = agent
+    #     app.state.agents = agents
+    #     app.state.connection_pool = pool
+        
     yield
 
     # 애플리케이션 종료 시 리소스 정리
@@ -81,7 +101,7 @@ app = FastAPI(
 
 # app.include_router(websocket.router)
 app.include_router(api_router)
-
+app.include_router(api_router_v2)
 @app.get("/" , tags=["root"])
 async def root():
     return {"message": "Welcome to the Clothing Recommendation API"}
