@@ -40,8 +40,8 @@ class Config_(dict):
         # _vector_search_settings = {
         #     "VECTOR_SEARCH_SETTINGS" : {
         #         "DEFAULT_VECTOR_INDEX": "tmp",
-        #         "EMBEDDING_FIELD_PATH": "embedding.comprehensive_description.vector",
-        #         "EMBEDDING_DIMENSIONS": 1024,
+        #         "EMBEDDING_FIELD_PATH": "embedding.comprehensive_descriptionv2.vector",
+        #         "EMBEDDING_DIMENSIONS": 3072,
         #         "DEFAULT_SIMILARITY": "cosine",
         #         "DEFAULT_NUM_CANDIDATES": 100,
         #         "DEFAULT_LIMIT": 10,
@@ -68,7 +68,7 @@ class Config_(dict):
             "VECTOR_SEARCH_SETTINGS" : {
                 "DEFAULT_VECTOR_INDEX": "default",
                 "EMBEDDING_FIELD_PATH": "embedding.comprehensive_description.vector",
-                "EMBEDDING_DIMENSIONS": 1024,
+                "EMBEDDING_DIMENSIONS": 3072,
                 "DEFAULT_SIMILARITY": "cosine",
                 "DEFAULT_NUM_CANDIDATES": 100,
                 "DEFAULT_LIMIT": 10,

@@ -1,7 +1,9 @@
 # 메인 의존성 정의 
 from functools import lru_cache
-from typing import Annotated
-from fastapi import Depends , Request
+from typing import Annotated , AsyncGenerator
+from fastapi import Depends , Request , Path , HTTPException
+import logging 
+import httpx
 
 # 필요 모듈 import 
 from .settings import get_settings
@@ -14,11 +16,14 @@ from app.services.search import SearchService
 from embedding.embedding import JinaEmbedding
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
 from query_analyzer.single_step_analyzer import SingleStepAnalyzer
-import logging 
-import httpx
+from embedding.other_api import GeminiEmbedding
+from langgraph.graph.state import CompiledStateGraph
+# from graph.agents import get_all_agent_info , get_agents_openapi_examples
+from psycopg import AsyncConnection
+
 logger = logging.getLogger(__name__)
 # =============================================================================
-# DB 관련 의존성 (비동기)
+# DB 관련 의존성 mongo db(비동기)
 # =============================================================================
 
 def get_async_repo_provider(is_sku: bool = False) -> AsyncFashionRepository:
@@ -30,6 +35,19 @@ def get_async_repo_provider(is_sku: bool = False) -> AsyncFashionRepository:
 async def get_async_fashion_repo_dependency(request: Request) -> AsyncFashionRepository:
     """AsyncFashionRepository 의존성 반환"""
     return request.app.state.db_repo
+
+# =============================================================================
+# DB 관련 의존성 postgres db(비동기)
+# =============================================================================
+
+# #TODO : 에러 처리 다 따로 빼고 
+# async def get_db_connection(request: Request) -> AsyncGenerator[AsyncConnection, None]:
+#     async with request.app.state.connection_pool.connection() as conn:
+#         try:
+#             yield conn
+#         except Exception as e:
+#             logger.error(f"Error getting db connection: {e}")
+#             raise HTTPException(status_code=500, detail="Internal server error")
 
 # =============================================================================
 # AWS 관련 의존성 
@@ -55,12 +73,12 @@ def get_aws_manager_dependency(request: Request)->AWSManager:
 # =============================================================================
 # Jina Embedding 관련 의존성
 # =============================================================================
-def get_jina_embedding(session: httpx.AsyncClient)->JinaEmbedding:
-    return JinaEmbedding(session=session)
+# def get_jina_embedding(session: httpx.AsyncClient)->JinaEmbedding:
+#     return JinaEmbedding(session=session)
 
-def get_jina_embedding_dependency(request: Request) -> JinaEmbedding:
-    """JinaEmbedding 의존성 반환""" 
-    return request.app.state.jina_embedding
+# def get_jina_embedding_dependency(request: Request) -> JinaEmbedding:
+#     """JinaEmbedding 의존성 반환""" 
+#     return request.app.state.jina_embedding
 
 # =============================================================================
 # Query Analyzer 관련 의존성 
@@ -97,11 +115,22 @@ async def get_search_service_dependency(
         
     s3_manager: Annotated[S3Manager, Depends(get_s3_manager_dependency)],
     repository: Annotated[AsyncFashionRepository, Depends(get_async_fashion_repo_dependency)],
-    jina_embedding: Annotated[JinaEmbedding, Depends(get_jina_embedding_dependency)],
     query_analyzer: Annotated[MultiStepAnalyzer, Depends(get_query_analyzer_dependency)]
 ) -> SearchService:
     """SearchService 의존성 반환 (비동기)"""
-    return SearchService(s3_manager, repository, jina_embedding, query_analyzer)
+    return SearchService(s3_manager, repository, query_analyzer)
+
+# =============================================================================
+# langgraph 관련 의존성 
+# =============================================================================
+# def get_agent(request: Request , agent_name:Annotated[str, Path(...,description=f"사용할 에이전트 이름 \n 에이전트 목록 : {get_all_agent_info()}" , openapi_examples=get_agents_openapi_examples())] ) -> CompiledStateGraph:
+#     if agent_name not in request.app.state.agents:
+#         raise HTTPException(status_code=404, detail=f"Agent {agent_name} not found")
+#     return request.app.state.agents[agent_name]
+
+# def get_agents(request: Request) -> dict[str, CompiledStateGraph]:
+#     return request.app.state.agents
+
 
 # =============================================================================
 # 의존성 타입 어노테이션 정의
@@ -109,6 +138,7 @@ async def get_search_service_dependency(
 
 # DB 관련
 RepositoryDep = Annotated[AsyncFashionRepository, Depends(get_async_fashion_repo_dependency)]
+# DBConnectionDep = Annotated[AsyncConnection, Depends(get_db_connection)]
 
 # AWS 관련
 AWSManagerDep = Annotated[AWSManager, Depends(get_aws_manager_dependency)]
@@ -122,7 +152,8 @@ QueryAnalyzerDep = Annotated[MultiStepAnalyzer, Depends(get_query_analyzer_depen
 SearchServiceDep = Annotated[SearchService, Depends(get_search_service_dependency)]
 MusinsaAPIWrapperDep = Annotated[MusinsaAPIWrapper, Depends(get_musinsa_api_wrapper)]
 
-
+# agent 관련 
+# AgentDep = Annotated[CompiledStateGraph, Depends(get_agent)]
 # =============================================================================
 # 헬스체크 및 정리 함수들 (수정 필요)
 # =============================================================================

@@ -84,7 +84,9 @@ class AsyncFashionRepository(BaseAsyncRepository):
         )
         try:
             # TODO : 벡터 서치 간에 대응하는 색상이 없는 경우 처리 필요 
+            # logger.info(f"pipeline: {pipeline}")
             cursor = await self.collection.aggregate(pipeline)
+            # logger.info(f"cursor: {cursor}")
             return [doc async for doc in cursor]
         except Exception as e:
             logger.error(f"Error during vector search (async): {e}")

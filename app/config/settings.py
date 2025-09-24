@@ -6,7 +6,18 @@ from typing import Annotated
 from db.config.config import Config as DBConfig
 from aws.config import Config as AWSConfig
 import os
+
+from graph import settings as graph_settings
 class Settings(BaseSettings):
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding='utf-8',
+        case_sensitive=True,
+        # 환경변수를 우선적으로 사용
+        env_prefix="",
+        extra="ignore"
+    )
     USE_ATLAS: Annotated[bool, Field(default=True)]
     
     # 환경변수가 None일 경우를 대비한 검증 추가
@@ -23,14 +34,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Annotated[str, Field(default=None)]
     GOOGLE_API_KEY: Annotated[str, Field(default=None)]
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding='utf-8',
-        case_sensitive=True,
-        # 환경변수를 우선적으로 사용
-        env_prefix="",
-        extra="ignore"
-    )
+
+    graph_settings : BaseSettings = graph_settings
     
     # def __init__(self, **kwargs):
     #     # 환경변수 직접 확인 및 로그

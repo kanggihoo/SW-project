@@ -76,7 +76,7 @@ class GeminiEmbedding:
         return [emb.values for emb in result.embeddings]
 
 
-client = GeminiEmbedding()
+gemini_embedding = GeminiEmbedding()
 
 
 # API 키 설정 (환경 변수에 설정하는 것을 권장)
@@ -87,10 +87,11 @@ client = GeminiEmbedding()
 async def main():
     from utils import normalize_vector
     from numpy.linalg import norm
-    embedding = await client.get_embedding(texts=["Hello, world!"] , output_dimension=768)
-    normalized_embedding = normalize_vector(embedding[0])
-    print(norm(normalized_embedding))
-    print(norm(embedding[0]))
+    embedding = await gemini_embedding.get_embedding(texts=["Hello, world!"] , output_dimension=768)
+    # normalized_embedding = normalize_vector(embedding[0])
+    # print(norm(normalized_embedding))
+    # print(norm(embedding[0]))
+    print(len(embedding[0]) , len(embedding))
     
 # 비동기 함수 실행
 if __name__ == "__main__":

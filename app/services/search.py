@@ -3,17 +3,17 @@ import logging
 from typing import Any, Optional, List
 from db.repository.fashion_async import AsyncFashionRepository
 from aws.aws_manager import S3Manager
-from embedding.embedding import JinaEmbedding
+from embedding.other_api import gemini_embedding
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
 import asyncio
 from fastapi import HTTPException
 logger = logging.getLogger(__name__)
 
 class SearchService:
-    def __init__(self, s3_manager: S3Manager, repository: AsyncFashionRepository, jina_embedding: JinaEmbedding, query_analyzer: MultiStepAnalyzer):
+    def __init__(self, s3_manager: S3Manager, repository: AsyncFashionRepository, query_analyzer: MultiStepAnalyzer):
         self.s3_manager = s3_manager
         self.repository = repository
-        self.jina_embedding = jina_embedding
+        self.gemini_embedding = gemini_embedding
         self.query_analyzer = query_analyzer
 
     async def search_by_query(self, query: str, limit: int = 1) -> dict:
@@ -38,8 +38,7 @@ class SearchService:
             logger.info(f"pre_filter_list: {pre_filter_list}")
             
             # 2. 임베딩 생성
-            embedding_data = await self.jina_embedding.get_embedding(rewritten_query_list)
-            embeddings = embedding_data.get("embeddings", [])
+            embeddings = await self.gemini_embedding.get_embedding(rewritten_query_list) 
             
             if not embeddings:
                 raise ValueError("Embedding generation failed")
@@ -49,12 +48,14 @@ class SearchService:
             # 3. 병렬 벡터 검색 실행
             tasks = []
             for emd, pf in zip(embeddings, pre_filter_list):
+                logger.info(f"쿼리 : {query} 필터 : {pf} , limit : {limit} 으로 검색 시작")
                 task = self.repository.vector_search(embedding=emd, limit=limit, pre_filter=pf)
                 tasks.append(task)
             
             vector_search_results = await asyncio.gather(*tasks)
             
             logger.info(f"vector_search_results completed")
+            logger.info(f"vector_search_results: {vector_search_results}")
             
             # 4. 결과 처리 및 S3 URL 생성
             processed_results = []
@@ -71,6 +72,8 @@ class SearchService:
 
             return {
                 "query": query,
+                "rewritten_query_list": rewritten_query_list,
+                "pre_filter_list": pre_filter_list,
                 "data": processed_results,
                 "total_count": len(processed_results),
                 "message": "Search completed successfully"

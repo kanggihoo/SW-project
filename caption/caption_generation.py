@@ -1,3 +1,4 @@
+# scripts/python/caption/caption_generation.py
 import logging
 import sys
 from typing import Any

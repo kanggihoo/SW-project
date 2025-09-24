@@ -34,6 +34,8 @@ async def search_product(
         # 결과를 API 응답 모델에 맞게 변환
         response_data = SearchResultItem(
             query=search_result["query"],
+            rewritten_query_list=search_result["rewritten_query_list"],
+            pre_filter_list=search_result["pre_filter_list"],
             data=search_result["data"],
             total_count=search_result["total_count"],
             message=search_result["message"]

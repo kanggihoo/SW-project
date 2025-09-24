@@ -4,6 +4,7 @@ from app.config.dependencies import SearchServiceDep
 from app.model.saarch_api import SearchRequest, SearchResponse, SearchResultItem
 import time
 import logging
+from embedding.other_api import gemini_embedding
 
 logger = logging.getLogger(__name__)
 
