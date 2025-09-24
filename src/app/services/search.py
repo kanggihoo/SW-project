@@ -48,7 +48,6 @@ class SearchServiceTest:
             # 3. 병렬 벡터 검색 실행
             tasks = []
             for emd, pf in zip(embeddings, pre_filter_list):
-                logger.info(f"쿼리 : {query} 필터 : {pf} , limit : {limit} 으로 검색 시작")
                 task = self.repository.vector_search(embedding=emd, limit=limit, pre_filter=pf)
                 tasks.append(task)
             

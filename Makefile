@@ -4,6 +4,9 @@ run-servers:
 	@echo "🚀 Starting servers in iTerm vertical split..."
 	@./scripts/shell/run_server.sh
 
+run:
+	@echo "🚀 Starting servers in iTerm vertical split..."
+	@./scripts/shell/run_server.sh
 # 서버 중지 및 iTerm 창 닫기
 stop-servers:
 	@echo "🛑 Stopping servers..."

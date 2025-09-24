@@ -99,13 +99,15 @@ def get_query_analyzer_dependency() -> SingleStepAnalyzer:
     
     return SingleStepAnalyzer(
         model_provider="openrouter",
-        model_name="google/gemini-2.5-flash-lite"
+        model_name="google/gemini-2.5-flash-lite",
+        max_tokens=1500  # 더 낮은 토큰 제한 설정
     )
     return MultiStepAnalyzer(
         model_provider1="openrouter",
-        model_name1="google/gemini-2.5-flash-lite",
-        model_provider2="openrouter",
-        model_name2="google/gemini-2.5-flash-lite"
+        model_name1="google/gemini-2.0-flash-exp",
+        model_provider2="openrouter", 
+        model_name2="google/gemini-2.0-flash-exp",
+        max_tokens=2000  # 토큰 제한을 더 낮게 설정
     )
 
 # =============================================================================
