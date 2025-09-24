@@ -15,12 +15,9 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from graph.agents import get_agent , get_all_agent_info
 from graph.memory.postgres import get_postgres_connection_pool
 
-
-
 # 로깅설정
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s - %(filename)s - %(lineno)d', datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
-
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s - %(filename)s - %(lineno)d', datefmt='%H:%M:%S')
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 애플리케이션 시작 시 리소스 초기화

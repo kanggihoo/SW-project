@@ -122,6 +122,8 @@ jobs:
             USE_ATLAS="${{ secrets.USE_ATLAS }}"
             GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
             POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+            OPENROUTER_API_KEY="${{ secrets.OPENROUTER_API_KEY }}"
+            OPENROUTER_BASE_URL="${{ secrets.OPENROUTER_BASE_URL }}"
 
             DB_ENV=${{env.DB_ENV}}
             POSTGRES_USER=${{env.POSTGRES_USER}}
