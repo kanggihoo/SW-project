@@ -9,6 +9,14 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+        DB_ENV: "cloud"
+        POSTGRES_USER: "postgres.mrnvymnblankzratdavt"
+        POSTGRES_HOST: "aws-1-ap-northeast-2.pooler.supabase.com"
+        POSTGRES_PORT: "6543"
+        POSTGRES_DB: "postgres"
+        HOST: "0.0.0.0" # HOST 변수 추가
+
 
     steps:
     - name: Checkout code
@@ -113,7 +121,13 @@ jobs:
             OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}"
             USE_ATLAS="${{ secrets.USE_ATLAS }}"
             GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
-            # 필요하다면 여기에 추가 환경 변수를 정의하세요.
+
+            DB_ENV=${{env.DB_ENV}}
+            POSTGRES_USER=${{env.POSTGRES_USER}}
+            POSTGRES_HOST=${{env.POSTGRES_HOST}}
+            POSTGRES_PORT=${{env.POSTGRES_PORT}}
+            POSTGRES_DB=${{env.POSTGRES_DB}}
+            HOST=${{env.HOST}}
             EOF
             chmod 600 "$PROJECT_DIR/.env" # .env 파일 권한 설정 (소유자만 읽기/쓰기 가능)
             echo "환경 변수 파일 생성/업데이트 및 권한 설정 완료."
@@ -138,7 +152,8 @@ jobs:
             Group=$(id -gn ${{ secrets.AI_SERVER_EC2_USERNAME }})
             WorkingDirectory=${PROJECT_DIR}
             EnvironmentFile=${PROJECT_DIR}/.env
-            ExecStart=${PROJECT_DIR}/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+            # ExecStart=${PROJECT_DIR}/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+            ExecStart=${HOME_DIR}/.local/bin/uv run python3 src/run_server.py
             Restart=always
             RestartSec=10
 
