@@ -100,7 +100,7 @@ def get_query_analyzer_dependency() -> SingleStepAnalyzer:
     return SingleStepAnalyzer(
         model_provider="openrouter",
         model_name="google/gemini-2.5-flash-lite",
-        max_tokens=1500  # 더 낮은 토큰 제한 설정
+        max_tokens=2000  # 더 낮은 토큰 제한 설정
     )
     return MultiStepAnalyzer(
         model_provider1="openrouter",
@@ -131,7 +131,7 @@ async def get_search_service_test_dependency(
     repository: Annotated[AsyncFashionRepository, Depends(get_async_fashion_repo_dependency)],
     query_analyzer: Annotated[MultiStepAnalyzer, Depends(get_query_analyzer_dependency)],
     embedding: Annotated[GeminiEmbedding, Depends(get_gemini_embedding_dependency)] 
-) -> SearchService:
+) -> SearchServiceTest:
     """SearchService 의존성 반환 (비동기)"""
     return SearchServiceTest(s3_manager, repository, query_analyzer , embedding)
 
@@ -173,7 +173,7 @@ DynamoDBManagerDep = Annotated[DynamoDBManager, Depends(get_dynamodb_manager_dep
 QueryAnalyzerDep = Annotated[MultiStepAnalyzer, Depends(get_query_analyzer_dependency)]
 
 # 서비스 관련
-SearchServiceTestDep = Annotated[SearchService, Depends(get_search_service_test_dependency)]
+SearchServiceTestDep = Annotated[SearchServiceTest, Depends(get_search_service_test_dependency)]
 SearchServiceDep = Annotated[SearchService, Depends(get_search_service_dependency)]
 
 MusinsaAPIWrapperDep = Annotated[MusinsaAPIWrapper, Depends(get_musinsa_api_wrapper)]

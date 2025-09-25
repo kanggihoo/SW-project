@@ -79,7 +79,7 @@ async def handle_user_input(user_input:UserInput , agent:CompiledStateGraph , **
     return kwargs , run_id
 
 
-async def message_generator(user_input:StreamInput , agent:CompiledStateGraph)->AsyncGenerator[str , None]:
+async def message_generator(user_input:StreamInput , agent:CompiledStateGraph , **kwargs)->AsyncGenerator[str , None]:
     """Generate a stream of messages from the agent
     스트리밍 모드로 요청을 받았을 때, graph의 동작과정을 SSE 방식으로 전송하기 위한 비동기 제너레이터 
 
@@ -87,8 +87,7 @@ async def message_generator(user_input:StreamInput , agent:CompiledStateGraph)->
         user_input (StreamInput): user input
         agent (CompiledStateGraph): agent / agent_name에 맞는 CompiledStateGraph 객체 
     """
-    kwargs , run_id = await handle_user_input(user_input , agent)
-    logger.debug(f"kwargs: {kwargs} \n run_id: {run_id}")
+    kwargs , run_id = await handle_user_input(user_input , agent , **kwargs) 
 
     try:
         async for stream_event in agent.astream(
@@ -167,7 +166,7 @@ async def message_generator(user_input:StreamInput , agent:CompiledStateGraph)->
                 try:
                     if isinstance(message, BaseMessage):
                         chat_message = langchain_to_chat_message(message)
-                        chat_message.run_id = str(run_id)
+                        # chat_message.run_id = str(run_id)
                     else:
                         data = {
                             "type" : "ai",

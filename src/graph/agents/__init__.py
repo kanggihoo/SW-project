@@ -6,7 +6,7 @@ from .chatbot import build_graph as build_chatbot_graph
 # from .product import build_graph as build_product_graph
 # from .search import build_graph as build_search_graph
 # from .external_llm import build_graph as build_external_llm_graph
-# from .llm_search import build_graph as build_llm_search_graph
+from .llm_search import build_graph as build_llm_search_graph
 # from .gather_info import build_graph as build_gather_info_graph
 DEFAULT_AGENT_NAME = "chatbot"
 
@@ -15,7 +15,7 @@ agents = {
     # 'product' : build_product_graph,
     # 'search' : build_search_graph,
     # "external_llm" : build_external_llm_graph,
-    # "llm_search" : build_llm_search_graph,
+    "llm_search" : build_llm_search_graph(),
     # "gather_info" : build_gather_info_graph,
 }
 

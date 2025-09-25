@@ -5,7 +5,7 @@ from graph.model.constants import SSETypes , ExternalLLMNames
 from graph.model.api_schema import StatusUpdate
 
 
-async def external_streaming_llm(text:str , api_end_point:str, httpx_client , expert_type:Literal["color_expert" , "style_anal" , "fitting_coordinater"])->AsyncGenerator[str, None]:
+async def external_streaming_llm(text:str , api_end_point:str, http_session , expert_type:Literal["color_expert" , "style_anal" , "fitting_coordinater"])->AsyncGenerator[str, None]:
     """특정 노드에서 외부 LLM 스트리밍 결과를 반환하는 비동기 제너레이터"""
     headers = {
         "Accept": "text/event-stream",
@@ -27,7 +27,7 @@ async def external_streaming_llm(text:str , api_end_point:str, httpx_client , ex
         }
     }
     try:
-        async with httpx_client.stream(
+        async with http_session.stream(
             "POST", 
             api_end_point, 
             headers=headers, 
@@ -48,4 +48,4 @@ async def external_streaming_llm(text:str , api_end_point:str, httpx_client , ex
                             yield f"data: {json.dumps({'type': SSETypes.END.value, 'content': ""})}\n\n"
     except Exception as e:
         print(e)
-        yield f"data: {json.dumps({'type': SSETypes.ERROR.value, 'content': 'Unexpected error' , 'agent_name': ExternalLLMNames.STYLE_ANALYST})}\n\n"
+        yield f"data: {json.dumps({'type': SSETypes.ERROR.value, 'content': 'Unexpected error' , 'agent_name': expert_type})}\n\n"

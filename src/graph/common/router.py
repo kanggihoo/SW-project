@@ -1,4 +1,4 @@
-from graph.model.graph_schemas import State
+from graph.common.state import State
 
 
 def route_expert_loop(state: State):

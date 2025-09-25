@@ -9,9 +9,9 @@ import httpx
 from functools import partial
 import logging
 
-from model.type import SSETypes
-from model.schema import StatusUpdate
-from utils.messages import create_message
+from graph.model.constants import SSETypes
+from graph.model.api_schema import StatusUpdate
+from graph.utils.messages import create_message
 from .utils import external_streaming_llm
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,6 @@ class ExternalLLMState(TypedDict):
     """External LLM state"""
     messages: Annotated[list[BaseMessage], add_messages] = []
     metadata: str = ""
-
 
 
 

@@ -26,6 +26,12 @@ class SearchResultItem(BaseModel):
     data : Annotated[list[dict] , Field(..., description="검색 결과 데이터")]
     total_count : Annotated[int , Field(..., description="검색 결과 총 개수")]
 
+
+
 class SearchResponse(BaseResponse):
     """검색 결과 응답 모델"""
     data : SearchResultItem
+
+class SearchOneProductResponse(BaseResponse):
+    """하나의 상품 조회 결과 응답 모델"""
+    data : Annotated[dict , Field(..., description="하나의 상품 조회 결과")]

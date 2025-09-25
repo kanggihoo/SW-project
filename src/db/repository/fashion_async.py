@@ -15,10 +15,10 @@ class AsyncFashionRepository(BaseAsyncRepository):
         super().__init__(connection_string, database_name, collection_name)
 
     @override
-    async def find_by_id(self, doc_id: str) -> Optional[Dict]:
+    async def find_by_id(self, doc_id: str , projection: Optional[Dict] = None) -> Optional[Dict]:
         """상품 ID로 비동기 조회"""
         try:
-            return await self.collection.find_one({"_id": doc_id})
+            return await self.collection.find_one({"_id": doc_id}, projection=projection)
         except Exception as e:
             logger.error(f"Error finding product by ID (async) {doc_id}: {e}")
             return None

@@ -53,11 +53,8 @@ def create_message(
             content="요청하신 '강아지' 이미지입니다.",
             additional_kwargs={
                 "type": "image",
-                "image_urls": ["s3://.../puppy-1.png"],
-                "metadata": {
-                    "role_id": "ai2",
-                    "display_name": "이미지 검색 AI",
-                }
+                # "image_urls": ["s3://.../puppy-1.png"],
+                "그외의 정보 dict"
             }
         )
     
@@ -70,10 +67,11 @@ def create_message(
     additional_kwargs = {}
     additional_kwargs["type"] = metadata_type
     additional_kwargs["created_at"] = get_current_utc_timestamp().isoformat()
-    if image_urls and metadata_type == "image":
-        additional_kwargs["image_urls"] = image_urls if isinstance(image_urls, list) else [image_urls]
+    # if image_urls and metadata_type == "image":
+    #     additional_kwargs["image_urls"] = image_urls if isinstance(image_urls, list) else [image_urls]
     if metadata:
-        additional_kwargs["metadata"] = metadata
+        for key, value in metadata.items():
+            additional_kwargs[key] = value
     match message_type:
         case "ai":
             return AIMessage(content=content , additional_kwargs=additional_kwargs)

@@ -22,7 +22,7 @@ class SearchService:
             #TODO: 에러 처리? 
             # 1. Query Analyzer를 이용한 쿼리 분석
             analyzed_results = await self.query_analyzer.analyze_and_format(query)
-            logger.info(f"analyzed_results: {analyzed_results}")
+            logger.info(f"쿼리 분석결과 analyzed_results: {analyzed_results}")
 
             if analyzed_results:
                 rewritten_query_list = [item["rewritten_query"] for item in analyzed_results]
@@ -53,7 +53,6 @@ class SearchService:
             vector_search_results = await asyncio.gather(*tasks)
             
             logger.info(f"vector_search_results completed")
-            logger.info(f"vector_search_results: {vector_search_results}")
             
             # 4. 결과 처리 및 S3 URL 생성
             processed_results = []
@@ -64,7 +63,7 @@ class SearchService:
             #TODO: 5. 무신사 API 호출해서 기본적인 실시간 정보 업데이트 해서 가져오기 
 
             
-            logger.info(f"Processed {len(processed_results)} results for query: '{query}'")
+            logger.info(f"Processed {len(processed_results)} results for query: '{query}' , data: {processed_results}")
 
             
             return {

@@ -1,8 +1,8 @@
 # Combined External LLM and Search Agent
-from langgraph.config import get_stream_writer , RunnableConfig
+from langgraph.config import get_stream_writer
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, START, END, add_messages
 from langchain_core.messages import BaseMessage
-from typing import Annotated, TypedDict
 from functools import partial
 
 import json
@@ -10,10 +10,10 @@ import httpx
 import logging
 
 from db.services.search import SearchService
+from graph.agents.llm_search.utils import external_streaming_llm
 from graph.model.constants import SSETypes
 from graph.model.api_schema import StatusUpdate
 from graph.utils.messages import create_message
-from agents.external_llm.utils import external_streaming_llm
 from graph.common.state import State
 from graph.common.router import route_expert_loop
 
@@ -21,7 +21,7 @@ from graph.common.router import route_expert_loop
 logger = logging.getLogger(__name__)
 
 
-async def pop_next_expert_node(state: State):
+async def pop_next_expert_node(state: State, config: RunnableConfig)->State:
     """전문가 리스트에서 다음 전문가를 꺼내 'current_expert'로 설정"""
     print("\n--- 노드 실행: pop_next_expert_node ---")
     experts_to_run = state["experts_to_run"]
@@ -34,7 +34,11 @@ async def pop_next_expert_node(state: State):
     }
 
 
-async def external_llm_node(state: State,  api_endpoint: str , config:dict) -> State:
+async def external_llm_node(state: State, config: RunnableConfig) -> State:
+    host = "https://the-first-take.com"
+    path = "llm/api/expert/single/stream"
+    api_endpoint = f"{host}/{path}"
+
     """외부 LLM 스트리밍 결과를 반환하는 노드 - 사용자 입력을 분석하여 검색 쿼리 생성"""
     text = state["user_message"]
     current_expert = state.get("current_expert")
@@ -70,7 +74,7 @@ async def external_llm_node(state: State,  api_endpoint: str , config:dict) -> S
                         writer({"type": SSETypes.STATUS.value, "content": content})
                         break
     except Exception as e:
-        logger.error(f"Error in external LLM node: {e}")
+        logger.error(f"Error in external external_llm_node : {e}")
         response_text = "의류 분석 중 오류가 발생했습니다."
         content = StatusUpdate(
             state="error", 
@@ -80,11 +84,11 @@ async def external_llm_node(state: State,  api_endpoint: str , config:dict) -> S
         ).model_dump()
         writer({"type": SSETypes.STATUS.value, "content": content})
 
-    return State(
-        expert_opinions=response_text,
-    )
+    return {
+        "expert_opinions": response_text
+    }
 
-async def search_node(state: State, config:dict) -> State:
+async def search_node(state: State, config: RunnableConfig) -> State:
     """외부 LLM 결과를 기반으로 벡터 검색을 수행하는 노드"""
     writer = get_stream_writer()
     writer({"type": SSETypes.STATUS.value, "content": StatusUpdate(state="start", content="이미지 검색 시작", task_id="search").model_dump()})
@@ -98,20 +102,20 @@ async def search_node(state: State, config:dict) -> State:
         
         writer({"type": SSETypes.STATUS.value, "content": StatusUpdate(state="end", content="이미지 검색 완료!", task_id="search").model_dump()})
         
-        image_urls = []
+        product_ids = []
         if search_result and "data" in search_result:
             for item in search_result["data"]:
-                url = search_service._generate_representative_image_url(item)
-                if url:
-                    image_urls.append(url)
+                product_ids.append(item.get("product_id").strip())
+                # url = search_service._generate_s3_url(item)
+                # if url:
+        
 
-        metadata = {"expert_type": current_expert, "search_response": search_result}
+        metadata = {"expert_type": current_expert, "product_ids": product_ids}
         
         search_result_message = create_message(
             message_type="ai", 
             content=expert_opinions, 
             metadata_type="image", 
-            image_urls=image_urls, 
             metadata=metadata
         )
         return {"messages":[search_result_message]}
@@ -134,15 +138,16 @@ def build_graph(api_endpoint: str = None) -> StateGraph:
     - external_llm_node: 사용자 입력을 분석하여 의류 조합 추천
     - search_node: 외부 LLM 결과를 기반으로 이미지 검색 수행
     """
-    if api_endpoint is None:
-        host = "https://the-first-take.com"
-        path = "llm/api/expert/single/stream"
-        api_endpoint = f"{host}/{path}"
+    # if api_endpoint is None:
+    #     host = "https://the-first-take.com"
+    #     path = "llm/api/expert/single/stream"
+    #     api_endpoint = f"{host}/{path}"
     
-    external_llm_partial = partial(
-        external_llm_node, 
-        api_endpoint=api_endpoint
-    )
+    #TODO : partial로 특정 인자 넘겨주면 config 값에는 특정 인자가 들어가지 않음 ??? 
+    # external_llm_partial = partial(
+    #     external_llm_node, 
+    #     api_endpoint=api_endpoint
+    # )
     
     # search_partial = partial(
     #     search_node, 
@@ -152,7 +157,7 @@ def build_graph(api_endpoint: str = None) -> StateGraph:
     graph_builder = StateGraph(State)
     
     graph_builder.add_node("pop_next_expert", pop_next_expert_node)
-    graph_builder.add_node("external_llm", external_llm_partial)
+    graph_builder.add_node("external_llm", external_llm_node)
     graph_builder.add_node("search", search_node)
     
     graph_builder.add_edge(START, "pop_next_expert")

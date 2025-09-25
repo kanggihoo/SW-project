@@ -152,33 +152,25 @@ data: {"type": "status", "content": {"task_id": "color_expert", "state": "progre
 
 data: {"type": "status", "content": {"task_id": "color_expert", "state": "progress", "content": "S3 매칭 성공: 11개 착장 발견", "error_details": null}}
 
-data: {"type": "status", "content": {"task_id": "color_expert", "state": "progress", "content": "최종 착장 선택: 9ff4b720fc20265b6252a99cc31af515", "error_details": null}}
+data: {"type": "status", "content": {"task_id": "color_expert", "state": "progress", "content": "최종 착장 선택: aef3dbacc1076182e6e733fd3563f463", "error_details": null}}
 
 data: {"type": "status", "content": {"task_id": "color_expert", "state": "progress", "content": "전문가 분석 시작...", "error_details": null}}
 
 data: {"type": "status", "content": {"task_id": "color_expert", "state": "progress", "content": "Claude API 호출 중...", "error_details": null}}
 
-data: {"type": "token", "content": "아"}
+data: {"type": "token", "content": "네이"}
 
-data: {"type": "token", "content": "이보리 니"}
+data: {"type": "token", "content": "비 베이직"}
 
-data: {"type": "token", "content": "트 폴로 셔"}
+data: {"type": "token", "content": " 반팔 "}
 
-data: {"type": "token", "content": "츠에 화이트 "}
+data: {"type": "token", "content": "셔츠에"}
 
-data: {"type": "token", "content": "좋아 데이트 때"}
+data: {"type": "token", "content": "밸런스를 완"}
 
-data: {"type": "token", "content": " 쾌적하"}
+data: {"type": "token", "content": "성할 수 있어"}
 
-data: {"type": "token", "content": "게 입을 "}
-
-data: {"type": "token", "content": "수 있을 "}
-
-data: {"type": "token", "content": "정도의 "}
-
-data: {"type": "token", "content": "밸런스를 "}
-
-data: {"type": "token", "content": "갖췄어."}
+data: {"type": "token", "content": "."}
 
 data: {"type": "status", "content": {"task_id": "color_expert", "state": "progress", "content": "전문가 분석 완료", "error_details": null}}
 
@@ -188,7 +180,7 @@ data: {"type": "status", "content": {"task_id": "search", "state": "start", "con
 
 data: {"type": "status", "content": {"task_id": "search", "state": "end", "content": "이미지 검색 완료!", "error_details": null}}
 
-data: {"type": "message", "content": {"type": "ai", "content": "아이보리 니트 폴로 셔츠에 화이트 와이드 슬랙스는 톤온톤 원리로 세련된 밝은 색상 조화를 이루고 있어. 베이지 클러치백에 브라운 로퍼로 포인트를 준 건 명도 대비를 활용한 거야. 여름철 메시 니트와 린넨 블렌드 소재는 통기성이 좋아 데이트 때 쾌적하게 입을 수 있을 정도의 밸런스를 갖췄어.", "tool_calls": [], "tool_call_id": null, "run_id": "5c1a5d2a-9ca6-44fb-979a-49e8556f25da", "response_metadata": {}, "additional_kwargs": {"type": "image", "created_at": "2025-09-23T06:59:52.279758+00:00", "image_urls": ["https://sw-fashion-image-data.s3.amazonaws.com/color_expert/1.png", "https://sw-fashion-image-data.s3.amazonaws.com/color_expert/2.png"],"metadata": {"expert_type": "color_expert"}}, "custom_data": {}}}
+data: {"type": "message", "content": {"type": "ai", "content": "네이비 베이직 반팔 셔츠에 아이보리 와이드 슬랙스가 잘 어울려! 네이비와 아이보리는 명도 대비를 통해 세련된 균형감을 만들어내고, 차가운 네이비와 따뜻한 아이보리의 색상 온도 대비로 시각적 긴장감을 형성해. 블랙 로퍼와 블랙 가방으로 포인트를 더하면서 전체적인 색상 밸런스를 완성할 수 있어.", "tool_calls": [], "tool_call_id": null, "additional_kwargs": {"type": "image", "created_at": "2025-09-25T08:51:48.710757+00:00", "expert_type": "color_expert", "product_ids": ["3858441_블루", "4109513_화이트"]}}}
 
 data: {"type": "status", "content": {"task_id": "style_analyst", "state": "start", "content": "style_analyst 의류 조합 분석 시작", "error_details": null}}
 
@@ -198,35 +190,23 @@ data: {"type": "status", "content": {"task_id": "style_analyst", "state": "progr
 
 data: {"type": "status", "content": {"task_id": "style_analyst", "state": "progress", "content": "S3 매칭 성공: 11개 착장 발견", "error_details": null}}
 
-data: {"type": "status", "content": {"task_id": "style_analyst", "state": "progress", "content": "최종 착장 선택: aef3dbacc1076182e6e733fd3563f463", "error_details": null}}
+data: {"type": "status", "content": {"task_id": "style_analyst", "state": "progress", "content": "최종 착장 선택: 184e375ed44293d5e73b630d4476ad92", "error_details": null}}
 
 data: {"type": "status", "content": {"task_id": "style_analyst", "state": "progress", "content": "전문가 분석 시작...", "error_details": null}}
 
 data: {"type": "status", "content": {"task_id": "style_analyst", "state": "progress", "content": "Claude API 호출 중...", "error_details": null}}
 
-data: {"type": "token", "content": "네이"}
+data: {"type": "token", "content": "화"}
 
-data: {"type": "token", "content": "비 베이직 반"}
+data: {"type": "token", "content": "이트 셔"}
 
-data: {"type": "token", "content": "팔 셔"}
+data: {"type": "token", "content": "츠에 블랙 "}
 
-data: {"type": "token", "content": "츠에 아이보리"}
+data: {"type": "token", "content": "색없을 만"}
 
-data: {"type": "token", "content": " 좋을 "}
+data: {"type": "token", "content": "한 스타일이"}
 
-data: {"type": "token", "content": "거야. 위"}
-
-data: {"type": "token", "content": "쪽 단"}
-
-data: {"type": "token", "content": "풀어주면 더 자"}
-
-data: {"type": "token", "content": "연스러운 "}
-
-data: {"type": "token", "content": "데이트"}
-
-data: {"type": "token", "content": "룩이 될 "}
-
-data: {"type": "token", "content": "수 있어."}
+data: {"type": "token", "content": "야."}
 
 data: {"type": "status", "content": {"task_id": "style_analyst", "state": "progress", "content": "전문가 분석 완료", "error_details": null}}
 
@@ -236,7 +216,7 @@ data: {"type": "status", "content": {"task_id": "search", "state": "start", "con
 
 data: {"type": "status", "content": {"task_id": "search", "state": "end", "content": "이미지 검색 완료!", "error_details": null}}
 
-data: {"type": "message", "content": {"type": "ai", "content": "네이비 베이직 반팔 셔츠에 아이보리 와이드 슬랙스가 잘 어울려. 셔츠 앞부분만 살짝 넣어서 캐주얼하면서도 세련된 분위기를 낼 수 있어. 블랙 로퍼에 같은 컬러의 가방으로 포인트를 줘서 데이트 때 딱 적당한 스타일이야. 린넨 혼방 슬랙스라 여름에도 시원하게 입을 수 있고, 상의는 면 소재라 착용감도 좋을 거야. 위쪽 단추 1-2개 정도 풀어주면 더 자연스러운 데이트룩이 될 수 있어.", "tool_calls": [], "tool_call_id": null, "run_id": "5c1a5d2a-9ca6-44fb-979a-49e8556f25da", "response_metadata": {}, "additional_kwargs": {"type": "image", "created_at": "2025-09-23T07:00:17.309144+00:00", "image_urls": ["https://sw-fashion-image-data.s3.amazonaws.com/style_analyst/1.png", "https://sw-fashion-image-data.s3.amazonaws.com/style_analyst/2.png"],"metadata": {"expert_type": "style_analyst"}}, "custom_data": {}}}
+data: {"type": "message", "content": {"type": "ai", "content": "화이트 셔츠에 블랙 와이드 슬랙스가 잘 어울려. 데이트 분위기에 맞게 소매는 자연스럽게 내리고 셔츠 단추 위쪽 1-2개만 살짝 풀어주는 게 좋아. 셔츠는 전체적으로 바지 안에 넣어서 깔끔한 실루엣을 만들면서, 블랙 벨트로 허리선을 살짝 강조해봐. 블랙 클래식 로퍼랑 매치하면 세련된 데이트룩이 완성될 거야. 캐주얼하면서도 포멀한 느낌이 적절히 섞여서 특별한 날에도 손색없을 만한 스타일이야.", "tool_calls": [], "tool_call_id": null, "additional_kwargs": {"type": "image", "created_at": "2025-09-25T08:51:57.832308+00:00", "expert_type": "style_analyst", "product_ids": ["2171532_화이트", "2503135_블랙"]}}}
 
 data: {"type": "status", "content": {"task_id": "fitting_coordinator", "state": "start", "content": "fitting_coordinator 의류 조합 분석 시작", "error_details": null}}
 
@@ -246,35 +226,23 @@ data: {"type": "status", "content": {"task_id": "fitting_coordinator", "state": 
 
 data: {"type": "status", "content": {"task_id": "fitting_coordinator", "state": "progress", "content": "S3 매칭 성공: 11개 착장 발견", "error_details": null}}
 
-data: {"type": "status", "content": {"task_id": "fitting_coordinator", "state": "progress", "content": "선택 풀 부족, 전체 DB에서 랜덤 선택...", "error_details": null}}
-
-data: {"type": "status", "content": {"task_id": "fitting_coordinator", "state": "progress", "content": "최종 착장 선택: 68c0ecfd4bc513ccb0cb725e3821533d", "error_details": null}}
+data: {"type": "status", "content": {"task_id": "fitting_coordinator", "state": "progress", "content": "최종 착장 선택: c96192fc7e225468fbd88137717364ea", "error_details": null}}
 
 data: {"type": "status", "content": {"task_id": "fitting_coordinator", "state": "progress", "content": "전문가 분석 시작...", "error_details": null}}
 
 data: {"type": "status", "content": {"task_id": "fitting_coordinator", "state": "progress", "content": "Claude API 호출 중...", "error_details": null}}
 
-data: {"type": "token", "content": "그"}
+data: {"type": "token", "content": "베"}
 
-data: {"type": "token", "content": "레이 블레이저에"}
+data: {"type": "token", "content": "이지 오버"}
 
-data: {"type": "token", "content": " 그레이 슬랙스"}
+data: {"type": "token", "content": "인을 더 "}
 
-data: {"type": "token", "content": "가 잘 어"}
+data: {"type": "token", "content": "길어보이게"}
 
-data: {"type": "token", "content": "울려. 세"}
+data: {"type": "token", "content": " 만들어"}
 
-data: {"type": "token", "content": "련된 정장 "}
-
-data: {"type": "token", "content": "셋업으로 데이트"}
-
-data: {"type": "token", "content": "고, 넥타이는 "}
-
-data: {"type": "token", "content": "타이트하게"}
-
-data: {"type": "token", "content": " 매면 "}
-
-data: {"type": "token", "content": "돼."}
+data: {"type": "token", "content": "줘."}
 
 data: {"type": "status", "content": {"task_id": "fitting_coordinator", "state": "progress", "content": "전문가 분석 완료", "error_details": null}}
 
@@ -284,7 +252,7 @@ data: {"type": "status", "content": {"task_id": "search", "state": "start", "con
 
 data: {"type": "status", "content": {"task_id": "search", "state": "end", "content": "이미지 검색 완료!", "error_details": null}}
 
-data: {"type": "message", "content": {"type": "ai", "content": "그레이 블레이저에 그레이 슬랙스가 잘 어울려. 세련된 정장 셋업으로 데이트에서 진중한 매력을 어필할 수 있어. 블랙 넥타이에 실버 시계로 포인트를 주고, 블랙 클래식 로퍼로 마무리하면 더욱 세련되지.\n\n블레이저는 어깨와 가슴 부분이 딱 맞게 입고, 위쪽 버튼 1-2개만 풀어서 자연스러운 느낌을 주는 게 좋아. 셔츠는 전체적으로 깔끔하게 넣어주고, 넥타이는 타이트하게 매면 돼.", "tool_calls": [], "tool_call_id": null, "run_id": "5c1a5d2a-9ca6-44fb-979a-49e8556f25da", "response_metadata": {}, "additional_kwargs": {"type": "image", "created_at": "2025-09-23T07:00:14.195157+00:00", "image_urls": ["https://sw-fashion-image-data.s3.amazonaws.com/fitting_coordinator/1.png", "https://sw-fashion-image-data.s3.amazonaws.com/fitting_coordinator/2.png"],"metadata": {"expert_type": "fitting_coordinator"}}, "custom_data": {}}}
+data: {"type": "message", "content": {"type": "ai", "content": "베이지 오버핏 반팔 셔츠에 블랙 와이드 슬랙스가 잘 어울려. 여유있는 실루엣으로 편안하면서도 세련된 데이트룩을 완성할 수 있어. 셔츠 앞부분만 살짝 넣어서 자연스러운 캐주얼함을 더하고, 위쪽 단추 1-2개 풀어주면 더 멋스러워. 블랙 옥스포드 슈즈로 포멀함을 더하고, 브라운 가죽 서류가방으로 포인트를 줘서 센스있는 데이트 스타일을 연출할 수 있어. 면 소재라 여름에도 시원하게 입을 수 있고, 슬랙스의 와이드한 실루엣이 다리라인을 더 길어보이게 만들어줘.", "tool_calls": [], "tool_call_id": null, "additional_kwargs": {"type": "image", "created_at": "2025-09-25T08:52:07.677316+00:00", "expert_type": "fitting_coordinator", "product_ids": ["4227290_베이지", "2503135_블랙"]}}}
 
 data: {"type": "[DONE]", "content": ""}
 '''
