@@ -77,7 +77,7 @@ class SingleStepAnalyzer:
             ("human", "분석할 사용자 쿼리: {query}")
         ])
 
-        return prompt | self.llm.with_structured_output(SingleCallAnalysisResult)
+        return (prompt | self.llm.with_structured_output(SingleCallAnalysisResult)).with_config({"tags": ["skip_stream"]})
 
     async def analyze(self, query: str) -> SingleCallAnalysisResult:
         """Analyzes the user query asynchronously and returns the structured result."""

@@ -61,8 +61,8 @@ class StreamInput(UserInput):
         "json_schema_extra": {
             "examples": [
                 {
-                    "message": "의류 추천해줘",
-                    "model": GoogleModelName.GEMINI_20_FLASH_LITE.value,
+                    "message": "데이트",
+                    "model": GoogleModelName.GEMINI_20_FLASH_LITE,
                     "thread_id": "847c6285-8fc9-4560-a83f-4e6285809254",
                     "user_id": "847c6285-8fc9-4560-a83f-4e6285809254",
                     "agent_config": {"spicy_level": 0.8},
@@ -106,23 +106,23 @@ class ChatMessage(BaseModel):
         default=None,
         examples=["call_Jja7J89XsjrOLA5r!MEOW!SL"],
     )
-    run_id: str | None = Field(
-        description="Run ID of the message.",
-        default=None,
-        examples=["847c6285-8fc9-4560-a83f-4e6285809254"],
-    )
-    response_metadata: dict[str, Any] = Field(
-        description="type = ai 인경우 ai 메세지의 response_metadata 필드 전달 For example: response headers, logprobs, token counts.",
-        default_factory=dict,
-    )
+    # run_id: str | None = Field(
+    #     description="Run ID of the message.",
+    #     default=None,
+    #     examples=["847c6285-8fc9-4560-a83f-4e6285809254"],
+    # )
+    # response_metadata: dict[str, Any] = Field(
+    #     description="type = ai 인경우 ai 메세지의 response_metadata 필드 전달 For example: response headers, logprobs, token counts.",
+    #     default_factory=dict,
+    # )
     additional_kwargs: dict[str, Any] = Field(
         description="additional_kwargs 필드 전달",
         default_factory=dict,
     )
-    custom_data: dict[str, Any] = Field(
-        description="type = custom 인 경우 content 필드 대신 해당 필드에 데이터 전달",
-        default_factory=dict,
-    )
+    # custom_data: dict[str, Any] = Field(
+    #     description="type = custom 인 경우 content 필드 대신 해당 필드에 데이터 전달",
+    #     default_factory=dict,
+    # )
     
     def pretty_repr(self) -> str:
         """Get a pretty representation of the message."""

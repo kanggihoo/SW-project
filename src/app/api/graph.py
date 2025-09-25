@@ -8,7 +8,7 @@ import logging
 import asyncio
 from typing import Any , cast ,Annotated, AsyncGenerator
 
-from app.config.dependencies import AgentDep , get_agent , get_agents , RepositoryDep , HTTPClientDep
+from app.config.dependencies import AgentDep , get_agent , get_agents , RepositoryDep , HTTPClientDep , SearchServiceDep
 from app.api_docs import sse_response_example , get_mock_sse_response , ERROR_RESPONSES
 
 from graph.agents import get_all_agent_info , DEFAULT_AGENT_NAME 
@@ -82,7 +82,7 @@ async def stream(
     user_input: StreamInput,
     agent: AgentDep,
     http_session: HTTPClientDep,
-    vector_db: RepositoryDep,
+    search_service: SearchServiceDep,
 ) -> StreamingResponse:
     """
     **지정된 에이전트를 사용자 입력으로 호출하고 Server-Sent Events (SSE)를 사용하여 응답을 스트리밍합니다.**
@@ -102,10 +102,9 @@ async def stream(
     에이전트의 출력을 실시간으로 클라이언트에 다시 스트리밍합니다.
     """
     logger.info(f"user_input: {user_input}")
-    logger.info(f"agent: {agent}")
     
     return StreamingResponse(
-            message_generator(user_input, agent , http_session=http_session, vector_db=vector_db),
+            message_generator(user_input, agent , http_session=http_session, search_service=search_service),
             media_type="text/event-stream",
         )
   

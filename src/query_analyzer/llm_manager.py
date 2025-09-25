@@ -7,7 +7,7 @@ class LLMManager:
     def __init__(self):
         self._load_env()
 
-    def load_llm(self, model_provider: str, model_name: str, max_tokens: int = 4000):
+    def load_llm(self, model_provider: str, model_name: str, max_tokens: int = 2000):
         provider = model_provider.lower()
         if provider == "gemini":
             return ChatGoogleGenerativeAI(model=model_name, temperature=0, max_output_tokens=max_tokens)
