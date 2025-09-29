@@ -4,7 +4,8 @@ from langchain_core.runnables import Runnable
 from typing import Optional
 from langchain_core.runnables import RunnableConfig
 from caption.config import LLMInputKeys
-#TODO 프롬프트 수정 입력으로 들어오는 이미지가 1개 혹은 2개인 경우에 따른 system_template 수정
+
+# TODO 프롬프트 수정 입력으로 들어오는 이미지가 1개 혹은 2개인 경우에 따른 system_template 수정
 system_template = """
 # 역할 및 임무
 당신은 3종의 의류 이미지를 종합적으로 분석하여, 상세한 속성 정보와 설명 캡션을 지정된 JSON 형식으로 추출하는 패션 전문가 AI입니다.
@@ -69,52 +70,40 @@ system_template = """
 """
 
 human_template = [
-
-    {
-        "type": "text", 
-        "text": "분석할 {category} 제품 이미지를 보고 지정된 구조에 맞춰 상세한 분석 결과를 제공해주세요."
-    },
-    {
-        "type": "image_url",
-        "image_url": "data:image/jpeg;base64,{image_data}"
-    }
+    {'type': 'text', 'text': '분석할 {category} 제품 이미지를 보고 지정된 구조에 맞춰 상세한 분석 결과를 제공해주세요.'},
+    {'type': 'image_url', 'image_url': 'data:image/jpeg;base64,{image_data}'},
 ]
+
 
 class DeepImageCaptionPrompt(Runnable):
     def __init__(self):
         self.prompt = self._make_prompt()
-    
-    
+
     def _make_prompt(self):
-        return ChatPromptTemplate.from_messages([
-            SystemMessagePromptTemplate.from_template(system_template),
-            HumanMessagePromptTemplate.from_template(human_template)
-        ])
-    
+        return ChatPromptTemplate.from_messages(
+            [SystemMessagePromptTemplate.from_template(system_template), HumanMessagePromptTemplate.from_template(human_template)]
+        )
+
     def invoke(self, input: dict[str, Any], config: Optional[RunnableConfig] = None, **kwargs: Any) -> Any:
         return self.prompt.invoke(input, config, **kwargs)
 
     def extract_chain_input(self, kwargs: dict) -> dict[str, Any]:
         """
         체인 입력 데이터 생성
-        
+
         Args:
             category: 상품 카테고리 (예: "상의", "하의")
             image_data: Base64 인코딩된 이미지 데이터
-            
+
         Returns:
             체인 호출을 위한 입력 딕셔너리
         """
         llm_input = kwargs.get(LLMInputKeys.DEEP_CAPTION)
-        category = llm_input.get("category")
-        image_data = llm_input.get("image_data")
+        category = llm_input.get('category')
+        image_data = llm_input.get('image_data')
         if category is None or image_data is None:
-            raise ValueError("category, image_data 모두 필요합니다.")
-        return {
-            "category": category,
-            "image_data": image_data
-        }
+            raise ValueError('category, image_data 모두 필요합니다.')
+        return {'category': category, 'image_data': image_data}
 
-__all__ = [
-    "DeepImageCaptionPrompt"
-    ]
+
+__all__ = ['DeepImageCaptionPrompt']

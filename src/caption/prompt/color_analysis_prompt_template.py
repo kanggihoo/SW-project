@@ -1,12 +1,14 @@
 """
 의류 색상 분석을 위한 VLM 프롬프트 템플릿 모듈
 """
+
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from typing import Any
 from langchain_core.runnables import Runnable
 from typing import Optional
 from langchain_core.runnables import RunnableConfig
 from caption.config import LLMInputKeys
+
 # System Prompt for Color Analysis
 system_template = """
 당신은 여러 의류 이미지를 분석하여 지정된 JSON 형식으로 색상 정보를 추출하는 전문 AI입니다.
@@ -38,53 +40,42 @@ system_template = """
 """
 
 human_template = [
-    {
-        "type": "text",
-        "text": "분석할 {count} 개의 의류 이미지를 보고 지정된 구조에 맞춰 상세한 분석 결과를 제공해주세요."
-    },
-    {
-        "type": "image_url",
-        "image_url": "data:image/jpeg;base64,{image_data}"
-    }
+    {'type': 'text', 'text': '분석할 {count} 개의 의류 이미지를 보고 지정된 구조에 맞춰 상세한 분석 결과를 제공해주세요.'},
+    {'type': 'image_url', 'image_url': 'data:image/jpeg;base64,{image_data}'},
 ]
+
 
 class ColorCaptionPrompt(Runnable):
     def __init__(self):
         self.prompt = self._make_prompt()
-    
+
     def _make_prompt(self):
-        return ChatPromptTemplate.from_messages([
-            SystemMessagePromptTemplate.from_template(system_template),
-            HumanMessagePromptTemplate.from_template(human_template)
-        ])
-    
+        return ChatPromptTemplate.from_messages(
+            [SystemMessagePromptTemplate.from_template(system_template), HumanMessagePromptTemplate.from_template(human_template)]
+        )
+
     def invoke(self, input: dict[str, Any], config: Optional[RunnableConfig] = None, **kwargs: Any) -> Any:
         return self.prompt.invoke(input, config, **kwargs)
 
     def extract_chain_input(self, kwargs: dict) -> dict[str, Any]:
         """
         체인 입력 데이터 생성
-        
+
         Args:
             count: 분석할 이미지 개수
             category: 상품 카테고리 (예: "상의", "하의")
             image_data: Base64 인코딩된 이미지 데이터
-            
+
         Returns:
             체인 호출을 위한 입력 딕셔너리
         """
         llm_input = kwargs.get(LLMInputKeys.COLOR_IMAGES)
-        count = llm_input.get("count")
-        category = llm_input.get("category")
-        image_data = llm_input.get("image_data")
+        count = llm_input.get('count')
+        category = llm_input.get('category')
+        image_data = llm_input.get('image_data')
         if count is None or category is None or image_data is None:
-            raise ValueError("count, category, image_data 모두 필요합니다.")
-        return {
-            "count": count,
-            "category": category,
-            "image_data": image_data
-        }
+            raise ValueError('count, category, image_data 모두 필요합니다.')
+        return {'count': count, 'category': category, 'image_data': image_data}
 
-__all__ = [
-    "ColorCaptionPrompt"
-    ]
+
+__all__ = ['ColorCaptionPrompt']

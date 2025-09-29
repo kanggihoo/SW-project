@@ -1,5 +1,7 @@
 .PHONY: run-servers
 
+VENV_PYTHON:= .venv/bin/python3
+
 run-servers:
 	@echo "🚀 Starting servers in iTerm vertical split..."
 	@./scripts/shell/run_server.sh
@@ -23,3 +25,8 @@ stop-servers:
 		osascript -e 'tell application "iTerm" to close every window' || true; \
 	fi
 	@echo "✅ iTerm window closed"
+
+
+test:
+	@echo "🚀 Running tests..."
+	@$(VENV_PYTHON) examples/query_analyzer/test_query_analyzer.py

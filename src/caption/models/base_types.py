@@ -1,129 +1,151 @@
 """
 VLM 출력을 위한 기본 타입 정의 모듈
 """
+
 from enum import Enum
+
 
 # =============================================================================
 # 색상 타입
 # =============================================================================
 class PrimaryColor(str, Enum):
     """대표 색상 타입"""
-    WHITE = "화이트"
-    GRAY = "그레이"
-    BLACK = "블랙"
-    RED = "레드"
-    PINK = "핑크"
-    YELLOW = "옐로우"
-    ORANGE = "오렌지"
-    GREEN = "그린"
-    BLUE = "블루"
-    PURPLE = "퍼플"
-    BROWN = "브라운"
-    BEIGE = "베이지"
-    DENIM = "데님"
-    METALLIC = "메탈릭"
-    MULTICOLOR = "멀티컬러"
-    
+
+    WHITE = '화이트'
+    GRAY = '그레이'
+    BLACK = '블랙'
+    RED = '레드'
+    PINK = '핑크'
+    YELLOW = '옐로우'
+    ORANGE = '오렌지'
+    GREEN = '그린'
+    BLUE = '블루'
+    PURPLE = '퍼플'
+    BROWN = '브라운'
+    BEIGE = '베이지'
+    DENIM = '데님'
+    METALLIC = '메탈릭'
+    MULTICOLOR = '멀티컬러'
+
+
 class Brightness(str, Enum):
     """명도 (5단계)"""
-    VERY_LIGHT = "아주 밝음"
-    LIGHT = "밝음"
-    MEDIUM = "중간 밝기"
-    DARK = "어두움"
-    VERY_DARK = "아주 어두움"
+
+    VERY_LIGHT = '아주 밝음'
+    LIGHT = '밝음'
+    MEDIUM = '중간 밝기'
+    DARK = '어두움'
+    VERY_DARK = '아주 어두움'
+
 
 class Saturation(str, Enum):
     """채도 (5단계)"""
-    VERY_LOW = "아주 낮음"
-    LOW = "낮음"
-    MEDIUM = "중간 채도"
-    HIGH = "높음"
-    VERY_HIGH = "아주 높음"
+
+    VERY_LOW = '아주 낮음'
+    LOW = '낮음'
+    MEDIUM = '중간 채도'
+    HIGH = '높음'
+    VERY_HIGH = '아주 높음'
 
 
 # =============================================================================
 # 상의 속성 타입
 # =============================================================================
 
+
 class Neckline(str, Enum):
     """상의 넥라인 타입"""
-    ROUND = "라운드넥"
-    V_NECK = "브이넥"
-    U_NECK = "유넥"
-    TURTLE = "터틀넥/폴라"
-    COLLAR = "카라"
-    HENLEY = "헨리넥"
-    HOOD = "후드"
-    SQUARE = "스퀘어넥"
-    BOAT = "보트넥"
+
+    ROUND = '라운드넥'
+    V_NECK = '브이넥'
+    U_NECK = '유넥'
+    TURTLE = '터틀넥/폴라'
+    COLLAR = '카라'
+    HENLEY = '헨리넥'
+    HOOD = '후드'
+    SQUARE = '스퀘어넥'
+    BOAT = '보트넥'
 
 
 class SleeveLength(str, Enum):
     """상의 소매 길이 타입"""
-    SLEEVELESS = "민소매"
-    SHORT = "반소매"
-    THREE_QUARTER = "5부/7부"
-    LONG = "긴소매"
+
+    SLEEVELESS = '민소매'
+    SHORT = '반소매'
+    THREE_QUARTER = '5부/7부'
+    LONG = '긴소매'
 
 
 class TopPatternType(str, Enum):
     """상의 패턴 타입"""
-    SOLID = "무지/솔리드"
-    STRIPE = "스트라이프"
-    CHECK = "체크"
-    DOT = "도트"
-    FLORAL = "플로럴"
-    ANIMAL = "애니멀 프린트"
-    PAISLEY = "페이즐리"
-    ARGYLE = "아가일"
-    GEOMETRIC = "기하학"
-    TYPOGRAPHY = "타이포그래피/레터링"
-    OTHER = "기타"
+
+    SOLID = '무지/솔리드'
+    STRIPE = '스트라이프'
+    CHECK = '체크'
+    DOT = '도트'
+    FLORAL = '플로럴'
+    ANIMAL = '애니멀 프린트'
+    PAISLEY = '페이즐리'
+    ARGYLE = '아가일'
+    GEOMETRIC = '기하학'
+    TYPOGRAPHY = '타이포그래피/레터링'
+    OTHER = '기타'
 
 
 class TopClosureType(str, Enum):
     """상의 여밈 방식 타입"""
-    NONE = "여밈 없음"
-    BUTTON = "버튼/단추"
-    ZIPPER = "지퍼"
-    SNAP = "스냅 버튼"
-    STRING = "스트링/끈"
+
+    NONE = '여밈 없음'
+    BUTTON = '버튼/단추'
+    ZIPPER = '지퍼'
+    SNAP = '스냅 버튼'
+    STRING = '스트링/끈'
+
 
 # =============================================================================
 # 하의 속성 타입
 # =============================================================================
 
+
 class BottomFitType(str, Enum):
     """하의 핏 타입"""
-    STRAIGHT = "스트레이트 핏"
-    SLIM = "슬림 핏"
-    TAPERED = "테이퍼드 핏"
-    WIDE = "와이드 핏"
-    BOOTS = "부츠컷 핏"
-    BAGGY = "배기 핏"
-    JOGGER = "조거 핏"
+
+    STRAIGHT = '스트레이트 핏'
+    SLIM = '슬림 핏'
+    TAPERED = '테이퍼드 핏'
+    WIDE = '와이드 핏'
+    BOOTS = '부츠컷 핏'
+    BAGGY = '배기 핏'
+    JOGGER = '조거 핏'
+
 
 class BottomClosureType(str, Enum):
     """하의 여밈 방식 타입"""
-    NONE = "여밈 없음"
-    BUTTON = "버튼"
-    ZIPPER = "지퍼"
-    STRING = "스트링"
-    HOOK = "후크"
+
+    NONE = '여밈 없음'
+    BUTTON = '버튼'
+    ZIPPER = '지퍼'
+    STRING = '스트링'
+    HOOK = '후크'
+
+
 class BottomLengthType(str, Enum):
     """하의 기장 타입"""
-    SHORT = "숏 바지"
-    CROP = "크롭 바지"
-    LONG = "롱 바지"
+
+    SHORT = '숏 바지'
+    CROP = '크롭 바지'
+    LONG = '롱 바지'
+
 
 class BottomPatternType(str, Enum):
     """하의 패턴 타입"""
-    SOLID = "무지"
-    STRIPE = "스트라이프"
-    CHECK = "체크"
-    CAMOUFLAGE = "카모플라쥬"
-    WASHING = "워싱 (데님 전용)"
-    OTHER = "기타 패턴"
+
+    SOLID = '무지'
+    STRIPE = '스트라이프'
+    CHECK = '체크'
+    CAMOUFLAGE = '카모플라쥬'
+    WASHING = '워싱 (데님 전용)'
+    OTHER = '기타 패턴'
 
 
 # =============================================================================
@@ -131,33 +153,34 @@ class BottomPatternType(str, Enum):
 # =============================================================================
 class TopFitType(str, Enum):
     """상의 핏 타입"""
-    SLIM = "슬림 핏"
-    REGULAR = "레귤러 핏/스탠다드 핏"
-    OVERSIZED = "오버사이즈 핏"
+
+    SLIM = '슬림 핏'
+    REGULAR = '레귤러 핏/스탠다드 핏'
+    OVERSIZED = '오버사이즈 핏'
 
 
 class StyleTag(str, Enum):
     """의류 스타일 태그"""
-    MODERN = "모던"
-    BASIC = "심플 베이직"
-    CASUAL = "캐주얼"
-    STREET = "스트릿"
-    FORMAL = "포멀"
-    SPORTY = "스포티"
-    OUTDOOR = "아웃도어"
-    VINTAGE = "레트로"
-    UNIQUE = "유니크"
+
+    MODERN = '모던'
+    BASIC = '심플 베이직'
+    CASUAL = '캐주얼'
+    STREET = '스트릿'
+    FORMAL = '포멀'
+    SPORTY = '스포티'
+    OUTDOOR = '아웃도어'
+    VINTAGE = '레트로'
+    UNIQUE = '유니크'
 
 
 class TPOTag(str, Enum):
     """의류 TPO 태그"""
-    DAILY = "데일리"
-    OFFICE = "오피스"
-    FORMAL = "격식"
-    DATE = "데이트"
-    TRAVEL = "여행"
-    PARTY = "파티"
-    EXERCISE = "운동"
-    HOME = "홈웨어"
 
-
+    DAILY = '데일리'
+    OFFICE = '오피스'
+    FORMAL = '격식'
+    DATE = '데이트'
+    TRAVEL = '여행'
+    PARTY = '파티'
+    EXERCISE = '운동'
+    HOME = '홈웨어'

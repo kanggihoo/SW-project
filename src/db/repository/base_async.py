@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Any, AsyncIterator
 from db.config.database_async import AsyncDatabaseManager
 from db.query_builders.fashion_queries import FashionQueryBuilder
 
+
 class BaseAsyncRepository(ABC):
     """기본 비동기 Repository 추상 클래스"""
 

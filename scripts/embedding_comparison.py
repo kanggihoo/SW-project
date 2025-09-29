@@ -45,7 +45,7 @@
 #     try:
 #         # Fetch a limited number of documents for testing purposes.
 #         # Remove .limit(100) to process all documents.
-#         cursor = products_collection.find().limit(1)            
+#         cursor = products_collection.find().limit(1)
 
 #         descriptions = [
 #             doc.get("captions", {}).get("comprehensive_description")

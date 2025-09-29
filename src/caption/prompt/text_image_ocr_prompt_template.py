@@ -3,13 +3,14 @@
 """
 의류 색상 분석을 위한 VLM 프롬프트 템플릿 모듈
 """
-from langchain_core.prompts import ChatPromptTemplate , HumanMessagePromptTemplate
+
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain_core.messages import SystemMessage
 from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig, Runnable
 from caption.config import LLMInputKeys
 
-#TODO : 사이즈 , fit 관련 정보는 이미 존재하는지 여부에 따라서 프롬프트 조정되도록 
+# TODO : 사이즈 , fit 관련 정보는 이미 존재하는지 여부에 따라서 프롬프트 조정되도록
 # System Prompt for Color Analysis
 system_template = """
 # 역할 및 임무
@@ -101,47 +102,35 @@ system_template_no_size = """
 """
 
 human_template = [
-    {
-        "type": "text",
-        "text": "분석할 이미지를 보고 지정된 구조에 맞춰 상세한 분석 결과를 제공해주세요."
-    },
-    {
-        "type": "image_url",
-        "image_url": "data:image/jpeg;base64,{image_data}"
-    }
+    {'type': 'text', 'text': '분석할 이미지를 보고 지정된 구조에 맞춰 상세한 분석 결과를 제공해주세요.'},
+    {'type': 'image_url', 'image_url': 'data:image/jpeg;base64,{image_data}'},
 ]
 
+
 class TextImageOCRPrompt(Runnable):
-    def __init__(self , include_size:bool = True):
+    def __init__(self, include_size: bool = True):
         self.include_size = include_size
         self.prompt = self._make_prompt()
-    
+
     def _get_system_template(self):
         if self.include_size:
             return system_template
         else:
             return system_template_no_size
-        
+
     def _make_prompt(self):
         system_template = self._get_system_template()
-        return ChatPromptTemplate.from_messages([
-            SystemMessage(content=system_template),
-            HumanMessagePromptTemplate.from_template(human_template)
-        ])
-    
+        return ChatPromptTemplate.from_messages([SystemMessage(content=system_template), HumanMessagePromptTemplate.from_template(human_template)])
+
     def invoke(self, input: dict[str, Any], config: Optional[RunnableConfig] = None, **kwargs: Any) -> Any:
         return self.prompt.invoke(input, config, **kwargs)
 
     def extract_chain_input(self, kwargs: dict) -> dict[str, Any]:
         llm_input = kwargs.get(LLMInputKeys.TEXT_IMAGES)
-        image_data = llm_input.get("image_data")
+        image_data = llm_input.get('image_data')
         if image_data is None:
-            raise ValueError("image_data 가필요합니다.")
-        return {
-            "image_data": image_data
-        }
+            raise ValueError('image_data 가필요합니다.')
+        return {'image_data': image_data}
 
-    
-__all__ = [
-    "TextImageOCRPrompt"
-    ]
+
+__all__ = ['TextImageOCRPrompt']

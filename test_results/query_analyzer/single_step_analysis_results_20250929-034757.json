@@ -1,0 +1,289 @@
+[
+    {
+        "query": "블랙핑크 제니처럼 입고싶어. 크롭티에 청바지 코디 추천해줘",
+        "analysis_result": [
+            {
+                "main_category": "상의",
+                "sub_category": "반소매",
+                "color": "블랙",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [
+                    "데일리"
+                ],
+                "fit": "슬림 핏",
+                "pattern_type": "무지/솔리드",
+                "length": "긴소매",
+                "rewritten_query": "블랙 제니 스타일 크롭티"
+            },
+            {
+                "main_category": "하의",
+                "sub_category": "데님팬츠",
+                "color": "블루",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [
+                    "데일리"
+                ],
+                "fit": "슬림 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "블랙 제니 스타일 청바지"
+            }
+        ],
+        "duration_seconds": 1.5985
+    },
+    {
+        "query": "여름 휴가 때 입을 만한 시원한 원피스 보여줘. 흰색에 린넨 소재였으면 좋겠어.",
+        "analysis_result": [
+            {
+                "main_category": "하의",
+                "sub_category": "점프슈트-오버울",
+                "color": "화이트",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [
+                    "여행",
+                    "데일리"
+                ],
+                "fit": "슬림 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "여름 휴가용 시원한 흰색 린넨 원피스"
+            }
+        ],
+        "duration_seconds": 1.0542
+    },
+    {
+        "query": "주말에 데이트할 때 입을만한 옷 좀 추천해줘. 너무 꾸민 것 같지 않으면서도 스타일리시했으면 좋겠어. 셔츠에 슬랙스 조합은 어때?",
+        "analysis_result": [
+            {
+                "main_category": "상의",
+                "sub_category": "셔츠-블라우스",
+                "color": "화이트",
+                "style_tags": [
+                    "캐주얼",
+                    "스트릿"
+                ],
+                "tpo_tags": [
+                    "데이트",
+                    "데일리"
+                ],
+                "fit": "오버사이즈 핏",
+                "pattern_type": "무지/솔리드",
+                "length": "긴소매",
+                "rewritten_query": "데이트룩으로 좋은 화이트 오버사이즈핏 셔츠"
+            },
+            {
+                "main_category": "하의",
+                "sub_category": "슈트팬츠-슬랙스",
+                "color": "블랙",
+                "style_tags": [
+                    "캐주얼",
+                    "스트릿"
+                ],
+                "tpo_tags": [
+                    "데이트",
+                    "데일리"
+                ],
+                "fit": "와이드 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "데이트룩으로 좋은 블랙 와이드핏 슬랙스"
+            }
+        ],
+        "duration_seconds": 1.3826
+    },
+    {
+        "query": "나는 오버핏을 좋아해. 회색 후드티에 어울리는 검정색 조거팬츠 찾아줘.",
+        "analysis_result": [
+            {
+                "main_category": "상의",
+                "sub_category": "후드티셔츠",
+                "color": "그레이",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [],
+                "fit": "오버사이즈 핏",
+                "pattern_type": "무지/솔리드",
+                "length": "긴소매",
+                "rewritten_query": "오버핏 회색 후드티"
+            },
+            {
+                "main_category": "하의",
+                "sub_category": "트레이닝-조거팬츠",
+                "color": "블랙",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [],
+                "fit": "스트레이트 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "검정색 오버핏 조거팬츠"
+            }
+        ],
+        "duration_seconds": 1.2645
+    },
+    {
+        "query": "결혼식 하객룩으로 입을만한 단정한 원피스나 투피스 보고싶어. 너무 튀지 않는 색상으로.",
+        "analysis_result": [
+            {
+                "main_category": "하의",
+                "sub_category": "기타하의",
+                "color": "베이지",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [
+                    "데일리"
+                ],
+                "fit": "슬림 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "결혼식 하객룩으로 입을 단정한 베이지색 원피스"
+            },
+            {
+                "main_category": "하의",
+                "sub_category": "기타하의",
+                "color": "베이지",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [
+                    "데일리"
+                ],
+                "fit": "슬림 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "결혼식 하객룩으로 입을 단정한 베이지색 투피스"
+            }
+        ],
+        "duration_seconds": 1.3281
+    },
+    {
+        "query": "요즘 유행하는 카고 팬츠에 어울리는 상의는 뭐가 있을까? 좀 힙한 스타일이었으면 해.",
+        "analysis_result": [
+            {
+                "main_category": "하의",
+                "sub_category": "슈트팬츠-슬랙스",
+                "color": "브라운",
+                "style_tags": [
+                    "캐주얼",
+                    "스트릿"
+                ],
+                "tpo_tags": [
+                    "데일리"
+                ],
+                "fit": "와이드 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "힙한 스타일의 브라운 카고 팬츠"
+            }
+        ],
+        "duration_seconds": 1.0236
+    },
+    {
+        "query": "회사에 입고 갈 만한 깔끔한 블라우스랑 스커트 조합 추천해줘. 오피스룩으로.",
+        "analysis_result": [
+            {
+                "main_category": "상의",
+                "sub_category": "셔츠-블라우스",
+                "color": "화이트",
+                "style_tags": [
+                    "포멀"
+                ],
+                "tpo_tags": [
+                    "오피스"
+                ],
+                "fit": "레귤러 핏/스탠다드 핏",
+                "pattern_type": "무지/솔리드",
+                "length": "긴소매",
+                "rewritten_query": "깔끔한 화이트 블라우스"
+            },
+            {
+                "main_category": "하의",
+                "sub_category": "기타하의",
+                "color": "블랙",
+                "style_tags": [
+                    "포멀"
+                ],
+                "tpo_tags": [
+                    "오피스"
+                ],
+                "fit": "슬림 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "블랙 오피스룩 스커트"
+            }
+        ],
+        "duration_seconds": 1.2129
+    },
+    {
+        "query": "운동할 때 입을 편한 트레이닝복 세트 없어? 땀 흡수 잘되고 신축성 좋은 걸로.",
+        "analysis_result": [
+            {
+                "main_category": "하의",
+                "sub_category": "트레이닝-조거팬츠",
+                "color": "오렌지",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [
+                    "운동"
+                ],
+                "fit": "슬림 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "운동용 땀 흡수 잘되고 신축성 좋은 트레이닝복 세트"
+            }
+        ],
+        "duration_seconds": 1.2032
+    },
+    {
+        "query": "가을에 입기 좋은 트렌치 코트 하나 장만하고 싶은데, 베이지색 기본 디자인으로 추천해줄래?",
+        "analysis_result": [
+            {
+                "main_category": "하의",
+                "sub_category": "트레이닝-조거팬츠",
+                "color": "베이지",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [
+                    "데일리"
+                ],
+                "fit": "스트레이트 핏",
+                "pattern_type": "무지",
+                "length": "롱 바지",
+                "rewritten_query": "가을 데일리 베이지색 기본 디자인 트렌치 코트"
+            }
+        ],
+        "duration_seconds": 1.0354
+    },
+    {
+        "query": "귀여운 스타일의 멜빵바지(오버롤)랑 같이 입을 반팔 티셔츠를 찾고 있어.",
+        "analysis_result": [
+            {
+                "main_category": "상의",
+                "sub_category": "반소매",
+                "color": "그레이",
+                "style_tags": [
+                    "캐주얼"
+                ],
+                "tpo_tags": [
+                    "데일리"
+                ],
+                "fit": "오버사이즈 핏",
+                "pattern_type": "무지/솔리드",
+                "length": "긴소매",
+                "rewritten_query": "귀여운 스타일의 오버롤과 함께 입을 캐주얼한 데일리 반팔 티셔츠"
+            }
+        ],
+        "duration_seconds": 0.9154
+    }
+]

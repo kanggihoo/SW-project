@@ -1,30 +1,37 @@
-from langchain_core.messages import AIMessage , AnyMessage
+import asyncio
+import logging
+from collections.abc import AsyncGenerator
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi.responses import StreamingResponse
+from langchain_core.messages import AIMessage, AnyMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
-from fastapi import APIRouter , HTTPException , status , Path , Depends 
-from fastapi.responses import StreamingResponse
 
-import logging 
-import asyncio
-from typing import Any , cast ,Annotated, AsyncGenerator
-
-from app.config.dependencies import AgentDep , get_agent , get_agents , RepositoryDep , HTTPClientDep , SearchServiceDep
-from app.api_docs import sse_response_example , get_mock_sse_response , ERROR_RESPONSES
-
-from graph.agents import get_all_agent_info , DEFAULT_AGENT_NAME 
-from graph.utils import langchain_to_chat_message , handle_user_input , message_generator
+from app.api_docs import ERROR_RESPONSES, get_mock_sse_response, sse_response_example
+from app.config.dependencies import AgentDep, HTTPClientDep, SearchServiceDep, get_agents
+from graph.agents import DEFAULT_AGENT_NAME, get_all_agent_info
+from graph.model.api_schema import (
+    ChatHistory,
+    ChatMessage,
+    DeleteHistoryResponse,
+    ServiceMetadata,
+    StreamInput,
+    UserInput,
+)
 from graph.settings import settings
-from graph.model.api_schema import ServiceMetadata , UserInput , ChatMessage , StreamInput, ChatHistory , ChatHistoryInput, StatusUpdate , DeleteHistoryResponse
+from graph.utils import handle_user_input, langchain_to_chat_message, message_generator
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/langgraph" , tags=["langgraph"])
+router = APIRouter(prefix='/langgraph', tags=['langgraph'])
 
 # Reusable error response for API documentation
 
 
-@router.get("/info" , summary="사용가능한 llm 모델 및 에이전트 정보 조회")
-async def get_info()->ServiceMetadata:
+@router.get('/info', summary='사용가능한 llm 모델 및 에이전트 정보 조회')
+async def get_info() -> ServiceMetadata:
     try:
         models = settings.AVAILABLE_LLM_MODELS
         return ServiceMetadata(
@@ -34,47 +41,44 @@ async def get_info()->ServiceMetadata:
             default_agent=DEFAULT_AGENT_NAME,
         )
     except Exception as e:
-        logger.error(f"Error getting info: {e}")
+        logger.error(f'Error getting info: {e}')
         raise e
 
 
-@router.post("/{agent_name}/invoke" , summary="에이전트 호출 스트리밍X" , deprecated=True)
+@router.post('/{agent_name}/invoke', summary='에이전트 호출 스트리밍X', deprecated=True)
 async def invoke(
-    user_input:UserInput , 
-    agent:AgentDep,
-)->ChatMessage:
+    user_input: UserInput,
+    agent: AgentDep,
+) -> ChatMessage:
     """
     지정된 에이전트를 사용자 입력으로 호출하고 응답을 반환합니다.
     """
     # agent:CompiledStateGraph = get_agent(agent_name)
-    kwargs , run_id = await handle_user_input(user_input , agent)
+    kwargs, run_id = await handle_user_input(user_input, agent)
 
     try:
         response_events: list[tuple[str, Any]] = await agent.ainvoke(**kwargs, stream_mode=["updates", "values"])  # type: ignore # fmt: skip
         response_type, response = response_events[-1]
-        if response_type == "values":
+        if response_type == 'values':
             # Normal response, the agent completed successfully
-            output = langchain_to_chat_message(response["messages"][-1]) # 맨 마지막 message에 대해서 변환
-        elif response_type == "updates" and "__interrupt__" in response:
+            output = langchain_to_chat_message(response['messages'][-1])  # 맨 마지막 message에 대해서 변환
+        elif response_type == 'updates' and '__interrupt__' in response:
             # The last thing to occur was an interrupt
             # Return the value of the first interrupt as an AIMessage
-            output = langchain_to_chat_message(
-                AIMessage(content=response["__interrupt__"][0].value)
-            )
+            output = langchain_to_chat_message(AIMessage(content=response['__interrupt__'][0].value))
         else:
-            raise ValueError(f"Unexpected response type: {response_type}")
+            raise ValueError(f'Unexpected response type: {response_type}')
 
         output.run_id = str(run_id)
         return output
     except Exception as e:
-        logger.error(f"An exception occurred: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unexpected error")
-
+        logger.error(f'An exception occurred: {e}')
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Unexpected error')
 
 
 @router.post(
-    "/{agent_name}/stream",
-    summary="에이전트 호출 및 응답 스트리밍",
+    '/{agent_name}/stream',
+    summary='에이전트 호출 및 응답 스트리밍',
     response_class=StreamingResponse,
     responses=sse_response_example(),
 )
@@ -101,99 +105,85 @@ async def stream(
     이 엔드포인트는 사용자 입력을 받아 지정된 LangGraph 에이전트로 전달하고,
     에이전트의 출력을 실시간으로 클라이언트에 다시 스트리밍합니다.
     """
-    logger.info(f"user_input: {user_input}")
-    
+    logger.info(f'user_input: {user_input}')
+
     return StreamingResponse(
-            message_generator(user_input, agent , http_session=http_session, search_service=search_service),
-            media_type="text/event-stream",
-        )
-  
+        message_generator(user_input, agent, http_session=http_session, search_service=search_service),
+        media_type='text/event-stream',
+    )
+
 
 @router.get(
-    "/{agent_name}/{thread_id}/history",
+    '/{agent_name}/{thread_id}/history',
     response_model=ChatHistory,
-    summary="사용자 채팅 내역 조회",
-    responses={
-        200: {
-            "description": "사용자 채팅 내역 조회 성공",
-            "model": ChatHistory
-        },
-        **ERROR_RESPONSES
-    }
+    summary='사용자 채팅 내역 조회',
+    responses={200: {'description': '사용자 채팅 내역 조회 성공', 'model': ChatHistory}, **ERROR_RESPONSES},
 )
 async def get_history(
-    thread_id:Annotated[str, Path(...,description="사용자 채팅 내역 조회할 스레드 ID" , examples=["847c6285-8fc9-4560-a83f-4e6285809254"])],
-    agent:AgentDep,
-    agent_name:Annotated[str, Path(...,description=f"사용자 채팅 내역 조회할 에이전트 이름 \n 에이전트 목록 : {get_all_agent_info()}")],
-)->ChatHistory:
-    print(f"agent_name: {agent_name}")
+    thread_id: Annotated[str, Path(..., description='사용자 채팅 내역 조회할 스레드 ID', examples=['847c6285-8fc9-4560-a83f-4e6285809254'])],
+    agent: AgentDep,
+    agent_name: Annotated[str, Path(..., description=f'사용자 채팅 내역 조회할 에이전트 이름 \n 에이전트 목록 : {get_all_agent_info()}')],
+) -> ChatHistory:
+    print(f'agent_name: {agent_name}')
     try:
-        state_snapshot = await agent.aget_state(
-            config=RunnableConfig(configurable={"thread_id": thread_id})
-        )
-        messages: list[AnyMessage] = state_snapshot.values["messages"]
+        state_snapshot = await agent.aget_state(config=RunnableConfig(configurable={'thread_id': thread_id}))
+        messages: list[AnyMessage] = state_snapshot.values['messages']
         chat_messages: list[ChatMessage] = [langchain_to_chat_message(m) for m in messages]
         return ChatHistory(messages=chat_messages)
     except Exception as e:
-        logger.error(f"An exception occurred: {e}")
-        raise HTTPException(status_code=500, detail="Unexpected error")
+        logger.error(f'An exception occurred: {e}')
+        raise HTTPException(status_code=500, detail='Unexpected error')
+
 
 @router.delete(
-    "/{thread_id}/history",
-    summary="사용자 채팅 내역 삭제",
+    '/{thread_id}/history',
+    summary='사용자 채팅 내역 삭제',
     response_model=DeleteHistoryResponse,
-    responses={
-        200: {
-            "description": "사용자 채팅 내역 삭제 성공",
-            "model": DeleteHistoryResponse
-        },
-        **ERROR_RESPONSES
-    }
+    responses={200: {'description': '사용자 채팅 내역 삭제 성공', 'model': DeleteHistoryResponse}, **ERROR_RESPONSES},
 )
 async def delete_history(
-    thread_id:Annotated[str, Path(description="사용자 채팅 내역 삭제할 스레드 ID")],
-    agents : Annotated[dict[str, CompiledStateGraph], Depends(get_agents)],
-)->None:
+    thread_id: Annotated[str, Path(description='사용자 채팅 내역 삭제할 스레드 ID')],
+    agents: Annotated[dict[str, CompiledStateGraph], Depends(get_agents)],
+) -> None:
     try:
         for agent in agents.values():
             await agent.checkpointer.adelete_thread(thread_id)
-        return DeleteHistoryResponse(success=True, message="사용자 채팅 내역 삭제 완료", data={"thread_id": thread_id})
+        return DeleteHistoryResponse(success=True, message='사용자 채팅 내역 삭제 완료', data={'thread_id': thread_id})
     except Exception as e:
-        logger.error(f"An exception occurred: {e}")
-        raise HTTPException(status_code=500, detail="Unexpected error")
-
+        logger.error(f'An exception occurred: {e}')
+        raise HTTPException(status_code=500, detail='Unexpected error')
 
 
 @router.get(
-    "/stream/mock",
+    '/stream/mock',
     response_class=StreamingResponse,
     responses=sse_response_example(),
-    summary="테스트 목적으로 mock SSE 응답을 스트리밍합니다.",
+    summary='테스트 목적으로 mock SSE 응답을 스트리밍합니다.',
 )
 async def stream_mock() -> StreamingResponse:
     """
     테스트 목적으로 mock SSE 응답을 스트리밍합니다.
     """
+
     async def mock_sse_generator() -> AsyncGenerator[str, None]:
         mock_data_str = get_mock_sse_response()
-        print(f"mock_data_str: {mock_data_str}")
+        print(f'mock_data_str: {mock_data_str}')
         for line in mock_data_str.split('\n\n'):
-            print(f"line: {line}")
+            print(f'line: {line}')
             if line:
-                yield f"{line}\n\n"
+                yield f'{line}\n\n'
                 await asyncio.sleep(0.1)
 
     return StreamingResponse(
         mock_sse_generator(),
-        media_type="text/event-stream",
+        media_type='text/event-stream',
     )
 
 
 @router.get(
-    "/health",
-    summary="health check",
+    '/health',
+    summary='health check',
 )
 async def health_check() -> StreamingResponse:
-    """
-    """
-    return {"status": "ok"}
+    """ """
+    return {'status': 'ok'}

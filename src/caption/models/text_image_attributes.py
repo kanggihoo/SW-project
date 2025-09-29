@@ -34,6 +34,7 @@ from typing import Union, Dict
 #         description="착용 경험 관련 특성 (예: ['가벼움', '무게감 있음', '형태 유지', '드레이프성', '통기성 좋음'])"
 #     )]
 
+
 class MultiSizeInfo(BaseModel):
     """
     S, M, L 등 여러 사이즈 정보를 한 번에 처리
@@ -44,48 +45,42 @@ class MultiSizeInfo(BaseModel):
     "L": {"총장": "72", "가슴단면": "54"}
     }
     """
-    is_exist: Annotated[bool, Field(
-        default=False,
-        description="사이즈 실측 정보가 포함된 이미지 존재 여부(존재시 True)"
-    )]
+
+    is_exist: Annotated[bool, Field(default=False, description='사이즈 실측 정보가 포함된 이미지 존재 여부(존재시 True)')]
     size_measurements: Annotated[
-        Union[Dict[str, Dict[str, str]], str, None], # str 타입도 허용
-        Field(
-            default=None,
-            description="사이즈(예: S, M, L)별로 정리된 상세 실측 정보. JSON 문자열 또는 딕셔너리 형태"
-        )
+        Union[Dict[str, Dict[str, str]], str, None],  # str 타입도 허용
+        Field(default=None, description='사이즈(예: S, M, L)별로 정리된 상세 실측 정보. JSON 문자열 또는 딕셔너리 형태'),
     ]
 
     @field_validator('size_measurements', mode='before')
     @classmethod
     def parse_size_measurements(cls, v):
         """size_measurements 필드를 검증하고 변환"""
-        print(f"[DEBUG] 입력값: {repr(v)}, 타입: {type(v)}")  # 디버깅 추가
-        
+        print(f'[DEBUG] 입력값: {repr(v)}, 타입: {type(v)}')  # 디버깅 추가
+
         if v is None:
             return None
-        
+
         # 이미 딕셔너리인 경우 그대로 반환
         if isinstance(v, dict):
             return v
-        
+
         # 문자열인 경우 JSON 파싱 시도
         if isinstance(v, str):
             try:
-                # 문자열 앞뒤 공백, 끝 쉼표 제거 
+                # 문자열 앞뒤 공백, 끝 쉼표 제거
                 cleaned = v.strip()
-                if cleaned.endswith(","):
+                if cleaned.endswith(','):
                     cleaned = cleaned[:-1]
-                
-                # JSON 파싱 
+
+                # JSON 파싱
                 parsed = json.loads(cleaned)
                 if isinstance(parsed, dict):
                     return parsed
                 else:
                     return v
             except (json.JSONDecodeError, ValueError) as e:
-                return v 
-        
+                return v
 
 
 # class CareInfo(BaseModel):
@@ -118,4 +113,3 @@ class MultiSizeInfo(BaseModel):
 #         default_factory=list,
 #         description="감성적 표현 (예: ['자연스러운 편안함', '세련된 분위기', '발랄한 느낌', '우아한 매력'])"
 #     )]
-

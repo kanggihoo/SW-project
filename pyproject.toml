@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=64.0.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "sw-project"
 version = "0.1.0"
@@ -15,6 +19,7 @@ dependencies = [
     "langfuse>=3.0.3",
     "langgraph>=0.6.7",
     "langgraph-checkpoint-postgres>=2.0.23",
+    "loguru>=0.7.3",
     "pillow>=11.2.1",
     "psycopg[binary,pool]>=3.2.10",
     "pydantic-settings>=2.10.1",
@@ -22,6 +27,9 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "uvicorn[standard]>=0.34.3",
 ]
+
+[project.scripts]
+test = "sw_project.examples.query_analyzer.test_query_analyzer:main"
 
 [dependency-groups]
 dev = [
@@ -31,20 +39,83 @@ dev = [
     "pyppeteer>=0.0.25",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
+    "ruff>=0.13.2",
     "tabulate>=0.9.0",
+    "typer>=0.19.2",
 ]
 
+# ruff 설정 
+[tool.ruff]
+# 린터와 포맷터가 공통으로 사용하는 설정
+line-length = 150
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # Pyflakes
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "I",    # isort
+    "B",    # flake8-bugbear (추가 권장)
+]
+
+# 포맷터와 충돌하는 규칙들을 명시적으로 제외
+ignore = [
+    "E111", # indentation-with-invalid-multiple
+    "E114", # indentation-with-invalid-multiple-comment
+    "E117", # over-indented
+]
+
+[tool.ruff.format]
+# 포맷터 전용 설정
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+
+
+# pyright 설정 
+[tool.pyright]
+include = ["src"]
+extraPaths = ["src"]
+reportArgumentType = false
+executionEnvironments = [
+  { root = "src" }
+]
+
+
+
+# pytest 관련 설정 
 [tool.pytest.ini_options]
 addopts = [
-    "-sv",
+    "--no-header", # pytest 실행시 출력되는 헤더 정보 생략(버전, 루트 디렉토리 경로, 등)
+    "--showlocals", # 테스트 오류 발생시 traceback 정보에 실패 지점의 로컬 변수와 그 값을 함께 표시 
+    "--capture=no", # capture 동작X , 테스트 중 출력 내용이 바로 터미널에 표시 
+    "-v", # 상세 옵션 출력 
+    "--tb=long", # 자세하고 정보가 풍부한 트레이스백 형식을 사용
+    "-x", # 테스트 도중 실패가 발생하면 즉시 테스트 중단
+    #"--pdb", #  테스트 실패시 자동으로 파이썬 디버거(pdb 동작) 
+    "-ra" , # 테스트완료 후 테스트 요약 정보 표시 (a값을 통해 성공이 아닌 것에 대한 요약정보)
+    
 ]
 pythonpath = [
-    "."
+    "src",
 ]
 testpaths = ["tests"]
 filterwarnings = [
     "ignore:datetime.datetime.utcnow():DeprecationWarning"
 ]
+norecursedirs = [
+    "tests/unit/app",
+    "tests/unit/aws",
+    "tests/unit/db",
+    "tests/unit/embedding",
+    "tests/unit/query_analyzer",
+]
+
 log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)s)"
+
+# setuptools에게 패키지 소스 코드가 'src' 폴더 안에 있다고 알려줍니다.
+[tool.setuptools.packages.find]
+where = ["src"]
