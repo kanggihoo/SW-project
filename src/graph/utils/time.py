@@ -1,7 +1,7 @@
 import datetime
 from zoneinfo import ZoneInfo  # Python 3.9+ 내장 라이브러리
+
 from pydantic import BaseModel, Field
-import datetime
 
 
 def get_current_utc_timestamp() -> datetime.datetime:

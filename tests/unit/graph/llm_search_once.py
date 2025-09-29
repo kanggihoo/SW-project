@@ -8,7 +8,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 from loguru import logger
 
-from graph.builders.external_llm_builder import build_external_llm_graph
+from graph.builders.llm_search_once import build_llm_search_once_graph
 from graph.model.api_schema import UserInput
 from graph.utils.utils import show_graph_stream
 
@@ -86,9 +86,10 @@ def mock_async_generator(*args, **kwargs):
 
 
 @pytest.mark.asyncio
+@patch('graph.common.node.', side_effect=mock_get_stream_writer)
 @patch('graph.common.node.external_streaming_llm', side_effect=mock_async_generator)
 async def test_build_external_llm_graph(mock_llm_call, test_state, test_config, capture_log):
-    graph = build_external_llm_graph()
+    graph = build_llm_search_once_graph()
     assert isinstance(graph, CompiledStateGraph)
     state = test_state(messages=[HumanMessage(content='데이트')], current_expert='fitting_coordinator')
     logger.info(f'state: {state}')

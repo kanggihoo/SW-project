@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Body, HTTPException, status
-from typing import Annotated, Dict, Any, List
-from app.config.dependencies import RepositoryDep
-import logging
+from typing import Annotated, Any
 
-logger = logging.getLogger(__name__)
+from fastapi import APIRouter, Body, HTTPException, status
+from loguru import logger
+
+from app.config.dependencies import RepositoryDep
 
 router = APIRouter(
     prefix='/api',
@@ -32,7 +32,7 @@ async def db_ping(repo: RepositoryDep):
 
 @router.post('/documents', status_code=status.HTTP_201_CREATED, summary='Create a new document')
 async def create_document(
-    repo: RepositoryDep, document: Annotated[Dict[str, Any], Body(..., description="Document to be created. Must include '_id'.")]
+    repo: RepositoryDep, document: Annotated[dict[str, Any], Body(..., description="Document to be created. Must include '_id'.")]
 ):
     """
     Create a new document in the fashion collection.
@@ -76,7 +76,7 @@ async def read_all_documents(repo: RepositoryDep):
 
 @router.put('/documents/{doc_id}', summary='Update a document by ID')
 async def update_document(
-    repo: RepositoryDep, doc_id: str, update_data: Annotated[Dict[str, Any], Body(..., description='Fields and values to update.')]
+    repo: RepositoryDep, doc_id: str, update_data: Annotated[dict[str, Any], Body(..., description='Fields and values to update.')]
 ):
     """
     Update fields of an existing document in the fashion collection.

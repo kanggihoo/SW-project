@@ -7,15 +7,15 @@ MongoDB 데이터 비정규화 스크립트
 """
 
 import asyncio
-import logging
-from typing import Dict, List, Any, Optional
-from pymongo.errors import DuplicateKeyError, BulkWriteError
+from typing import Any
+
+from loguru import logger
+from pymongo.errors import BulkWriteError
+
 from db.config.config import Config
 from db.repository.fashion_async import AsyncFashionRepository
 
 # 로깅 설정
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 
 class DenormalizationService:
@@ -59,7 +59,7 @@ class DenormalizationService:
         await self.target_repo.close()
         logger.info('Database connections closed')
 
-    def transform_product_to_sku_documents(self, product_doc: Dict) -> List[Dict]:
+    def transform_product_to_sku_documents(self, product_doc: dict) -> list[dict]:
         """
         단일 상품 문서를 여러 SKU 문서로 변환
 
@@ -140,7 +140,7 @@ class DenormalizationService:
 
         return sku_documents
 
-    async def process_batch(self, batch_documents: List[Dict]) -> int:
+    async def process_batch(self, batch_documents: list[dict]) -> int:
         """
         배치 단위로 문서 처리
 
@@ -166,7 +166,7 @@ class DenormalizationService:
             logger.error(f'Error processing batch: {e}')
             return 0
 
-    async def migrate_data(self, limit: Optional[int] = None) -> Dict[str, int]:
+    async def migrate_data(self, limit: int | None = None) -> dict[str, int]:
         """
         데이터 마이그레이션 실행
 
@@ -234,7 +234,7 @@ class DenormalizationService:
             logger.error(f'Migration failed: {e}')
             raise
 
-    async def verify_migration(self, sample_size: int = 10) -> Dict[str, Any]:
+    async def verify_migration(self, sample_size: int = 10) -> dict[str, Any]:
         """
         마이그레이션 결과 검증
 

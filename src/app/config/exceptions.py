@@ -1,11 +1,9 @@
 import json
-import logging
 
 from fastapi import Request
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 async def http_exception_handler(request: Request, exc: HTTPException):

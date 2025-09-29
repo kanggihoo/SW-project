@@ -10,6 +10,23 @@ import httpx
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from graph.model.graph_schemas import ClothSearch
+from loguru import logger
+import sys
+
+
+@pytest.fixture(scope='session')
+def capture_log():
+    """Real logger fixture with proper resource management."""
+    logger.remove()
+    logger.add(
+        sink=sys.stderr,
+        level='INFO',
+        format='<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <2}</level> | <cyan>{name}:{function}:{line}</cyan> \n \
+             <level>{message}</level>',
+        colorize=True,
+    )
+    yield logger
+    logger.remove()
 
 
 @pytest_asyncio.fixture(scope='session')

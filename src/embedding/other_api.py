@@ -1,10 +1,10 @@
-from google import genai
-from google.genai import types
 import asyncio
 import os
-import logging
 
-logger = logging.getLogger(__name__)
+from google import genai
+from google.genai import types
+from loguru import logger
+
 # def get_embedding_with_openai(texts: list[str] ,
 #                               model_name:str="text-embedding-3-small" ,
 #                               api_key:str|None=None) -> list[float]:
@@ -77,9 +77,6 @@ gemini_embedding = GeminiEmbedding()
 
 
 async def main():
-    from utils import normalize_vector
-    from numpy.linalg import norm
-
     embedding = await gemini_embedding.get_embedding(texts=['Hello, world!'], output_dimension=768)
     # normalized_embedding = normalize_vector(embedding[0])
     # print(norm(normalized_embedding))

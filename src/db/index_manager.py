@@ -1,9 +1,8 @@
-from pymongo.collection import Collection
-from pymongo.operations import SearchIndexModel, ASCENDING, DESCENDING
-import logging
-from typing import Any, Dict
+from typing import Any
 
-logger = logging.getLogger(__name__)
+from loguru import logger
+from pymongo.collection import Collection
+from pymongo.operations import ASCENDING, SearchIndexModel
 
 
 def create_indexes(collection: Collection):
@@ -194,7 +193,7 @@ class VectorIndexManager:
 
         return False
 
-    def drop_multiple_vector_indexes(self, index_names: list, continue_on_error: bool = True) -> Dict[str, Any]:
+    def drop_multiple_vector_indexes(self, index_names: list, continue_on_error: bool = True) -> dict[str, Any]:
         """
         여러 벡터 인덱스를 일괄 삭제합니다.
 

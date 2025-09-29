@@ -1,6 +1,7 @@
 import os
-import httpx
 from typing import Any
+
+import httpx
 
 
 class JinaEmbedding:
@@ -78,6 +79,7 @@ async def main():
 
 if __name__ == '__main__':
     import asyncio
+
     from dotenv import load_dotenv
 
     load_dotenv()

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Body, HTTPException, Path
-from typing import Annotated
-from app.config.dependencies import SearchServiceTestDep, S3ManagerDep, RepositoryDep, HTTPClientDep
-from app.model.saarch_api import SearchRequest, SearchResponse, SearchResultItem, SearchOneProductResponse
 import time
-import logging
+from typing import Annotated
 
-logger = logging.getLogger(__name__)
+from fastapi import APIRouter, Body, HTTPException, Path
+from loguru import logger
+
+from app.config.dependencies import HTTPClientDep, RepositoryDep, S3ManagerDep, SearchServiceTestDep
+from app.model.saarch_api import SearchOneProductResponse, SearchRequest, SearchResponse, SearchResultItem
 
 router = APIRouter(
     prefix='/search',
@@ -15,7 +15,10 @@ router = APIRouter(
 
 # 여기는 s3랑 , mongodb 만 필요 이제는
 @router.post('/', response_model=SearchResponse, deprecated=True)
-async def search_product(search_service: SearchServiceTestDep, request: Annotated[SearchRequest, Body()]):
+async def search_product(
+    search_service: SearchServiceTestDep,
+    request: Annotated[SearchRequest, Body()],
+):
     """
     사용자 쿼리를 기반으로 상품을 검색합니다.
     - 쿼리 분석 (향후 확장)
@@ -57,7 +60,7 @@ async def search_product(
     s3_manager: S3ManagerDep,
     repository: RepositoryDep,
     http_client: HTTPClientDep,
-    product_id: Annotated[str, Path(description='조회할 상품 sku_id', example='89731_블루')],
+    product_id: Annotated[str, Path(description='조회할 상품 sku_id', example='4149670_데님')],
 ):
     # TODO : 해당 제품이 없는 경우 에러처리
     logger.info(f'product_id: {product_id}')

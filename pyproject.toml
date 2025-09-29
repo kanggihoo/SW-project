@@ -29,7 +29,6 @@ dependencies = [
 ]
 
 [project.scripts]
-test = "sw_project.examples.query_analyzer.test_query_analyzer:main"
 
 [dependency-groups]
 dev = [

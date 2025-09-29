@@ -1,6 +1,6 @@
 from .config.config import Config
-from .repository.fashion_sync import FashionRepository as SyncFashionRepository
 from .repository.fashion_async import AsyncFashionRepository
+from .repository.fashion_sync import FashionRepository as SyncFashionRepository
 
 _config = Config()
 _mongodb_atlas_config = _config.get_atlas_config()

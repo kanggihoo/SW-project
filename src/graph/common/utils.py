@@ -1,12 +1,11 @@
 import json
-import logging
 from collections.abc import AsyncGenerator
 from typing import Literal
 
+from loguru import logger
+
 from graph.model.api_schema import StatusUpdate
 from graph.model.constants import SSETypes
-
-logger = logging.getLogger(__name__)
 
 
 async def external_streaming_llm(

@@ -106,6 +106,7 @@ app = FastAPI(
     lifespan=lifespan,
     exception_handlers={RequestValidationError: validation_exception_handler, HTTPException: http_exception_handler},
     openapi_tags=TAGS_METADATA,
+    root_path='/langgraph',
 )
 
 # app.include_router(websocket.router)
