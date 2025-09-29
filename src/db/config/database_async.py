@@ -1,10 +1,8 @@
+from loguru import logger
 from pymongo import AsyncMongoClient
 from pymongo.database import Database
-from pymongo.server_api import ServerApi
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
-import logging
-
-logger = logging.getLogger(__name__)
+from pymongo.server_api import ServerApi
 
 
 class AsyncDatabaseManager:

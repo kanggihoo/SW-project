@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, AsyncIterator
+from collections.abc import AsyncIterator
+
 from db.config.database_async import AsyncDatabaseManager
 from db.query_builders.fashion_queries import FashionQueryBuilder
 
@@ -29,22 +30,22 @@ class BaseAsyncRepository(ABC):
         return await self.db_manager.is_connected()
 
     @abstractmethod
-    async def find_by_id(self, doc_id: str) -> Optional[Dict]:
+    async def find_by_id(self, doc_id: str) -> dict | None:
         """ID로 문서 조회"""
         pass
 
     @abstractmethod
-    async def find_all(self, filter_dict: Optional[Dict] = None) -> AsyncIterator[Dict]:
+    async def find_all(self, filter_dict: dict | None = None) -> AsyncIterator[dict]:
         """조건에 맞는 모든 문서 조회"""
         pass
 
     @abstractmethod
-    async def create(self, document: Dict) -> Optional[str]:
+    async def create(self, document: dict) -> str | None:
         """문서 생성"""
         pass
 
     @abstractmethod
-    async def update_by_id(self, doc_id: str, update_data: Dict) -> bool:
+    async def update_by_id(self, doc_id: str, update_data: dict) -> bool:
         """ID로 문서 업데이트"""
         pass
 
@@ -54,6 +55,6 @@ class BaseAsyncRepository(ABC):
         pass
 
     @abstractmethod
-    async def find(self, query: dict) -> AsyncIterator[Dict]:
+    async def find(self, query: dict) -> AsyncIterator[dict]:
         """쿼리에 맞는 문서 조회"""
         pass

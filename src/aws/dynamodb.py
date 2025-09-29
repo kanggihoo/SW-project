@@ -1,14 +1,13 @@
+from collections.abc import Iterator
+from datetime import UTC, datetime
+
 import boto3
-import logging
-from botocore.exceptions import ClientError
 from boto3.dynamodb.types import TypeSerializer
-from pathlib import Path
-from typing import Iterator, Any
+from botocore.exceptions import ClientError
+from loguru import logger
 from pydantic import validate_call
-from datetime import datetime, timezone
 
 # logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class DynamoDBManager:
@@ -17,7 +16,7 @@ class DynamoDBManager:
         self.table_name = table_name
         self.projection_fields = config.get('DEFAULT_PROJECTION_FIELDS', [])
         self.pagenator_config = config.get('DEFAULT_PAGINATOR_CONFIG', {})
-        self.GSI_NAME = config.get('DEFAULT_GSI_NAME', None)
+        self.GSI_NAME = config.get('DEFAULT_GSI_NAME')
         self.client = None
         self._initialize_client()
 
@@ -102,7 +101,7 @@ class DynamoDBManager:
             expression_attribute_values = {
                 ':status': {'S': update_result},
                 ':curation_caption_status': {'S': f'{update_result}#{update_result}'},
-                ':caption_updated_at': {'S': datetime.now(timezone.utc).isoformat()},
+                ':caption_updated_at': {'S': datetime.now(UTC).isoformat()},
             }
             self.client.update_item(
                 TableName=self.table_name, Key=key, UpdateExpression=update_expression, ExpressionAttributeValues=expression_attribute_values

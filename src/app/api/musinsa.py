@@ -1,11 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body
-from fastapi.responses import JSONResponse
-from typing import List, Optional, Annotated, Literal
+from typing import Annotated, Literal
+
+from fastapi import APIRouter, Body, Path, Query
+
 from app.config.dependencies import MusinsaAPIWrapperDep
 from app.model import musinsa as m
-import logging
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/musinsa', tags=['musinsa'], deprecated=True)
 
@@ -122,8 +120,8 @@ async def get_filtered_review_count(
     wrapper: MusinsaAPIWrapperDep,
     product_id: Annotated[int, Path(description='조회할 상품 ID', example=3522389)],
     has_photo: Annotated[bool, Query(description='사진 리뷰만 필터링할지 여부')] = False,
-    option_list: Annotated[Optional[List[str]], Query(description='필터링할 상품 옵션 목록', example=['M', 'L'])] = None,
-    sex: Annotated[Optional[Literal['M', 'F']], Query(description="필터링할 성별 ('M' 또는 'F')")] = None,
+    option_list: Annotated[list[str] | None, Query(description='필터링할 상품 옵션 목록', example=['M', 'L'])] = None,
+    sex: Annotated[Literal['M', 'F'] | None, Query(description="필터링할 성별 ('M' 또는 'F')")] = None,
 ):
     print(option_list, sex, has_photo)
     response = await wrapper.get_filtered_review_count(product_id, has_photo, option_list, sex)
@@ -145,8 +143,8 @@ async def get_review_list(
         Literal['up_cnt_desc', 'new', 'comment_cnt_desc', 'goods_est_desc', 'goods_est_asc'],
         Query(description='정렬 순서: 유용도순, 최신순, 댓글순, 평점높은순, 평점낮은순'),
     ] = 'up_cnt_desc',
-    option_list: Annotated[Optional[List[str]], Query(description='필터링할 상품 옵션 목록', example=['M'])] = None,
-    sex: Annotated[Optional[Literal['M', 'F']], Query(description='필터링할 성별')] = None,
+    option_list: Annotated[list[str] | None, Query(description='필터링할 상품 옵션 목록', example=['M'])] = None,
+    sex: Annotated[Literal['M', 'F'] | None, Query(description='필터링할 성별')] = None,
     has_photo: Annotated[bool, Query(description='사진 리뷰만 필터링할지 여부')] = False,
     is_experience: Annotated[bool, Query(description='한달 사용기 필터링 여부')] = False,
 ):

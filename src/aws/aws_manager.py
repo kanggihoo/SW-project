@@ -1,13 +1,10 @@
-from pathlib import Path
-from typing import Annotated, Iterator, Any
-import logging
+from loguru import logger
 
-from .config import Config
-from .s3 import S3Manager
-from .dynamodb import DynamoDBManager
 from caption.models.product import ImageManager, ProductManager
 
-logger = logging.getLogger(__name__)
+from .config import Config
+from .dynamodb import DynamoDBManager
+from .s3 import S3Manager
 
 
 class AWSManager:
@@ -108,7 +105,7 @@ class AWSManager:
         images = []
         success = True
         try:
-            assert len(set(key for key in representative_assets.keys() if key in ['model', 'front', 'back', 'color_variant'])) == 4, (
+            assert len(set(key for key in representative_assets if key in ['model', 'front', 'back', 'color_variant'])) == 4, (
                 'representative_assets 형식이 올바르지 않습니다.'
             )
             for key, value in representative_assets.items():

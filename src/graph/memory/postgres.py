@@ -1,4 +1,3 @@
-import logging
 from contextlib import asynccontextmanager
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -8,8 +7,6 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
 from graph.settings import settings
-
-logger = logging.getLogger(__name__)
 
 
 def validate_postgres_config() -> None:

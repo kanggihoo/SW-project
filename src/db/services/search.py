@@ -1,18 +1,23 @@
 # from app.config.dependencies import S3ManagerDep , RepositoryDep
-import logging
 import asyncio
+
+from fastapi import HTTPException
+from loguru import logger
+
 from db.repository.fashion_async import AsyncFashionRepository
 
 # from aws.aws_manager import S3Manager
 from embedding.other_api import GeminiEmbedding
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
-from fastapi import HTTPException
-
-logger = logging.getLogger(__name__)
 
 
 class SearchService:
-    def __init__(self, repository: AsyncFashionRepository, query_analyzer: MultiStepAnalyzer, embedding: GeminiEmbedding):
+    def __init__(
+        self,
+        repository: AsyncFashionRepository,
+        query_analyzer: MultiStepAnalyzer,
+        embedding: GeminiEmbedding,
+    ):
         self.repository = repository
         self.embedding = embedding
         self.query_analyzer = query_analyzer
@@ -48,14 +53,14 @@ class SearchService:
 
             # 3. 병렬 벡터 검색 실행
             tasks = []
-            for emd, pf in zip(embeddings, pre_filter_list):
+            for emd, pf in zip(embeddings, pre_filter_list, strict=False):
                 logger.info(f'쿼리 : {query} 필터 : {pf} , limit : {limit} 으로 검색 시작')
                 task = self.repository.vector_search(embedding=emd, limit=limit, pre_filter=pf)
                 tasks.append(task)
 
             vector_search_results = await asyncio.gather(*tasks)
 
-            logger.info(f'vector_search_results completed')
+            logger.info('vector_search_results completed')
 
             # 4. 결과 처리 및 S3 URL 생성
             processed_results = []

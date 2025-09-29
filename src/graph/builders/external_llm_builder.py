@@ -1,12 +1,9 @@
 # External LLM streaming graph builder
-import logging
 
 from langgraph.graph import START, StateGraph
 
 from graph.common.node import external_llm_node
 from graph.common.state import State
-
-logger = logging.getLogger(__name__)
 
 
 def build_external_llm_graph():

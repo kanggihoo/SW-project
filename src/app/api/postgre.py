@@ -1,7 +1,9 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException
+
 from app.config.dependencies import DBConnectionDep
 from app.services.db_meta import database_metadata_service
-import asyncio
 
 router = APIRouter(prefix='/api', tags=['postgre'])
 

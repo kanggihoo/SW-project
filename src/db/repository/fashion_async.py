@@ -1,12 +1,12 @@
-from .base_async import BaseAsyncRepository
-from typing import Dict, Any, Optional, List, AsyncIterator
-from pymongo.errors import DuplicateKeyError
-from pymongo import UpdateOne
-from bson.binary import Binary, BinaryVectorDtype
-import logging
-from typing_extensions import override
+from collections.abc import AsyncIterator
+from typing import Any, override
 
-logger = logging.getLogger(__name__)
+from bson.binary import Binary, BinaryVectorDtype
+from loguru import logger
+from pymongo import UpdateOne
+from pymongo.errors import DuplicateKeyError
+
+from .base_async import BaseAsyncRepository
 
 
 class AsyncFashionRepository(BaseAsyncRepository):
@@ -16,7 +16,7 @@ class AsyncFashionRepository(BaseAsyncRepository):
         super().__init__(connection_string, database_name, collection_name)
 
     @override
-    async def find_by_id(self, doc_id: str, projection: Optional[Dict] = None) -> Optional[Dict]:
+    async def find_by_id(self, doc_id: str, projection: dict | None = None) -> dict | None:
         """상품 ID로 비동기 조회"""
         try:
             return await self.collection.find_one({'_id': doc_id}, projection=projection)
@@ -25,13 +25,13 @@ class AsyncFashionRepository(BaseAsyncRepository):
             return None
 
     @override
-    async def find_all(self, filter_dict: Optional[Dict] = None) -> AsyncIterator[Dict]:
+    async def find_all(self, filter_dict: dict | None = None) -> AsyncIterator[dict]:
         """조건에 맞는 모든 상품 비동기 조회"""
         filter_dict = filter_dict or {}
         return self.collection.find(filter_dict)
 
     @override
-    async def create(self, document: Dict) -> Optional[str]:
+    async def create(self, document: dict) -> str | None:
         """상품 비동기 생성"""
         try:
             result = await self.collection.insert_one(document)
@@ -44,7 +44,7 @@ class AsyncFashionRepository(BaseAsyncRepository):
             return None
 
     @override
-    async def update_by_id(self, doc_id: str, update_data: Dict) -> bool:
+    async def update_by_id(self, doc_id: str, update_data: dict) -> bool:
         """상품 비동기 업데이트"""
         try:
             if not update_data:
@@ -66,14 +66,14 @@ class AsyncFashionRepository(BaseAsyncRepository):
             return False
 
     @override
-    async def find(self, query: dict) -> AsyncIterator[Dict]:
+    async def find(self, query: dict) -> AsyncIterator[dict]:
         """쿼리에 맞는 문서 비동기 조회"""
         return await self.collection.find(query)
 
     # ===========================================================================
     # 벡터 검색
     # ===========================================================================
-    async def vector_search(self, embedding: list[float], limit: int, pre_filter: Optional[Dict] = None) -> List[Dict]:
+    async def vector_search(self, embedding: list[float], limit: int, pre_filter: dict | None = None) -> list[dict]:
         """비동기 벡터 검색"""
         pipeline = self.query_builder.vector_search_pipeline(embedding=embedding, limit=limit, pre_filter=pre_filter)
         try:
@@ -87,7 +87,7 @@ class AsyncFashionRepository(BaseAsyncRepository):
             raise e
 
     @staticmethod
-    def _generate_bson_vector(vector: List[float], vector_dtype: Any) -> Binary:
+    def _generate_bson_vector(vector: list[float], vector_dtype: Any) -> Binary:
         """벡터값을 BSON 형태로 변환"""
         # Generate BSON vector from the sample float32 embedding
         return Binary.from_vector(vector, vector_dtype)

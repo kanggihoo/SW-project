@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from . import musinsa, mongodb, search, postgre, graph
+
+from . import graph, mongodb, musinsa, postgre, search
 
 api_router = APIRouter()
 

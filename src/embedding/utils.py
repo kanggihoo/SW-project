@@ -9,7 +9,6 @@ def normalize_vector(vector: list[float]) -> np.ndarray:
 
 # TODO: 벡터값 Binary 형태로 저장
 from bson.binary import Binary
-from bson.binary import BinaryVectorDtype
 
 
 def generate_bson_vector(vector, vector_dtype):

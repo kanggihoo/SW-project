@@ -1,18 +1,23 @@
 # from app.config.dependencies import S3ManagerDep , RepositoryDep
-import logging
-from typing import Any, Optional, List
-from db.repository.fashion_async import AsyncFashionRepository
+import asyncio
+
+from fastapi import HTTPException
+from loguru import logger
+
 from aws.aws_manager import S3Manager
+from db.repository.fashion_async import AsyncFashionRepository
 from embedding.other_api import GeminiEmbedding
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
-import asyncio
-from fastapi import HTTPException
-
-logger = logging.getLogger(__name__)
 
 
 class SearchServiceTest:
-    def __init__(self, s3_manager: S3Manager, repository: AsyncFashionRepository, query_analyzer: MultiStepAnalyzer, embedding: GeminiEmbedding):
+    def __init__(
+        self,
+        s3_manager: S3Manager,
+        repository: AsyncFashionRepository,
+        query_analyzer: MultiStepAnalyzer,
+        embedding: GeminiEmbedding,
+    ):
         self.s3_manager = s3_manager
         self.repository = repository
         self.embedding = embedding
@@ -49,13 +54,13 @@ class SearchServiceTest:
 
             # 3. 병렬 벡터 검색 실행
             tasks = []
-            for emd, pf in zip(embeddings, pre_filter_list):
+            for emd, pf in zip(embeddings, pre_filter_list, strict=False):
                 task = self.repository.vector_search(embedding=emd, limit=limit, pre_filter=pf)
                 tasks.append(task)
 
             vector_search_results = await asyncio.gather(*tasks)
 
-            logger.info(f'vector_search_results completed')
+            logger.info('vector_search_results completed')
 
             # 4. 결과 처리 및 S3 URL 생성
             processed_results = []

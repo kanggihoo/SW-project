@@ -1,5 +1,4 @@
 # 메인 의존성 정의
-import logging
 from collections.abc import AsyncGenerator
 from functools import cache
 from typing import Annotated
@@ -7,6 +6,9 @@ from typing import Annotated
 import httpx
 from fastapi import Depends, HTTPException, Path, Request
 from langgraph.graph.state import CompiledStateGraph
+
+# from query_analyzer.single_step_analyzer import SingleStepAnalyzer
+from loguru import logger
 from psycopg import AsyncConnection
 
 from app.api_docs.langgraph_docs import get_agents_openapi_examples
@@ -23,10 +25,6 @@ from db.services.search import SearchService
 from embedding.other_api import GeminiEmbedding, gemini_embedding
 from graph.agents import get_all_agent_info
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
-
-# from query_analyzer.single_step_analyzer import SingleStepAnalyzer
-
-logger = logging.getLogger(__name__)
 
 
 # =============================================================================

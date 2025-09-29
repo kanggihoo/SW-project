@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 
 def get_default_pagenator_config() -> dict:
@@ -26,14 +26,14 @@ class Config:
             'cache': {'DEFAULT_CACHE_DIR': DEFAULT_CACHE_DIR.as_posix()},
         }
 
-    def get_aws_config(self) -> Dict[str, Any]:
+    def get_aws_config(self) -> dict[str, Any]:
         return self._config['aws']
 
-    def get_s3_config(self) -> Dict[str, Any]:
+    def get_s3_config(self) -> dict[str, Any]:
         return self._config['s3']
 
-    def get_dynamodb_config(self) -> Dict[str, Any]:
+    def get_dynamodb_config(self) -> dict[str, Any]:
         return self._config['dynamodb']
 
-    def get_cache_config(self) -> Dict[str, Any]:
+    def get_cache_config(self) -> dict[str, Any]:
         return self._config['cache']

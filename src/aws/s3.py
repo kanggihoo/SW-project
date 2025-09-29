@@ -1,9 +1,6 @@
 import boto3
-import logging
 from botocore.exceptions import ClientError
-from pathlib import Path
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class S3Manager:

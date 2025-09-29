@@ -1,7 +1,6 @@
-import logging
-from typing import List, Dict, Callable, Optional
-from db.config.config import Config
+from collections.abc import Callable
 
+from db.config.config import Config
 
 """
 원하는 데이터를 가져오기 위해서 mongodb 쿼리로 변환
@@ -32,12 +31,12 @@ class FashionQueryBuilder:
     def vector_search_pipeline(
         self,
         embedding: list[float],
-        limit: Optional[int],
-        pre_filter: Optional[Dict] = None,
-        num_candidates: Optional[int] = None,
-        index_name: Optional[str] = None,
-        embedding_field_path: Optional[str] = None,
-    ) -> List[Dict]:
+        limit: int | None,
+        pre_filter: dict | None = None,
+        num_candidates: int | None = None,
+        index_name: str | None = None,
+        embedding_field_path: str | None = None,
+    ) -> list[dict]:
         """
         Vector Search 파이프라인 생성
 
@@ -103,4 +102,4 @@ class FashionQueryBuilder:
         index_name: str = None,
         embedding_field_path: str = None,
         limit: int = 10,
-    ) -> List[Dict]: ...
+    ) -> list[dict]: ...

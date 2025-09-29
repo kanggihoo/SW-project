@@ -1,7 +1,8 @@
-import httpx
 import json
 import re
-from typing import Annotated, Literal, Dict, Any, List, Union
+from typing import Any, Literal
+
+import httpx
 from bs4 import BeautifulSoup
 
 
@@ -72,7 +73,7 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.UNKNOWN},
             }
 
-    async def get_product_selection_info(self, product_id: str | int) -> Dict[str, Any]:
+    async def get_product_selection_info(self, product_id: str | int) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id}
         try:
@@ -108,7 +109,7 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_option_stock(self, product_id: str | int) -> Dict[str, Any]:
+    async def get_product_option_stock(self, product_id: str | int) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
@@ -205,7 +206,7 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_review_summary(self, product_id: str | int) -> Dict[str, Any]:
+    async def get_review_summary(self, product_id: str | int) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
@@ -241,8 +242,8 @@ class MusinsaAPIWrapper:
             }
 
     async def get_filtered_review_count(
-        self, product_id: str | int, has_photo: bool = False, option_list: List[str] | None = None, sex: Literal['M', 'F'] | None = None
-    ) -> Dict[str, Any]:
+        self, product_id: str | int, has_photo: bool = False, option_list: list[str] | None = None, sex: Literal['M', 'F'] | None = None
+    ) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id, 'has_photo': has_photo, 'option_list': option_list, 'sex': sex}
         params = {'goodsNo': product_id_str, 'hasPhoto': has_photo, 'option1List': option_list, 'sex': sex, 'selectedSimilarNo': product_id_str}
@@ -274,12 +275,12 @@ class MusinsaAPIWrapper:
         product_id: str | int,
         page_size: int = 10,
         page: int = 1,
-        option_list: List[str] | None = None,
+        option_list: list[str] | None = None,
         sex: Literal['M', 'F'] | None = None,
         sort: Literal['up_cnt_desc', 'new', 'comment_cnt_desc', 'goods_est_desc', 'goods_est_asc'] = 'up_cnt_desc',
         is_experience: bool = False,
         has_photo: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {
             'product_id': product_id,
@@ -344,7 +345,7 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_like_count(self, product_id: Union[str, int, List[Union[str, int]]]) -> Dict[str, Any]:
+    async def get_product_like_count(self, product_id: str | int | list[str | int]) -> dict[str, Any]:
         product_ids = product_id if isinstance(product_id, list) else [product_id]
         product_ids_str = [str(pid) for pid in product_ids]
         error_context = {'product_ids': product_ids}
@@ -372,7 +373,7 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_stats(self, product_id: str | int) -> Dict[str, Any]:
+    async def get_product_stats(self, product_id: str | int) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
@@ -398,7 +399,7 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_other_color(self, product_id: str | int) -> Dict[str, Any]:
+    async def get_product_other_color(self, product_id: str | int) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
@@ -438,7 +439,7 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_brand_and_price(self, product_id: str | int) -> Dict[str, Any]:
+    async def get_product_brand_and_price(self, product_id: str | int) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
@@ -492,7 +493,7 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_brand_likes_count(self, brand_name: Union[str, List[str]]) -> Dict[str, Any]:
+    async def get_brand_likes_count(self, brand_name: str | list[str]) -> dict[str, Any]:
         brand_names = [brand_name.lower()] if isinstance(brand_name, str) else [name.lower() for name in brand_name]
         error_context = {'brand_names': brand_names}
         payload = {'relationIds': brand_names}
@@ -519,7 +520,7 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_color_code(self) -> Dict[str, Any]:
+    async def get_color_code(self) -> dict[str, Any]:
         error_context = {'error_type': ErrorType.API_ERROR}
         try:
             response = await self.client.get('https://goods-detail.musinsa.com/api2/goods/color-images')

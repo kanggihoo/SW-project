@@ -1,39 +1,38 @@
 # app/services/db_metadata_service.py
-from typing import Dict, List, Optional, Any
-from psycopg import AsyncConnection
-import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 
-logger = logging.getLogger(__name__)
+from loguru import logger
+from psycopg import AsyncConnection
 
 
 class DatabaseMetadataService:
     """데이터베이스 메타데이터 및 서버 정보를 관리하는 서비스 클래스 (dict_row 지원)"""
 
-    async def health_check(self, connection: AsyncConnection) -> Dict[str, Any]:
+    async def health_check(self, connection: AsyncConnection) -> dict[str, Any]:
         """데이터베이스 헬스체크"""
         try:
-            start_time = datetime.now(timezone.utc)
+            start_time = datetime.now(UTC)
 
             # 간단한 쿼리로 연결 확인
             async with connection.cursor() as cursor:
                 await cursor.execute('SELECT 1 as test_value')
                 result = await cursor.fetchone()
 
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             response_time = (end_time - start_time).total_seconds() * 1000
 
             return {
                 'status': 'healthy',
                 'response_time_ms': round(response_time, 2),
-                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'timestamp': datetime.now(UTC).isoformat(),
                 'query_result': result.get('test_value') if result else None,
             }
         except Exception as e:
             logger.error(f'Health check failed: {e}')
-            return {'status': 'unhealthy', 'error': str(e), 'timestamp': datetime.now(timezone.utc).isoformat()}
+            return {'status': 'unhealthy', 'error': str(e), 'timestamp': datetime.now(UTC).isoformat()}
 
-    async def get_connection_info(self, connection: AsyncConnection) -> Dict[str, Any]:
+    async def get_connection_info(self, connection: AsyncConnection) -> dict[str, Any]:
         """현재 연결 정보 조회"""
         try:
             queries = [
@@ -88,7 +87,7 @@ class DatabaseMetadataService:
             logger.error(f'Failed to get connection info: {e}')
             raise
 
-    async def get_database_info(self, connection: AsyncConnection) -> Dict[str, Any]:
+    async def get_database_info(self, connection: AsyncConnection) -> dict[str, Any]:
         """데이터베이스 기본 정보 조회"""
         try:
             queries = [
@@ -133,7 +132,7 @@ class DatabaseMetadataService:
             logger.error(f'Failed to get database info: {e}')
             raise
 
-    async def get_table_statistics(self, connection: AsyncConnection) -> List[Dict[str, Any]]:
+    async def get_table_statistics(self, connection: AsyncConnection) -> list[dict[str, Any]]:
         """테이블 통계 정보 조회"""
         try:
             query = """
@@ -173,7 +172,7 @@ class DatabaseMetadataService:
             logger.error(f'Failed to get table statistics: {e}')
             raise
 
-    async def get_database_size_info(self, connection: AsyncConnection) -> Dict[str, Any]:
+    async def get_database_size_info(self, connection: AsyncConnection) -> dict[str, Any]:
         """데이터베이스 크기 정보 조회"""
         try:
             # 단일 값 쿼리들

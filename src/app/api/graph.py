@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from collections.abc import AsyncGenerator
 from typing import Annotated, Any
 
@@ -8,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AnyMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
+from loguru import logger
 
 from app.api_docs import ERROR_RESPONSES, get_mock_sse_response, sse_response_example
 from app.config.dependencies import AgentDep, HTTPClientDep, SearchServiceDep, get_agents
@@ -23,9 +23,7 @@ from graph.model.api_schema import (
 from graph.settings import settings
 from graph.utils import handle_user_input, langchain_to_chat_message, message_generator
 
-logger = logging.getLogger(__name__)
-
-router = APIRouter(prefix='/langgraph', tags=['langgraph'])
+router = APIRouter(tags=['langgraph'])
 
 # Reusable error response for API documentation
 

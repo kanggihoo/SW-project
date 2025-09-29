@@ -1,12 +1,12 @@
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage, ChatMessage as LangchainChatMessage
-import logging
 import inspect
 from typing import Literal
 
-from graph.model.api_schema import ChatMessage
-from .time import get_current_utc_timestamp
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from loguru import logger
 
-logger = logging.getLogger(__name__)
+from graph.model.api_schema import ChatMessage
+
+from .time import get_current_utc_timestamp
 
 
 def convert_message_content_to_string(content: str | list[str | dict]) -> str:
