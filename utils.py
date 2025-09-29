@@ -1,8 +1,9 @@
 import os
 import logging
 
+
 # 로그 설정
-def setup_logger(name:str="crawler" , file_name: str = "crawling.log"):
+def setup_logger(name: str = 'crawler', file_name: str = 'crawling.log'):
     """
     Sets up a logger with different levels for file and console handlers.
     - File handler logs ERROR and higher level messages.
@@ -21,24 +22,21 @@ def setup_logger(name:str="crawler" , file_name: str = "crawling.log"):
     # log_dir = os.path.join(os.path.dirname(__file__), 'logs')
     # if not os.path.exists(log_dir):
     #     os.makedirs(log_dir)
-    
+
     # log_file = os.path.join(log_dir, file_name)
-    
-    formatter = logging.Formatter(
-        '%(asctime)s [%(levelname)s] %(message)s : %(filename)s , %(lineno)d',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
+
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s : %(filename)s , %(lineno)d', datefmt='%Y-%m-%d %H:%M:%S')
 
     # 콘솔 출력을 위한 StreamHandler 설정 (WARNING 레벨 이상)
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(logging.INFO)
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
-    
+
     # 파일 저장을 위한 FileHandler 설정 (ERROR 레벨 이상)
     # file_handler = logging.FileHandler(log_file, encoding='utf-8')
     # file_handler.setLevel(logging.ERROR)
     # file_handler.setFormatter(formatter)
     # logger.addHandler(file_handler)
-    
+
     return logger

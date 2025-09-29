@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
 # from langgraph.store.postgres import AsyncPostgresStore
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
@@ -11,7 +12,6 @@ from graph.settings import settings
 logger = logging.getLogger(__name__)
 
 
-
 def validate_postgres_config() -> None:
     """
     Validate that all required PostgreSQL configuration is present.
@@ -19,31 +19,30 @@ def validate_postgres_config() -> None:
     """
     if settings.is_local():
         required_vars = [
-            "LOCAL_POSTGRES_USER",
-            "LOCAL_POSTGRES_PASSWORD", 
-            "LOCAL_POSTGRES_HOST",
-            "LOCAL_POSTGRES_PORT",
-            "LOCAL_POSTGRES_DB",
+            'LOCAL_POSTGRES_USER',
+            'LOCAL_POSTGRES_PASSWORD',
+            'LOCAL_POSTGRES_HOST',
+            'LOCAL_POSTGRES_PORT',
+            'LOCAL_POSTGRES_DB',
         ]
     else:
         required_vars = [
-            "POSTGRES_USER",
-            "POSTGRES_PASSWORD",
-            "POSTGRES_HOST", 
-            "POSTGRES_PORT",
-            "POSTGRES_DB",
+            'POSTGRES_USER',
+            'POSTGRES_PASSWORD',
+            'POSTGRES_HOST',
+            'POSTGRES_PORT',
+            'POSTGRES_DB',
         ]
 
     missing = [var for var in required_vars if not getattr(settings, var, None)]
     if missing:
         raise ValueError(
-            f"Missing required PostgreSQL configuration: {', '.join(missing)}. "
-            "These environment variables must be set to use PostgreSQL persistence."
+            f'Missing required PostgreSQL configuration: {", ".join(missing)}. These environment variables must be set to use PostgreSQL persistence.'
         )
 
     if settings.POSTGRES_MIN_CONNECTIONS_PER_POOL > settings.POSTGRES_MAX_CONNECTIONS_PER_POOL:
         raise ValueError(
-            f"POSTGRES_MIN_CONNECTIONS_PER_POOL ({settings.POSTGRES_MIN_CONNECTIONS_PER_POOL}) must be less than or equal to POSTGRES_MAX_CONNECTIONS_PER_POOL ({settings.POSTGRES_MAX_CONNECTIONS_PER_POOL})"
+            f'POSTGRES_MIN_CONNECTIONS_PER_POOL ({settings.POSTGRES_MIN_CONNECTIONS_PER_POOL}) must be less than or equal to POSTGRES_MAX_CONNECTIONS_PER_POOL ({settings.POSTGRES_MAX_CONNECTIONS_PER_POOL})'
         )
 
 
@@ -62,14 +61,9 @@ def get_postgres_connection_string() -> str:
         db = settings.POSTGRES_DB
 
     if password is None:
-        raise ValueError("PostgreSQL password is not set")
-    
-    return (
-        f"postgresql://{user}:"
-        f"{password.get_secret_value()}@"
-        f"{host}:{port}/"
-        f"{db}"
-    )
+        raise ValueError('PostgreSQL password is not set')
+
+    return f'postgresql://{user}:{password.get_secret_value()}@{host}:{port}/{db}'
 
 
 # @asynccontextmanager
@@ -95,22 +89,19 @@ def get_postgres_connection_string() -> str:
 #         finally:
 #             await pool.close()
 
+
 @asynccontextmanager
 async def get_postgres_connection_pool() -> AsyncPostgresSaver:
     validate_postgres_config()
-    application_name = settings.POSTGRES_APPLICATION_NAME + "-" + "store"
+    application_name = settings.POSTGRES_APPLICATION_NAME + '-' + 'store'
     async with AsyncConnectionPool(
         get_postgres_connection_string(),
         min_size=settings.POSTGRES_MIN_CONNECTIONS_PER_POOL,
         max_size=settings.POSTGRES_MAX_CONNECTIONS_PER_POOL,
-        kwargs={"autocommit": True, "row_factory": dict_row, "application_name": application_name, "prepare_threshold": None},
+        kwargs={'autocommit': True, 'row_factory': dict_row, 'application_name': application_name, 'prepare_threshold': None},
         check=AsyncConnectionPool.check_connection,
     ) as pool:
         yield pool
-
-    
-
-
 
 
 # @asynccontextmanager
@@ -140,7 +131,3 @@ async def get_postgres_connection_pool() -> AsyncPostgresSaver:
 #             yield store
 #         finally:
 #             await pool.close()
-
-
-
-

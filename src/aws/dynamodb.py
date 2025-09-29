@@ -3,21 +3,24 @@ import logging
 from botocore.exceptions import ClientError
 from boto3.dynamodb.types import TypeSerializer
 from pathlib import Path
-from typing import Iterator , Any
-from pydantic import validate_call 
+from typing import Iterator, Any
+from pydantic import validate_call
 from datetime import datetime, timezone
+
 # logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
 class DynamoDBManager:
-    def __init__(self , region_name: str|None = None, table_name: str|None = None, config:dict=None):
+    def __init__(self, region_name: str | None = None, table_name: str | None = None, config: dict = None):
         self.region_name = region_name
         self.table_name = table_name
-        self.projection_fields = config.get("DEFAULT_PROJECTION_FIELDS",[])
-        self.pagenator_config = config.get("DEFAULT_PAGINATOR_CONFIG",{})
-        self.GSI_NAME = config.get("DEFAULT_GSI_NAME",None)
+        self.projection_fields = config.get('DEFAULT_PROJECTION_FIELDS', [])
+        self.pagenator_config = config.get('DEFAULT_PAGINATOR_CONFIG', {})
+        self.GSI_NAME = config.get('DEFAULT_GSI_NAME', None)
         self.client = None
         self._initialize_client()
-    
+
     # =============================================================================
     # 클라이언트 초기화 관련 함수
     # =============================================================================
@@ -25,13 +28,12 @@ class DynamoDBManager:
         try:
             self.client = boto3.client('dynamodb', region_name=self.region_name)
         except ClientError as e:
-            logger.error(f"DynamoDB 클라이언트 초기화 실패: {e}")
-            raise 
+            logger.error(f'DynamoDB 클라이언트 초기화 실패: {e}')
+            raise
         except Exception as e:
-            logger.error(f"DynamoDB 클라이언트 초기화 예상치 못한 오류: {e}")
-            raise 
-        logger.info(f"DynamoDB 클라이언트 초기화 완료: {self.table_name}")
-
+            logger.error(f'DynamoDB 클라이언트 초기화 예상치 못한 오류: {e}')
+            raise
+        logger.info(f'DynamoDB 클라이언트 초기화 완료: {self.table_name}')
 
     def test_connection(self) -> bool:
         """DynamoDB 연결 테스트"""
@@ -41,17 +43,17 @@ class DynamoDBManager:
             self.table_info = self.client.describe_table(TableName=self.table_name)
             return True
         except ClientError as e:
-            logger.error(f"DynamoDB 연결 테스트 실패: {e}")
+            logger.error(f'DynamoDB 연결 테스트 실패: {e}')
             return False
         except Exception as e:
-            logger.error(f"DynamoDB 연결 중 예상치 못한 오류: {e}")
+            logger.error(f'DynamoDB 연결 중 예상치 못한 오류: {e}')
             return False
-    
+
     # =============================================================================
     # CRUD , Query 관련 함수들
     # =============================================================================
     @validate_call
-    def get_item(self, sub_category:int, product_id: str) -> dict|None:
+    def get_item(self, sub_category: int, product_id: str) -> dict | None:
         """현재 테이블의 파티션 키와 정렬 키를 기반으로 조회후 python 딕셔너리로 변환
 
         Args:
@@ -62,29 +64,24 @@ class DynamoDBManager:
         """
         if isinstance(sub_category, str):
             sub_category = int(sub_category)
-            
-        key = self._convert_python_to_dynamodb({
-            'sub_category': sub_category,
-            'product_id': product_id
-        })
+
+        key = self._convert_python_to_dynamodb({'sub_category': sub_category, 'product_id': product_id})
         try:
-            response = self.client.get_item(
-                TableName=self.table_name,
-                Key=key
-            )
+            response = self.client.get_item(TableName=self.table_name, Key=key)
             item = response.get('Item')
             if item:
-                logger.info(f"DynamoDB {self.table_name} 조회 성공: {sub_category}-{product_id}")
+                logger.info(f'DynamoDB {self.table_name} 조회 성공: {sub_category}-{product_id}')
                 return self._convert_dynamodb_item_to_python(item)
             else:
-                logger.warning(f"DynamoDB {self.table_name}에 대응하는 항목 없음: {sub_category}-{product_id}")
+                logger.warning(f'DynamoDB {self.table_name}에 대응하는 항목 없음: {sub_category}-{product_id}')
                 return None
         except ClientError as e:
-            logger.error(f"DynamoDB 조회 간 오류 발생 : {e}")
+            logger.error(f'DynamoDB 조회 간 오류 발생 : {e}')
             return {}
+
     @validate_call
-    def update_caption_result(self, sub_category: int, product_id: str , update_result:str):
-        """caption_status 업데이트 
+    def update_caption_result(self, sub_category: int, product_id: str, update_result: str):
+        """caption_status 업데이트
 
         Args:
             sub_category (int): 서브 카테고리 ID
@@ -93,35 +90,29 @@ class DynamoDBManager:
         """
         if isinstance(sub_category, str):
             sub_category = int(sub_category)
-        
+
         if update_result != 'COMPLETED':
-            logger.error(f"caption_status 업데이트 결과 값 오류 : {update_result} , 업데이트 결과 값은 COMPLETED 여야 합니다.")
+            logger.error(f'caption_status 업데이트 결과 값 오류 : {update_result} , 업데이트 결과 값은 COMPLETED 여야 합니다.')
             return
         try:
-            key = self._convert_python_to_dynamodb({
-                'sub_category': sub_category,
-                'product_id': product_id
-            })
-            update_expression = "SET caption_status = :status, curation_caption_status = :curation_caption_status, caption_updated_at = :caption_updated_at"
+            key = self._convert_python_to_dynamodb({'sub_category': sub_category, 'product_id': product_id})
+            update_expression = (
+                'SET caption_status = :status, curation_caption_status = :curation_caption_status, caption_updated_at = :caption_updated_at'
+            )
             expression_attribute_values = {
                 ':status': {'S': update_result},
-                ':curation_caption_status': {'S': f"{update_result}#{update_result}"},
-                ':caption_updated_at': {'S': datetime.now(timezone.utc).isoformat()}
+                ':curation_caption_status': {'S': f'{update_result}#{update_result}'},
+                ':caption_updated_at': {'S': datetime.now(timezone.utc).isoformat()},
             }
             self.client.update_item(
-                TableName=self.table_name,
-                Key=key,
-                UpdateExpression=update_expression,
-                ExpressionAttributeValues=expression_attribute_values
+                TableName=self.table_name, Key=key, UpdateExpression=update_expression, ExpressionAttributeValues=expression_attribute_values
             )
-            logger.info(f"DynamoDB caption_status 업데이트 성공 : {sub_category} , {product_id} : {update_result}")
+            logger.info(f'DynamoDB caption_status 업데이트 성공 : {sub_category} , {product_id} : {update_result}')
         except ClientError as e:
-            logger.error(f"DynamoDB 업데이트 간 오류 발생 : {e}")
+            logger.error(f'DynamoDB 업데이트 간 오류 발생 : {e}')
         except Exception as e:
-            logger.error(f"예상치 못한 오류 발생 : {e}")
+            logger.error(f'예상치 못한 오류 발생 : {e}')
 
-        
-    
     # def put_item(self, item: dict) -> bool:
     #     """
     #     Upsert 연산으로 주어진 key에 대해 이미 존재하면 입력으로 주어진 항목으로 변경(다른 속성 제거), 이미 존재하지 않으면 새로운 item 생성(create)
@@ -129,19 +120,20 @@ class DynamoDBManager:
     #         item: 추가할 데이터 (타입 정보 포함)
     #     """
     #     ...
-    
+
     # =============================================================================
-    # pagenation 관련 함수 
+    # pagenation 관련 함수
     # =============================================================================
 
-    def get_product_pagenator(self ,
-                              partition:dict ,
-                              sort_key:dict ,
-                              sub_category:int|None = None,
-                              GSI_NAME:str|None = None,
-                              projection_fields:list[str]=None,
-                              pagenator_config:dict=None,
-                              ) -> Iterator[dict] | None:
+    def get_product_pagenator(
+        self,
+        partition: dict,
+        sort_key: dict,
+        sub_category: int | None = None,
+        GSI_NAME: str | None = None,
+        projection_fields: list[str] = None,
+        pagenator_config: dict = None,
+    ) -> Iterator[dict] | None:
         """조건에 맞는 제품 리스트 조회 (페이지네이터 반환)
 
         Args:
@@ -157,7 +149,7 @@ class DynamoDBManager:
 
         Returns:
             _type_: paginator 객체
-            
+
         Raises:
             TypeError: 파라미터 타입이 올바르지 않은 경우
             ValueError: 파라미터 값이 올바르지 않은 경우
@@ -166,118 +158,103 @@ class DynamoDBManager:
         pagenator_config = pagenator_config if pagenator_config else self.pagenator_config
         try:
             # DynamoDB 예약어 처리
-            reserved_keywords = {"text"}
+            reserved_keywords = {'text'}
             expression_attribute_names = {}
             projection_expresssion_part = []
             for field in projection_fields:
                 if field in reserved_keywords:
-                    alias = f"#{field}"
+                    alias = f'#{field}'
                     projection_expresssion_part.append(alias)
                     expression_attribute_names[alias] = field
                 else:
                     projection_expresssion_part.append(field)
-                    
+
             # 프로젝션 필드 설정
-            projection_expression = ", ".join(projection_expresssion_part)
-            
-                
+            projection_expression = ', '.join(projection_expresssion_part)
+
             # # condition 파라미터 처리
             # if condition is None:
             #     condition = {}
-            
+
             # GSI 사용 여부 결정 (curation_status가 있으면 GSI 사용)
             use_gsi = GSI_NAME is not None
-            
+
             # 기본 쿼리 파라미터 설정
-            query_params = {
-                'TableName': self.table_name,
-                'PaginationConfig': pagenator_config 
-            }
-            
+            query_params = {'TableName': self.table_name, 'PaginationConfig': pagenator_config}
+
             # KeyConditionExpression 및 ExpressionAttributeValues 구성
             key_condition_parts = []
             expression_values = {}
-            
-            
+
             if use_gsi:
                 # GSI 사용 시
                 query_params['IndexName'] = GSI_NAME
-                
+
                 # 파티션 키: curation_status
-                partition_key = partition.get("key")
-                partition_value = partition.get("value")
-                partition_type = partition.get("type")
+                partition_key = partition.get('key')
+                partition_value = partition.get('value')
+                partition_type = partition.get('type')
                 key_condition_parts.append(f'{partition_key} = :{partition_key}')
                 expression_values[f':{partition_key}'] = {partition_type: partition_value}
 
-                # 정렬 키 : 
+                # 정렬 키 :
                 if sort_key:
-                    sort_key_key = sort_key.get("key")
-                    sort_key_value = sort_key.get("value")
-                    sort_key_type = sort_key.get("type")
-                    sort_key_operator = sort_key.get("operator")
-                    if sort_key_operator == "begins_with":
+                    sort_key_key = sort_key.get('key')
+                    sort_key_value = sort_key.get('value')
+                    sort_key_type = sort_key.get('type')
+                    sort_key_operator = sort_key.get('operator')
+                    if sort_key_operator == 'begins_with':
                         key_condition_parts.append(f'begins_with({sort_key_key} , :{sort_key_key})')
                         expression_values[f':{sort_key_key}'] = {sort_key_type: sort_key_value}
                     else:
                         key_condition_parts.append(f'{sort_key_key} {sort_key_operator} :{sort_key_key}')
                         expression_values[f':{sort_key_key}'] = {sort_key_type: sort_key_value}
-                
+
             else:
                 # 파티션 키: sub_category
                 key_condition_parts.append('sub_category = :sub_category')
                 expression_values[':sub_category'] = {'N': str(sub_category)}
-                
-            #  ProjectionExpression 설정 
+
+            #  ProjectionExpression 설정
             query_params['ProjectionExpression'] = projection_expression
             # KeyConditionExpression 설정 (AND 조건만 가능 )
             if key_condition_parts:
                 query_params['KeyConditionExpression'] = ' AND '.join(key_condition_parts)
-            
-         
+
             # ExpressionAttributeValues 설정
             if expression_values:
                 query_params['ExpressionAttributeValues'] = expression_values
             if expression_attribute_names:
                 query_params['ExpressionAttributeNames'] = expression_attribute_names
-            
-            
-            
+
             paginator = self.client.get_paginator('query')
             return paginator.paginate(**query_params)
-        
+
         except ClientError as e:
-            logger.error(f"DynamoDB 조회 간 오류 발생 : {e}")
+            logger.error(f'DynamoDB 조회 간 오류 발생 : {e}')
             return None
         except Exception as e:
-            logger.error(f"예상치 못한 오류 발생 : {e}")
+            logger.error(f'예상치 못한 오류 발생 : {e}')
             return None
-    
+
     # =============================================================================
     # main_category , sub_category 별 통계 관련 함수
     # =============================================================================
     def get_category_status_stats(self, main_category: str, sub_category: int) -> dict | None:
-        stats_id = f"STATUS_STATS_{main_category}_{sub_category}"
+        stats_id = f'STATUS_STATS_{main_category}_{sub_category}'
         try:
-            key = self._convert_python_to_dynamodb({
-                'sub_category': 0,
-                'product_id': stats_id
-            })
-            
-            response = self.client.get_item(
-                TableName=self.table_name,
-                Key=key
-            )
-            
+            key = self._convert_python_to_dynamodb({'sub_category': 0, 'product_id': stats_id})
+
+            response = self.client.get_item(TableName=self.table_name, Key=key)
+
             item = response.get('Item')
             if item:
                 return self._convert_dynamodb_item_to_python(item)
             else:
                 return None
         except Exception as e:
-            logger.error(f"카테고리 상태 통계 조회 실패 {main_category}-{sub_category}: {e}")
+            logger.error(f'카테고리 상태 통계 조회 실패 {main_category}-{sub_category}: {e}')
             return None
-        
 
     # =============================================================================
     # 유틸리티 함수
@@ -285,27 +262,26 @@ class DynamoDBManager:
     @property
     def page_size(self):
         return self.pagenator_config['PageSize']
-    
+
     @page_size.setter
-    def page_size(self, page_size:int):
+    def page_size(self, page_size: int):
         """dynamodb 의 pagesize 조정 함수"""
         self.pagenator_config['PageSize'] = page_size
-
 
     def close_connection(self):
         if self.client:
             self.client.close()
             self.client = None
-            logger.info(f"DynamoDB 클라이언트 연결 종료: {self.table_name}")
+            logger.info(f'DynamoDB 클라이언트 연결 종료: {self.table_name}')
 
     def _convert_dynamodb_item_to_python(self, item: dict) -> dict:
         """
         DynamoDB client 응답 아이템을 일반 딕셔너리로 변환합니다.
-        
+
         Args:
             item: DynamoDB에서 쿼리 반환결과인 Item 키에 대한 데이터 (타입 정보 포함)
                 example : {'속성이름': {'데이터타입': '값'}, ...}
-            
+
         Returns:
             dict: {"속성이름": "값", ...}
         """
@@ -343,7 +319,7 @@ class DynamoDBManager:
                 # 알 수 없는 타입은 그대로 유지
                 converted[key] = value
         return converted
-        
+
     def _convert_python_to_dynamodb(self, item: dict) -> dict:
         """
         일반 python 딕셔너리를 DynamoDB client 메서드에 전달할 아이템 형식으로 변환(타입 정보 포함)
@@ -356,26 +332,20 @@ class DynamoDBManager:
         """
         serializer = TypeSerializer()
         return {k: serializer.serialize(v) for k, v in item.items()}
-    
 
-        
 
 # if __name__ == "__main__":
 #     dynamodb_manager = DynamoDBManager()
-    
+
 #     # 사용 예제
-    
-    
+
+
 #     # 2. 특정 product_id로 시작하는 제품들
 #     print("=== product_id 조건 예제 ===")
 #     condition = {
 #         'curation_status': 'COMPLETED'
 #     }
 #     iterator = dynamodb_manager.get_product_pagenator(
-#         sub_category=1005, 
+#         sub_category=1005,
 #         condition=condition
 #     )
-
-   
-    
-                

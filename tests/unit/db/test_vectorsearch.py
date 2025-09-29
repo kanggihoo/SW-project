@@ -1,9 +1,8 @@
-
 from pymongo.operations import SearchIndexModel
 from db.config.database import DatabaseManager
 from db import create_fashion_repo
 from embedding import get_embedding_with_jina
-import logging 
+import logging
 from dotenv import load_dotenv
 import os
 import pytest
@@ -13,25 +12,26 @@ import numpy as np
 from typing import List, Tuple
 import math
 
+
 def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
     """두 벡터 간의 코사인 유사도 계산"""
     # 벡터를 numpy 배열로 변환
     v1 = np.array(vec1)
     v2 = np.array(vec2)
-    
+
     # 코사인 유사도 공식: (A·B) / (|A| * |B|)
     dot_product = np.dot(v1, v2)
     norm_v1 = np.linalg.norm(v1)
     norm_v2 = np.linalg.norm(v2)
-    
+
     # 0으로 나누기 방지
     if norm_v1 == 0 or norm_v2 == 0:
         return 0.0
-    
+
     return dot_product / (norm_v1 * norm_v2)
 
 
-@pytest.fixture(scope="session" , autouse=True)
+@pytest.fixture(scope='session', autouse=True)
 def setup():
     load_dotenv()
     root = logging.getLogger()
@@ -43,19 +43,19 @@ def setup():
     root.addHandler(handler)
     root.setLevel(logging.INFO)
 
+
 logger = logging.getLogger(__name__)
 
-@pytest.fixture(scope="session")
-def config():
-    return {
-        "vector_index_name": "tmp",
-        "database_name": "fashion_db",
-        "collection_name": "products"
-    }
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='session')
+def config():
+    return {'vector_index_name': 'tmp', 'database_name': 'fashion_db', 'collection_name': 'products'}
+
+
+@pytest.fixture(scope='session')
 def db(config):
     return create_fashion_repo(use_atlas=True)
+
 
 # @pytest.fixture()
 # def embedding_factory():
@@ -119,15 +119,8 @@ def db(config):
 #             }
 #         }
 #     )
-    
 
 
-def test_vector_qeury(db ):
-    results = db.vector_search("라운드넥에 긴소매 기장을 가진 블랙 색상의 상의")
+def test_vector_qeury(db):
+    results = db.vector_search('라운드넥에 긴소매 기장을 가진 블랙 색상의 상의')
     print(results)
-    
-
-
-
-
-

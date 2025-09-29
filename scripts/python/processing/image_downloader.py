@@ -7,11 +7,12 @@ from PIL import Image
 from caption.models.product import ImageManager
 from aiohttp import ClientTimeout
 
+
 class ImageDownloader:
     def __init__(self):
         self.session: Optional[aiohttp.ClientSession] = None
         self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
         }
         self._setup_logging()
 
@@ -37,32 +38,32 @@ class ImageDownloader:
         """
         try:
             if image.s3_url is None:
-                self.logger.warning(f"No S3 URL provided for image: {image}")
+                self.logger.warning(f'No S3 URL provided for image: {image}')
                 return
 
             if not self.session:
-                self.logger.error("No active session. Please use context manager or initialize session.")
+                self.logger.error('No active session. Please use context manager or initialize session.')
                 return
 
             timeout_obj = ClientTimeout(total=timeout)
             async with self.session.get(image.s3_url, headers=self.headers, timeout=timeout_obj) as response:
                 response.raise_for_status()
                 content = await response.read()
-                
+
                 image_stream = BytesIO(content)
                 try:
-                    pil_image = Image.open(image_stream).convert("RGB")
+                    pil_image = Image.open(image_stream).convert('RGB')
                     image.pil_image = pil_image
                 finally:
                     image_stream.close()
 
         except asyncio.TimeoutError:
-            self.logger.error(f"Timeout while downloading image: {image.s3_url}")
+            self.logger.error(f'Timeout while downloading image: {image.s3_url}')
         except aiohttp.ClientError as e:
-            self.logger.error(f"Network error while downloading image: {image.s3_url}, error: {e}")
-            raise aiohttp.ClientError(f"Network error while downloading image: {image.s3_url}, error: {e}")
+            self.logger.error(f'Network error while downloading image: {image.s3_url}, error: {e}')
+            raise aiohttp.ClientError(f'Network error while downloading image: {image.s3_url}, error: {e}')
         except Exception as e:
-            self.logger.error(f"Unexpected error while downloading image: {image.s3_url}, error: {e}", exc_info=True)
+            self.logger.error(f'Unexpected error while downloading image: {image.s3_url}, error: {e}', exc_info=True)
 
     async def download_images(self, images: list[ImageManager], timeout: int = 30) -> None:
         """
@@ -73,20 +74,19 @@ class ImageDownloader:
         """
         if not self.session:
             self.session = aiohttp.ClientSession()
-            
+
         tasks = [self._get_pil_image_from_s3_url(image, timeout) for image in images]
         try:
             await asyncio.gather(*tasks)  # We don't need to return anything since we modify images in place
         except Exception as e:
-            raise 
-            self.logger.error(f"Unexpected error while downloading images: {e}", exc_info=True)
+            raise
+            self.logger.error(f'Unexpected error while downloading images: {e}', exc_info=True)
 
     async def close(self):
         """Explicitly close the session if not using context manager"""
         if self.session:
             await self.session.close()
             self.session = None
-
 
 
 # 사용 예시
@@ -98,7 +98,7 @@ class ImageDownloader:
 #     async with ImageDownloader() as downloader:
 #         await downloader.download_images(image_list)
 #         # 이 시점에서 image_list의 각 ImageManager 객체에 pil_image가 설정되어 있습니다
-        
+
 #     # 여기서 image_list를 사용할 수 있습니다
 #     for image in image_list:
 #         if hasattr(image, 'pil_image') and image.pil_image is not None:
