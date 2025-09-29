@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, SerializeAsAny
 
-from llm.llm_models import AllModelEnum, GoogleModelName, OpenAIModelName, OpenRouterModelName
+from llm.llm_models import AllModelEnum, OpenAIModelName, OpenRouterModelName
 
 
 class AgentInfo(BaseModel):
@@ -68,7 +68,7 @@ class StreamInput(UserInput):
             'examples': [
                 {
                     'message': '데이트',
-                    'model': GoogleModelName.GEMINI_20_FLASH_LITE,
+                    'model': OpenRouterModelName.OPENROUTER_GEMINI_25_FLASH_LITE,
                     'thread_id': '847c6285-8fc9-4560-a83f-4e6285809254',
                     'user_id': '847c6285-8fc9-4560-a83f-4e6285809254',
                     'agent_config': {'spicy_level': 0.8},
