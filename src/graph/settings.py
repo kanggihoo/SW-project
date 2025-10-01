@@ -7,14 +7,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from llm.llm_models import AllModelEnum, GoogleModelName, LLMProvider, OpenAIModelName, OpenRouterModelName
 
 
-class DatabaseType(StrEnum):
-    """Database type"""
-
-    SQLITE = 'sqlite'
-    POSTGRES = 'postgres'
-    MONGO = 'mongo'
-
-
 class EnvType(StrEnum):
     """Environment type"""
 
@@ -44,16 +36,8 @@ class Settings(BaseSettings):
     DEFAULT_LLM_MODEL: AllModelEnum = OpenRouterModelName.OPENROUTER_GEMINI_20_FLASH_LITE
     AVAILABLE_LLM_MODELS: Annotated[set[AllModelEnum], '사용 가능한 모든 LLM 모델 집합'] = Field(default_factory=set)
 
-    # Langsmith
-    LANGSMITH_TRACING: Annotated[str, 'Langsmith tracing'] = Field(default='False')
-    LANGSMITH_PROJECT: Annotated[str, 'Langsmith project'] = Field(default='langgraph-agent-test')
-    LANGSMITH_ENDPOINT: str | None = None
-    LANGSMITH_API_KEY: SecretStr | None = None
-
-    # ===============================================================================================================
-    # 데이터베이스 설정(Connection String 정보 및 Connection Pool 설정)
-    # ===============================================================================================================
-    DATABASE_TYPE: DatabaseType = DatabaseType.POSTGRES
+    # SQLite 데이터베이스 파일 경로
+    SQLITE_DB_PATH: str = 'checkpoints.db'
 
     DB_ENV: Annotated[EnvType, 'Environment type'] = EnvType.LOCAL
 

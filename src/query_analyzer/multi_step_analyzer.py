@@ -22,7 +22,7 @@ class MultiStepAnalyzer:
         """Step 1: Identify items and common context from the query."""
         system_prompt = SYSTEMPROMPT1
         prompt = ChatPromptTemplate.from_messages([SystemMessage(content=system_prompt), ('human', '쿼리: {query}')])
-        return prompt | self.llm1.with_structured_output(InitialAnalysis)
+        return (prompt | self.llm1.with_structured_output(InitialAnalysis)).with_config({'tags': ['skip_stream']})
 
     def _get_second_chain(self, item_type: MainCategory):
         """Step 2: Analyze a single identified item."""

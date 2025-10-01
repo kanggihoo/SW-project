@@ -1,12 +1,36 @@
 # 설정관리
+from enum import StrEnum
 from typing import Annotated
 
-from pydantic import Field
+from pydantic import BeforeValidator, Field, SecretStr, TypeAdapter
+from pydantic.networks import HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 # import os
 # from db.config.config import Config as DBConfig
 # from aws.config import Config as AWSConfig
+# 입력된 문자열이 유효한 HTTP URL 형식인지 검증하는 함수입니다.
+def check_str_is_http(x: str) -> str:
+    # Pydantic의 HttpUrl 타입을 사용하여 유효성을 검사하는 어댑터를 생성합니다.
+    http_url_adapter = TypeAdapter(HttpUrl)
+    # 입력값(x)의 유효성을 검사하고, 통과하면 문자열로 변환하여 반환합니다.
+    return str(http_url_adapter.validate_python(x))
+
+
+class DatabaseType(StrEnum):
+    """Database type"""
+
+    SQLITE = 'sqlite'
+    POSTGRES = 'postgres'
+    MONGO = 'mongo'
+
+
+class MonitoringType(StrEnum):
+    """Monitoring type"""
+
+    LANGFUSE = 'langfuse'
+    LANGSMITH = 'langsmith'
 
 
 class Settings(BaseSettings):
@@ -20,51 +44,31 @@ class Settings(BaseSettings):
     )
 
     MODE: Annotated[str, 'Fastapi Server model로 reload 할때 사용'] = Field(default='')
+    DATABASE_TYPE: DatabaseType = DatabaseType.POSTGRES
     USE_ATLAS: Annotated[bool, Field(default=True)]
+
+    # monitoering type
+    MONITORING_TYPE: MonitoringType = MonitoringType.LANGFUSE
+
+    # Langsmith
+    LANGSMITH_TRACING: Annotated[str, 'Langsmith tracing'] = Field(default='False')
+    LANGSMITH_PROJECT: Annotated[str, 'Langsmith project'] = Field(default='langgraph-agent-test')
+    LANGSMITH_ENDPOINT: str | None = None
+    LANGSMITH_API_KEY: SecretStr | None = None
+
+    # Langfuse
+    LANGFUSE_TRACING: bool = False
+    LANGFUSE_HOST: Annotated[str, BeforeValidator(check_str_is_http)] = 'https://cloud.langfuse.com'
+    LANGFUSE_PUBLIC_KEY: SecretStr | None = None
+    LANGFUSE_SECRET_KEY: SecretStr | None = None
+
+    # ===============================================================================================================
+    # 데이터베이스 설정(Connection String 정보 및 Connection Pool 설정)
+    # ===============================================================================================================
 
     def is_dev(self) -> bool:
         """Check if the server is in development mode"""
         return self.MODE == 'dev'
-
-    # graph_settings : BaseSettings = graph_settings
-
-    # 환경변수가 None일 경우를 대비한 검증 추가
-    # MONGODB_ATLAS_URI: Annotated[str, Field(
-    #     description="MongoDB Atlas connection URI",
-    #     min_length=1  # 빈 문자열 방지
-    # )]
-
-    # MONGODB_ATLAS_DATABASE: Annotated[str, Field(default="fashion_db")]
-    # MONGODB_ATLAS_COLLECTION: Annotated[str, Field(default="products")]
-
-    # 다른 필수 환경변수들도 추가
-    # JINA_API_KEY: Annotated[str, Field(default=None)]
-    # OPENAI_API_KEY: Annotated[str, Field(default=None)]
-    # GOOGLE_API_KEY: Annotated[str, Field(default=None)]
-
-    # def __init__(self, **kwargs):
-    #     # 환경변수 직접 확인 및 로그
-    #     required_vars = ['MONGODB_ATLAS_URI']
-    #     missing_vars = []
-
-    #     for var in required_vars:
-    #         env_value = os.environ.get(var)
-    #         if not env_value:
-    #             missing_vars.append(var)
-    #         else:
-    #             print(f"✓ {var}: {env_value[:20]}...")
-
-    #     if missing_vars:
-    #         print(f"❌ 누락된 환경변수: {', '.join(missing_vars)}")
-    #         print("현재 환경변수 목록:")
-    #         for key, value in os.environ.items():
-    #             if any(x in key.upper() for x in ['MONGO', 'API', 'ATLAS']):
-    #                 print(f"  {key}: {value[:20] if value else 'None'}...")
-
-    #         # 환경변수가 누락된 경우 명확한 에러 메시지
-    #         raise ValueError(f"필수 환경변수가 설정되지 않았습니다: {', '.join(missing_vars)}")
-
-    #     super().__init__(**kwargs)
 
 
 settings = Settings()

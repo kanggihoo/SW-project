@@ -67,4 +67,6 @@ Temporary Items
 data/
 examples/
 scripts/
-
+GEMINI.md
+docker-compose.yml
+tmp.py

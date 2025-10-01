@@ -2,11 +2,10 @@
 
 # Combined External LLM and Search graph builder
 
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from graph.common.node import external_llm_node, search_node
-from graph.common.router import route_expert_loop
 from graph.common.state import State
 
 
@@ -36,11 +35,11 @@ def build_llm_search_once_graph() -> CompiledStateGraph:
     graph_builder.add_edge('external_llm', 'search')
 
     # Add conditional edges for expert loop control
-    graph_builder.add_conditional_edges(
-        'search',
-        route_expert_loop,
-        {'continue_loop': 'pop_next_expert', 'end_loop': END},
-    )
+    # graph_builder.add_conditional_edges(
+    #     'search',
+    #     route_expert_loop,
+    #     {'continue_loop': 'pop_next_expert', 'end_loop': END},
+    # )
 
     compiled_graph = graph_builder.compile()
     compiled_graph.name = 'llm_search_once_graph'

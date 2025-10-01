@@ -62,7 +62,6 @@ class SearchService:
 
             logger.info('vector_search_results completed')
 
-            # 4. 결과 처리 및 S3 URL 생성
             processed_results = []
             for result_list in vector_search_results:
                 for item in result_list:

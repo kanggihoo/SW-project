@@ -5,6 +5,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from graph.builders.external_llm_builder import build_external_llm_graph
 from graph.builders.llm_search_builder import build_llm_search_graph
+from graph.builders.llm_search_once_builder import build_llm_search_once_graph
 
 # from .gather_info import build_graph as build_gather_info_graph
 DEFAULT_AGENT_NAME = 'gather_info'
@@ -15,6 +16,7 @@ agents = {
     # 'search' : build_search_graph,
     'external_llm': build_external_llm_graph(),
     'llm_search': build_llm_search_graph(),
+    'llm_search_once': build_llm_search_once_graph(),
     # "gather_info" : build_gather_info_graph,
 }
 

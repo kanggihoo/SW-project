@@ -15,11 +15,11 @@ from graph.utils.messages import create_message
 
 async def pop_next_expert_node(state: State, config: RunnableConfig) -> dict:
     """전문가 리스트에서 다음 전문가를 꺼내 'current_expert'로 설정"""
-    print('\n--- 노드 실행: pop_next_expert_node ---')
+    logger.debug('\n--- 노드 실행: pop_next_expert_node ---')
     experts_to_run = state['experts_to_run']
-    print(f'experts_to_run: {experts_to_run}')
+    logger.debug(f'experts_to_run: {experts_to_run}')
     current_expert = experts_to_run.pop(0)
-    print(f'  (이번 전문가: {current_expert})')
+    logger.debug(f'  (이번 전문가: {current_expert})')
     return {'current_expert': current_expert, 'experts_to_run': experts_to_run}
 
 
@@ -48,7 +48,7 @@ async def external_llm_node(state: State, config: RunnableConfig) -> dict:
             if chunk.startswith('data: '):
                 data = chunk[6:]
                 parsed = json.loads(data)
-                logger.info(f'parsed: {parsed}')
+                # logger.info(f'parsed: {parsed}')
                 match parsed['type']:
                     case SSETypes.TOKEN.value:
                         response_text += parsed['content']
