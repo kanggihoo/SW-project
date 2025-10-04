@@ -12,7 +12,8 @@ logger.remove()  # 기본 핸들러 제거
 # 콘솔 출력 설정
 logger.add(
     sys.stderr,
-    format='<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <5}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> \n <level>{message}</level>',
+    format='<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <5}</level> | '
+    '<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan>  <level>{message}</level>',
     level='INFO',
     colorize=True,
 )

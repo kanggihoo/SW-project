@@ -3,15 +3,16 @@ from collections.abc import Callable
 import httpx
 from langgraph.graph.state import CompiledStateGraph
 
+from graph.builders.chatbot_builder import build_chatbot_graph
 from graph.builders.external_llm_builder import build_external_llm_graph
 from graph.builders.llm_search_builder import build_llm_search_graph
 from graph.builders.llm_search_once_builder import build_llm_search_once_graph
 
 # from .gather_info import build_graph as build_gather_info_graph
-DEFAULT_AGENT_NAME = 'gather_info'
+DEFAULT_AGENT_NAME = 'llm_search_once'
 
 agents = {
-    # 'chatbot': build_chatbot_graph(),
+    'chatbot': build_chatbot_graph(),
     # 'product' : build_product_graph,
     # 'search' : build_search_graph,
     'external_llm': build_external_llm_graph(),

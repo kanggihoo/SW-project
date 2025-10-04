@@ -1,22 +1,24 @@
 import json
 from collections.abc import AsyncGenerator
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
+from langfuse.langchain import CallbackHandler  # type: ignore[import-untyped]
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 from loguru import logger
 
 from graph.model.api_schema import ChatMessage, StreamInput, UserInput
 from graph.model.constants import SSETypes
+from graph.settings import MonitoringType, settings
 
 from .messages import convert_message_content_to_string, create_ai_message, create_message, langchain_to_chat_message, remove_tool_calls
 
 
-async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **kwargs) -> tuple[dict[str, Any], uuid4]:
+async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **kwargs) -> tuple[dict[str, Any], UUID]:
     """
     user_input을 parsing 하고 , 현재 graph 상태가 interrupt 상태인지 확인 후 재개가 필요한 경우 Command 객체를 생성하여 "input" 키에 사용자가 입력한 메세지를 전달
     그렇지 않다면 "input" 키에 HumanMessage 객체에 사용자가 입력한 메세지 전달(문자열)
@@ -32,7 +34,7 @@ async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **
         HTTPException: 입력 검증 실패 시
         ValueError: 필수 파라미터 누락 시
         Exception: 기타 예상치 못한 오류 시
-    """
+    """  # noqa: E501
     try:
         run_id = uuid4()
         thread_id = user_input.thread_id
@@ -49,33 +51,33 @@ async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **
         configurable = {'thread_id': thread_id, 'user_id': user_id, 'model': user_input.model, **kwargs}
         callbacks = []
 
-        # if settings.LANGFUSE_TRACING:
-        #     # Initialize Langfuse CallbackHandler for Langchain (tracing)
-        #     langfuse_handler = CallbackHandler()
-
-        #     callbacks.append(langfuse_handler)
+        # Initialize Langfuse CallbackHandler for Langchain (tracing)
+        if settings.MONITORING_TYPE == MonitoringType.LANGFUSE and settings.LANGFUSE_TRACING:
+            langfuse_handler = CallbackHandler()
+            callbacks.append(langfuse_handler)
+            # langfuse_user_id , langfuse_session_id , langfuse_tags ,
+            configurable.update({'metadata': {'langfuse_user_id': 'test'}})
+        # elif settings.MONITORING_TYPE == MonitoringType.LANGSMITH and settings.LANGSMITH_TRACING:
+        #     # Initialize Langsmith CallbackHandler for Langchain (tracing)
+        #     langsmith_handler = LangsmithCallbackHandler()
+        #     callbacks.append(langsmith_handler)
 
         if user_input.agent_config:
             if overlap := user_input.agent_config.keys() & configurable.keys():
                 raise HTTPException(status_code=400, detail=f'Overlapping keys in agent_config: {overlap}')
             configurable.update(user_input.agent_config)
 
-            try:
-                config = RunnableConfig(configurable=configurable, callbacks=callbacks, run_id=run_id)
-            except Exception as e:
-                logger.error(f'Failed to create RunnableConfig: {e}')
-                raise ValueError(f'Failed to create RunnableConfig: {e}')
+        config = RunnableConfig(configurable=configurable, callbacks=callbacks, run_id=run_id)
+        # 현재 agent(CompiledStateGraph) 의 상태를 가져와서 interrupt 상태인지 확인
+        try:
+            state = await agent.aget_state(config)
+        except Exception as e:
+            logger.error(f'Failed to get agent state: {e}')
+            raise ValueError(f'Failed to get agent state: {e}') from e
 
-            # 현재 agent(CompiledStateGraph) 의 상태를 가져와서 interrupt 상태인지 확인
-            try:
-                state = await agent.aget_state(config)
-            except Exception as e:
-                logger.error(f'Failed to get agent state: {e}')
-                raise ValueError(f'Failed to get agent state: {e}')
+        interrupted_task = [task for task in state.tasks if hasattr(task, 'interrupt') and task.interrupts]
 
-            interrupted_task = [task for task in state.tasks if hasattr(task, 'interrupt') and task.interrupts]
-
-            input: Command | dict[str, Any]
+        input: Command | dict[str, Any]
 
         if interrupted_task:
             input = Command(resume=user_input.message)
@@ -84,6 +86,7 @@ async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **
                 'messages': create_message(message_type='human', content=user_input.message),
                 'user_message': user_input.message,
                 'experts_to_run': ['color_expert', 'style_analyst', 'fitting_coordinator'],
+                'current_expert': 'color_expert',
             }
 
             kwargs = {
@@ -91,13 +94,13 @@ async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **
                 'config': config,
             }
 
-            logger.info(f'Successfully handled user input for run_id: {run_id}')
-            return kwargs, run_id
+            logger.info(f'Successfully handled user input for graph: {run_id}')
+        return kwargs, run_id
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f'Unexpected error in handle_user_input: {e}', exc_info=True)
+        logger.error(f'Unexpected error in handle_user_input: {e}')
         raise
 
 
@@ -119,7 +122,9 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
         return
 
     try:
+        logger.debug(f'kwargs: {kwargs}')
         async for stream_event in agent.astream(**kwargs, stream_mode=['updates', 'custom', 'messages'], subgraphs=True):
+            logger.debug(f'stream_event: {stream_event}')
             if not isinstance(stream_event, tuple):
                 continue
 
@@ -151,7 +156,7 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
 
                     # node_name 이름에 따라 처리 (supervisor 노드의 도구 호출 결과가 필요한 경우만 처리, 나머지 중간노드 결과는 pass)
                     if node_name == 'supervisor':
-                        if isinstance(updated_messages[-1], ToolMessage):  # tool 메세지만 필요
+                        if updated_messages and isinstance(updated_messages[-1], ToolMessage):  # tool 메세지만 필요
                             updated_messages = [updated_messages[-1]]
                         else:
                             # 중간 노드 메세지 제거

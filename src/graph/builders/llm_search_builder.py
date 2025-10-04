@@ -3,6 +3,8 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from app.config.settings import Environment, settings
+from graph.common.mock_node import mock_external_llm_node
 from graph.common.node import external_llm_node, pop_next_expert_node, search_node
 from graph.common.router import route_expert_loop
 from graph.common.state import State
@@ -24,7 +26,10 @@ def build_llm_search_graph() -> CompiledStateGraph:
 
     # Add nodes
     graph_builder.add_node('pop_next_expert', pop_next_expert_node)
-    graph_builder.add_node('external_llm', external_llm_node)
+    if settings.ENV == Environment.TESTING:
+        graph_builder.add_node('external_llm', mock_external_llm_node)
+    else:
+        graph_builder.add_node('external_llm', external_llm_node)
     graph_builder.add_node('search', search_node)
 
     # Add edges

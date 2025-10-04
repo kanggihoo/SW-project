@@ -27,22 +27,23 @@ class MusinsaAPIWrapper:
         클래스 초기화 시, 재사용 가능한 httpx.AsyncClient와 공통 헤더를 설정합니다.
         """
         self.user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
-        self.client = httpx.AsyncClient(headers={'User-Agent': self.user_agent, 'accept': 'application/json'}, timeout=10.0)
+        self.headers = {'User-Agent': self.user_agent, 'accept': 'application/json'}
+        self.timeout = 10.0
 
-    async def close(self):
-        """
-        애플리케이션 종료 시, httpx.AsyncClient 리소스를 안전하게 닫습니다.
-        """
-        await self.client.aclose()
-
-    async def get_size_recommend(self, product_id: str | int, height: str | int, weight: str | int) -> dict:
+    async def get_size_recommend(
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int,
+        height: str | int,
+        weight: str | int,
+    ) -> dict:
         product_id_str = str(product_id)
         height_str = str(height)
         weight_str = str(weight)
         error_context = {'product_id': product_id, 'height': height, 'weight': weight}
         params = {'height': height_str, 'weight': weight_str}
         try:
-            response = await self.client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/size-recommend', params=params)
+            response = await client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/size-recommend', params=params)
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('data', {}).get('sizeRecommends'):
@@ -73,7 +74,11 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.UNKNOWN},
             }
 
-    async def get_product_selection_info(self, product_id: str | int) -> dict[str, Any]:
+    async def get_product_selection_info(
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int,
+    ) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id}
         try:
@@ -109,12 +114,16 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_option_stock(self, product_id: str | int) -> dict[str, Any]:
+    async def get_product_option_stock(
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int,
+    ) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
             params = {'goodsSaleType': 'SALE', 'optKindCd': 'CLOTHES'}
-            response = await self.client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/v2/options', params=params)
+            response = await client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/v2/options', params=params)
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('data'):
@@ -166,11 +175,15 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_size(self, product_id: str | int) -> dict:
+    async def get_product_size(
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int,
+    ) -> dict:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
-            response = await self.client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/actual-size')
+            response = await client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/actual-size')
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('data') and raw_data['data'].get('sizes'):
@@ -206,11 +219,15 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_review_summary(self, product_id: str | int) -> dict[str, Any]:
+    async def get_review_summary(
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int,
+    ) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
-            response = await self.client.get(f'https://goods.musinsa.com/api2/review/v1/goods/{product_id_str}/reviews/summary')
+            response = await client.get(f'https://goods.musinsa.com/api2/review/v1/goods/{product_id_str}/reviews/summary')
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('data') and raw_data.get('meta', {}).get('result') == 'SUCCESS':
@@ -242,14 +259,19 @@ class MusinsaAPIWrapper:
             }
 
     async def get_filtered_review_count(
-        self, product_id: str | int, has_photo: bool = False, option_list: list[str] | None = None, sex: Literal['M', 'F'] | None = None
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int,
+        has_photo: bool = False,
+        option_list: list[str] | None = None,
+        sex: Literal['M', 'F'] | None = None,
     ) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id, 'has_photo': has_photo, 'option_list': option_list, 'sex': sex}
         params = {'goodsNo': product_id_str, 'hasPhoto': has_photo, 'option1List': option_list, 'sex': sex, 'selectedSimilarNo': product_id_str}
         params = {k: v for k, v in params.items() if v}
         try:
-            response = await self.client.get('https://goods.musinsa.com/api2/review/v1/view/list/count', params=params)
+            response = await client.get('https://goods.musinsa.com/api2/review/v1/view/list/count', params=params)
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('meta', {}).get('result') == 'SUCCESS' and 'data' in raw_data:
@@ -272,6 +294,7 @@ class MusinsaAPIWrapper:
 
     async def get_review_list(
         self,
+        client: httpx.AsyncClient,
         product_id: str | int,
         page_size: int = 10,
         page: int = 1,
@@ -306,7 +329,7 @@ class MusinsaAPIWrapper:
         params = {k: v for k, v in params.items() if v}
 
         try:
-            response = await self.client.get('https://goods.musinsa.com/api2/review/v1/view/list', params=params)
+            response = await client.get('https://goods.musinsa.com/api2/review/v1/view/list', params=params)
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('data', {}).get('list'):
@@ -345,13 +368,17 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_like_count(self, product_id: str | int | list[str | int]) -> dict[str, Any]:
+    async def get_product_like_count(
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int | list[str | int],
+    ) -> dict[str, Any]:
         product_ids = product_id if isinstance(product_id, list) else [product_id]
         product_ids_str = [str(pid) for pid in product_ids]
         error_context = {'product_ids': product_ids}
         payload = {'relationIds': product_ids_str}
         try:
-            response = await self.client.post('https://like.musinsa.com/like/api/v2/liketypes/goods/counts', json=payload)
+            response = await client.post('https://like.musinsa.com/like/api/v2/liketypes/goods/counts', json=payload)
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('data', {}).get('success', False):
@@ -373,11 +400,15 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_stats(self, product_id: str | int) -> dict[str, Any]:
+    async def get_product_stats(
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int,
+    ) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
-            response = await self.client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/stat')
+            response = await client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/stat')
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('data') and raw_data.get('meta', {}).get('result') == 'SUCCESS':
@@ -399,11 +430,15 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_other_color(self, product_id: str | int) -> dict[str, Any]:
+    async def get_product_other_color(
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int,
+    ) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
-            response = await self.client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/curation/other-color')
+            response = await client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/curation/other-color')
             response.raise_for_status()
             raw_data = response.json()
             other_color_products = []
@@ -439,11 +474,15 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_product_brand_and_price(self, product_id: str | int) -> dict[str, Any]:
+    async def get_product_brand_and_price(
+        self,
+        client: httpx.AsyncClient,
+        product_id: str | int,
+    ) -> dict[str, Any]:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
-            response = await self.client.get(
+            response = await client.get(
                 f'https://www.musinsa.com/products/{product_id_str}', headers={'User-Agent': self.user_agent, 'accept': 'text/html'}, timeout=15.0
             )
             response.raise_for_status()
@@ -493,12 +532,16 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_brand_likes_count(self, brand_name: str | list[str]) -> dict[str, Any]:
+    async def get_brand_likes_count(
+        self,
+        client: httpx.AsyncClient,
+        brand_name: str | list[str],
+    ) -> dict[str, Any]:
         brand_names = [brand_name.lower()] if isinstance(brand_name, str) else [name.lower() for name in brand_name]
         error_context = {'brand_names': brand_names}
         payload = {'relationIds': brand_names}
         try:
-            response = await self.client.post('https://like.musinsa.com/like/api/v2/liketypes/brand/counts', json=payload)
+            response = await client.post('https://like.musinsa.com/like/api/v2/liketypes/brand/counts', json=payload)
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('data', {}).get('success', False):
@@ -520,10 +563,13 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.API_ERROR},
             }
 
-    async def get_color_code(self) -> dict[str, Any]:
+    async def get_color_code(
+        self,
+        client: httpx.AsyncClient,
+    ) -> dict[str, Any]:
         error_context = {'error_type': ErrorType.API_ERROR}
         try:
-            response = await self.client.get('https://goods-detail.musinsa.com/api2/goods/color-images')
+            response = await client.get('https://goods-detail.musinsa.com/api2/goods/color-images')
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('meta', {}).get('result') == 'SUCCESS':

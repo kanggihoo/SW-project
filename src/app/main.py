@@ -1,71 +1,117 @@
 # 로깅설정
 import logging
+import os
+import sys
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.exceptions import HTTPException, RequestValidationError
+from langfuse import get_client
+from loguru import logger
 
 # langgraph 관련 모듈 import
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-
 from graph.agents import get_agent, get_all_agent_info
-from graph.memory.postgres import get_postgres_connection_pool
+from graph.memory import initialize_database
+from graph.settings import DatabaseType, MonitoringType, settings
 
 from .api import api_router
 from .api_docs import TAGS_METADATA
 from .config.dependencies import get_async_repo_provider, get_aws_manager
 from .config.exceptions import http_exception_handler, validation_exception_handler
+from .services.musinsa import MusinsaAPIWrapper
 
-# 로깅설정
-logging.basicConfig(
-    level=logging.INFO, format='%(asctime)s - %(name)s - [%(levelname)s] - %(message)s - %(filename)s - %(lineno)d', datefmt='%H:%M:%S'
-)
-logger = logging.getLogger(__name__)
+
+# Configure logger when module is imported (for uvicorn worker processes)
+def setup_app_logger():
+    log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
+    logger.remove()  # remove default handler
+
+    # console output settings
+    logger.add(
+        sys.stderr,
+        format=(
+            '<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <5}</level> | '
+            '<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan>  <level>{message}</level>'
+        ),
+        level=log_level,
+        colorize=True,
+    )
+
+    # Redirect uvicorn and FastAPI logs to loguru
+    class InterceptHandler(logging.Handler):
+        def emit(self, record):
+            try:
+                level = logger.level(record.levelname).name
+            except ValueError:
+                level = record.levelno
+
+            frame, depth = logging.currentframe(), 2
+            while frame and frame.f_code.co_filename == logging.__file__:
+                frame = frame.f_back
+                depth += 1
+
+            logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+
+    # Set up InterceptHandler for uvicorn and FastAPI loggers
+    logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
+
+    for name in ['uvicorn', 'uvicorn.error', 'uvicorn.access', 'fastapi']:
+        logging.getLogger(name).handlers = [InterceptHandler()]
+        logging.getLogger(name).propagate = False
+
+
+# Setup logger when module is imported
+setup_app_logger()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 애플리케이션 시작 시 리소스 초기화
     logger.info('Lifespan started: Initializing resources...')
+    if settings.LANGFUSE_TRACING and settings.MONITORING_TYPE == MonitoringType.LANGFUSE:
+        try:
+            langfuse = get_client()
+            if langfuse.auth_check():
+                logger.info('Langfuse initialized.')
+            else:
+                raise ValueError('Langfuse authentication failed')
+        except Exception as e:
+            logger.warning(f'Langfuse initialization error: {e}')
     try:
         http_session = httpx.AsyncClient()
         app.state.http_session = http_session
         logger.info('httpx.AsyncClient initialized.')
-    except Exception as e:
-        logger.error(f'httpx.AsyncClient initialization error: {e}')
-        app.state.http_session = None
-    try:
-        # 의존성 주입을 통해 repo를 한 번만 생성하도록 유도
+
         app.state.db_repo = await get_async_repo_provider(is_sku=True)
         logger.info('MongoDB connection established.')
-    except Exception as e:
-        logger.error(f'MongoDB connection error: {e}')
-        app.state.db_repo = None
 
-    try:
         app.state.aws_manager = get_aws_manager()
         logger.info('AWS Manager initialized.')
+
+        # try:
+        #     app.state.jina_embedding = get_jina_embedding(session=http_session)
+        #     logger.info("Jina Embedding initialized.")
+        # except Exception as e:
+        #     logger.error(f"Jina Embedding initialization error: {e}")
+        #     app.state.jina_embedding = None
+
+        app.state.musinsa_api_wrapper = MusinsaAPIWrapper()
+        logger.info('Musinsa API Wrapper initialized.')
     except Exception as e:
-        logger.error(f'AWS connection error: {e}')
-        app.state.aws_manager = None
-    # try:
-    #     app.state.jina_embedding = get_jina_embedding(session=http_session)
-    #     logger.info("Jina Embedding initialized.")
-    # except Exception as e:
-    #     logger.error(f"Jina Embedding initialization error: {e}")
-    #     app.state.jina_embedding = None
-    # try:
-    #     app.state.musinsa_api_wrapper = MusinsaAPIWrapper()
-    #     logger.info("Musinsa API Wrapper initialized.")
-    # except Exception as e:
-    #     logger.error(f"Musinsa API Wrapper initialization error: {e}")
-    #     app.state.musinsa_api_wrapper = None
+        logger.error(f'fastapi lifespan initialization error: {e}')
+        raise e from e
     try:
-        async with get_postgres_connection_pool() as pool:
-            logger.info('PostgreSQL connection pool initialized.')
-            checkpointer = AsyncPostgresSaver(pool)
-            await checkpointer.setup()
+        async with initialize_database() as saver:
+            if settings.DATABASE_TYPE == DatabaseType.POSTGRES:
+                logger.info('PostgreSQL connection pool initialized.')
+            elif settings.DATABASE_TYPE == DatabaseType.SQLITE:
+                logger.info('SQLite connection initialized.')
+            else:
+                raise ValueError(f'Invalid database type: {settings.DATABASE_TYPE}')
+
+            if hasattr(saver, 'setup'):
+                await saver.setup()
             agent_names = get_all_agent_info()
             agents = {}
             for agent_name in agent_names:
@@ -75,11 +121,11 @@ async def lifespan(app: FastAPI):
                 # else:
                 #     agent = builder(app.state.http_session)
 
-                agent.checkpointer = checkpointer
+                agent.checkpointer = saver
                 agents[agent_name] = agent
             app.state.agents = agents
-            app.state.connection_pool = pool
-
+            app.state.checkpointer = saver
+            logger.info('init finished')
             yield
     except Exception as e:
         logger.error(f'PostgreSQL connection pool initialization error: {e}')
@@ -117,61 +163,3 @@ app.include_router(api_router)
 @app.get('/', tags=['root'])
 async def root():
     return {'message': 'Welcome to the Clothing Recommendation API'}
-
-
-# #TODO : 문서화 추가
-# from fastapi.openapi.utils import get_openapi
-
-# def custom_openapi():
-#     if app.openapi_schema:
-#         return app.openapi_schema
-
-#     # 기본 OpenAPI 스키마 생성
-#     openapi_schema = get_openapi(
-#         title="Custom API with WebSocket",
-#         version="1.0.0",
-#         description="This is a very custom OpenAPI schema",
-#         routes=app.routes,
-#     )
-
-#     # WebSocket 경로에 대한 정보 추가
-#     # openapi_schema["paths"] 딕셔너리에 /ws 경로를 추가합니다.
-#     openapi_schema["paths"]["/ws"] = {
-#         "get": {  # WebSocket은 보통 GET 요청으로 시작되므로 'get'으로 표현합니다.
-#             "summary": "Create WebSocket Connection",
-#             "description": "이 엔드포인트는 WebSocket 연결을 생성합니다.",
-#             "tags": ["websockets"],
-#             "responses": {
-#                 "101": {
-#                     "description": "WebSocket connection established"
-#                 }
-#             },
-#             "parameters": [], # WebSocket 연결 자체에는 파라미터가 없을 수 있습니다.
-#         }
-#     }
-
-#     # x-aperture-replaces 필드를 사용하여 WebSocket 메시지에 대한 정보를 추가할 수 있습니다.
-#     # 이는 표준 OpenAPI 사양은 아니지만, 일부 도구에서 활용될 수 있는 확장 필드입니다.
-#     # 더 명확한 문서화를 위해 description에 직접 명시하는 것이 일반적입니다.
-
-#     # Pydantic 모델을 사용한 메시지 스키마를 설명에 추가
-#     openapi_schema["paths"]["/ws"]["get"]["description"] += """
-
-#     ### 주고받는 메시지 형식:
-
-#     - **클라이언트 -> 서버 (MessageIn):**
-#     ```json
-#     {
-#         "text": "string"
-#     }
-#     - 서버 -> 클라이언트 (MessageOut):
-#     ```json
-#     {
-#         "message": "string"
-#     }
-#     """
-
-#     app.openapi_schema = openapi_schema
-#     return app.openapi_schema
-
-# app.openapi = custom_openapi

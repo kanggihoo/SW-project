@@ -119,13 +119,13 @@ def create_message(
 
         except Exception as e:
             logger.error(f'Failed to create {message_type} message: {e}')
-            raise ValueError(f'Failed to create {message_type} message: {e}')
+            raise ValueError(f'Failed to create {message_type} message: {e}') from e
 
     except Exception as e:
         if isinstance(e, (ValueError, TypeError)):
             raise
         logger.error(f'Unexpected error creating message: {e}')
-        raise ValueError(f'Unexpected error creating message: {e}')
+        raise ValueError(f'Unexpected error creating message: {e}') from e
 
 
 def create_ai_message(parts: dict) -> AIMessage:
@@ -178,7 +178,7 @@ def langchain_to_chat_message(message: BaseMessage) -> ChatMessage:
                     return human_message
                 except Exception as e:
                     logger.error(f'Error converting HumanMessage: {e}, content: {message.content}')
-                    raise ValueError(f'Failed to convert HumanMessage: {e}')
+                    raise ValueError(f'Failed to convert HumanMessage: {e}') from e
 
             case AIMessage():
                 try:
@@ -196,7 +196,7 @@ def langchain_to_chat_message(message: BaseMessage) -> ChatMessage:
                     return ai_message
                 except Exception as e:
                     logger.error(f'Error converting AIMessage: {e}, content: {message.content}')
-                    raise ValueError(f'Failed to convert AIMessage: {e}')
+                    raise ValueError(f'Failed to convert AIMessage: {e}') from e
 
             case ToolMessage():
                 try:
@@ -211,7 +211,7 @@ def langchain_to_chat_message(message: BaseMessage) -> ChatMessage:
                     return tool_message
                 except Exception as e:
                     logger.error(f'Error converting ToolMessage: {e}, content: {message.content}')
-                    raise ValueError(f'Failed to convert ToolMessage: {e}')
+                    raise ValueError(f'Failed to convert ToolMessage: {e}') from e
 
             # case LangchainChatMessage():
             #     try:
@@ -244,7 +244,7 @@ def langchain_to_chat_message(message: BaseMessage) -> ChatMessage:
         if isinstance(e, (ValueError, TypeError)):
             raise
         logger.error(f'Unexpected error converting message {message.__class__.__name__}: {e}')
-        raise ValueError(f'Unexpected error converting message: {e}')
+        raise ValueError(f'Unexpected error converting message: {e}') from e
 
 
 def remove_tool_calls(content: str | list[str | dict]) -> str | list[str | dict]:

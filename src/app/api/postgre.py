@@ -8,6 +8,14 @@ from app.services.db_meta import database_metadata_service
 router = APIRouter(prefix='/api', tags=['postgre'])
 
 
+@router.get('/test')
+async def ping(db_connection: DBConnectionDep):
+    """데이터베이스 연결 확인"""
+    stat = await db_connection.execute('SELECT 1')
+    result = await stat.fetchone()
+    return result
+
+
 @router.get('/health')
 async def health_check(db_connection: DBConnectionDep):
     """데이터베이스 헬스체크"""

@@ -9,9 +9,10 @@ from langgraph.graph.state import CompiledStateGraph
 
 # from query_analyzer.single_step_analyzer import SingleStepAnalyzer
 from loguru import logger
-from psycopg import AsyncConnection
+from psycopg import AsyncConnection, AsyncCursor
 
 from app.api_docs.langgraph_docs import get_agents_openapi_examples
+from app.services.musinsa import MusinsaAPIWrapper
 from app.services.search import SearchServiceTest
 from aws.aws_manager import AWSManager
 from aws.dynamodb import DynamoDBManager
@@ -54,13 +55,24 @@ async def get_async_fashion_repo_dependency(request: Request) -> AsyncFashionRep
 # DB 관련 의존성 postgres db(비동기)
 # =============================================================================
 # #TODO : 에러 처리 다 따로 빼고
+async def get_db_cursor(request: Request) -> AsyncGenerator[AsyncCursor, None]:
+    try:
+        checkpointer = request.app.state.checkpointer
+        async with checkpointer._cursor() as cursor:
+            yield cursor
+    except Exception as e:
+        logger.error(f'Error getting db cursor: {e}')
+        raise HTTPException(status_code=500, detail='Internal server error')
+
+
 async def get_db_connection(request: Request) -> AsyncGenerator[AsyncConnection, None]:
-    async with request.app.state.connection_pool.connection() as conn:
-        try:
+    try:
+        checkpointer = request.app.state.checkpointer
+        async with checkpointer.conn.connection() as conn:
             yield conn
-        except Exception as e:
-            logger.error(f'Error getting db connection: {e}')
-            raise HTTPException(status_code=500, detail='Internal server error')
+    except Exception as e:
+        logger.error(f'Error getting db connection: {e}')
+        raise HTTPException(status_code=500, detail='Internal server error')
 
 
 # =============================================================================
@@ -117,7 +129,6 @@ def get_query_analyzer_dependency() -> MultiStepAnalyzer:
 # =============================================================================
 # Musinsa API Wrapper 관련 의존성
 # =============================================================================
-from app.services.musinsa import MusinsaAPIWrapper
 
 
 def get_musinsa_api_wrapper(request: Request) -> MusinsaAPIWrapper:

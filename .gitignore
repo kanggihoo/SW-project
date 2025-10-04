@@ -70,3 +70,8 @@ scripts/
 GEMINI.md
 docker-compose.yml
 tmp.py
+checkpoints.*
+test_results/
+.env*
+gui/
+taskqueue/

@@ -1,10 +1,17 @@
 from enum import StrEnum
 from typing import Annotated, Any
 
-from pydantic import Field, SecretStr
+from pydantic import BeforeValidator, Field, HttpUrl, SecretStr, TypeAdapter
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from llm.llm_models import AllModelEnum, GoogleModelName, LLMProvider, OpenAIModelName, OpenRouterModelName
+
+
+def check_str_is_http(x: str) -> str:
+    # Pydantic의 HttpUrl 타입을 사용하여 유효성을 검사하는 어댑터를 생성합니다.
+    http_url_adapter = TypeAdapter(HttpUrl)
+    # 입력값(x)의 유효성을 검사하고, 통과하면 문자열로 변환하여 반환합니다.
+    return str(http_url_adapter.validate_python(x))
 
 
 class EnvType(StrEnum):
@@ -12,6 +19,22 @@ class EnvType(StrEnum):
 
     LOCAL = 'local'
     CLOUD = 'cloud'
+
+
+class DatabaseType(StrEnum):
+    """Database type"""
+
+    SQLITE = 'sqlite'
+    POSTGRES = 'postgres'
+    MONGO = 'mongo'
+
+
+class MonitoringType(StrEnum):
+    """Monitoring type"""
+
+    LANGFUSE = 'langfuse'
+    LANGSMITH = 'langsmith'
+    NONE = 'none'
 
 
 class Settings(BaseSettings):
@@ -36,10 +59,25 @@ class Settings(BaseSettings):
     DEFAULT_LLM_MODEL: AllModelEnum = OpenRouterModelName.OPENROUTER_GEMINI_20_FLASH_LITE
     AVAILABLE_LLM_MODELS: Annotated[set[AllModelEnum], '사용 가능한 모든 LLM 모델 집합'] = Field(default_factory=set)
 
+    # monitoering type
+    MONITORING_TYPE: MonitoringType = MonitoringType.NONE
+    # Langsmith
+    LANGSMITH_TRACING: Annotated[str, 'Langsmith tracing'] = Field(default='False')
+    LANGSMITH_PROJECT: Annotated[str, 'Langsmith project'] = Field(default='langgraph-agent-test')
+    LANGSMITH_ENDPOINT: str | None = None
+    LANGSMITH_API_KEY: SecretStr | None = None
+
+    # Langfuse
+    LANGFUSE_TRACING: bool = False
+    LANGFUSE_HOST: Annotated[str, BeforeValidator(check_str_is_http)] = 'https://cloud.langfuse.com'
+    LANGFUSE_PUBLIC_KEY: SecretStr | None = None
+    LANGFUSE_SECRET_KEY: SecretStr | None = None
+
     # SQLite 데이터베이스 파일 경로
     SQLITE_DB_PATH: str = 'checkpoints.db'
 
     DB_ENV: Annotated[EnvType, 'Environment type'] = EnvType.LOCAL
+    DATABASE_TYPE: DatabaseType = DatabaseType.POSTGRES
 
     POSTGRES_USER: str | None = None
     POSTGRES_PASSWORD: SecretStr | None = None

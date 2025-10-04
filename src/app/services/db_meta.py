@@ -19,15 +19,15 @@ class DatabaseMetadataService:
                 await cursor.execute('SELECT 1 as test_value')
                 result = await cursor.fetchone()
 
-            end_time = datetime.now(UTC)
-            response_time = (end_time - start_time).total_seconds() * 1000
+                end_time = datetime.now(UTC)
+                response_time = (end_time - start_time).total_seconds() * 1000
 
-            return {
-                'status': 'healthy',
-                'response_time_ms': round(response_time, 2),
-                'timestamp': datetime.now(UTC).isoformat(),
-                'query_result': result.get('test_value') if result else None,
-            }
+                return {
+                    'status': 'healthy',
+                    'response_time_ms': round(response_time, 2),
+                    'timestamp': datetime.now(UTC).isoformat(),
+                    'query_result': result.get('test_value') if result else None,
+                }
         except Exception as e:
             logger.error(f'Health check failed: {e}')
             return {'status': 'unhealthy', 'error': str(e), 'timestamp': datetime.now(UTC).isoformat()}
@@ -77,14 +77,14 @@ class DatabaseMetadataService:
                     # 딕셔너리에서 첫 번째 값 추출
                     result[key] = list(row.values())[0] if row else 0
 
-            # 연결 사용률 계산
-            if result.get('max_connections', 0) > 0:
-                result['connection_usage_percent'] = round((result['total_connections'] / result['max_connections']) * 100, 2)
+                # 연결 사용률 계산
+                if result.get('max_connections', 0) > 0:
+                    result['connection_usage_percent'] = round((result['total_connections'] / result['max_connections']) * 100, 2)
 
             return result
 
         except Exception as e:
-            logger.error(f'Failed to get connection info: {e}')
+            logger.error(f'Failed to get cursor info: {e}')
             raise
 
     async def get_database_info(self, connection: AsyncConnection) -> dict[str, Any]:
@@ -150,7 +150,6 @@ class DatabaseMetadataService:
                 ORDER BY n_live_tup DESC
                 LIMIT 20
             """
-
             async with connection.cursor() as cursor:
                 await cursor.execute(query)
                 rows = await cursor.fetchall()
@@ -166,7 +165,7 @@ class DatabaseMetadataService:
                             processed_row[key] = value
                     result.append(processed_row)
 
-                return result
+            return result
 
         except Exception as e:
             logger.error(f'Failed to get table statistics: {e}')
