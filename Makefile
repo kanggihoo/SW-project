@@ -33,8 +33,6 @@ test:
 
 # Docker Compose 관련 명령어
 start-docker:
-	@echo "🛑 Stopping local PostgreSQL service..."
-	@brew services stop postgresql@17 || true
 	@echo "🐳 Starting Docker Compose services..."
 	@docker compose up 
 	@echo "✅ Docker Compose services started"
@@ -42,20 +40,18 @@ start-docker:
 stop-docker:
 	@echo "🛑 Stopping Docker Compose services..."
 	@docker compose down
-	@echo "🔄 Starting local PostgreSQL service..."
-	@brew services start postgresql@17
 	@echo "✅ Docker Compose stopped and PostgreSQL restarted"
 
 # CLI 실행 관련 명령어
 # 사용법: make start-cli [DB=sqlite|postgres] [MT=langfuse|none] [ENV=production|development] [LOG=info|debug] [MODE=development|production]
-# make start-cli DB=postgres ENV=development LOG=debug
+# make start-cli DB=postgres ENV=dev|production LOG=debug
 start-cli:
 	@echo "🚀 Starting CLI application in new iTerm window..."
-	@DB_TYPE=$${DB:-sqlite}; \
+	@DB_TYPE=$${DB:-postgres}; \
 	MONITOR_TYPE=$${MT:-langfuse}; \
 	ENVIRONMENT=$${ENV:-production}; \
 	LOG_LEVEL=$${LOG:-info}; \
-	FASTAPI_MODE=$${MODE:-development}; \
+	FASTAPI_MODE=$${MODE:-dev}; \
 	osascript \
 		-e 'tell application "iTerm"' \
 		-e 'set newWindow to (create window with default profile)' \

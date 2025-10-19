@@ -73,9 +73,18 @@ class AsyncFashionRepository(BaseAsyncRepository):
     # ===========================================================================
     # 벡터 검색
     # ===========================================================================
-    async def vector_search(self, embedding: list[float], limit: int, pre_filter: dict | None = None) -> list[dict]:
+    async def vector_search(
+        self,
+        embedding: list[float],
+        limit: int,
+        pre_filter: dict | None = None,
+    ) -> list[dict]:
         """비동기 벡터 검색"""
-        pipeline = self.query_builder.vector_search_pipeline(embedding=embedding, limit=limit, pre_filter=pre_filter)
+        pipeline = self.query_builder.vector_search_pipeline(
+            embedding=embedding,
+            limit=limit,
+            pre_filter=pre_filter,
+        )
         try:
             # TODO : 벡터 서치 간에 대응하는 색상이 없는 경우 처리 필요
             # logger.info(f"pipeline: {pipeline}")

@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import status
 
-from graph.agents import get_all_agent_info
+from graph.builders import get_all_agent_info
 from graph.model.api_schema import ErrorResponse
 
 AGENTS = get_all_agent_info()

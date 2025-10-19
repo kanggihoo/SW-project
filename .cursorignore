@@ -3,3 +3,7 @@ pyproject.toml
 .python-version
 .gitignore
 .venv
+.env
+.vscode
+/gui
+/data

@@ -6,7 +6,7 @@ from loguru import logger
 
 from aws.aws_manager import S3Manager
 from db.repository.fashion_async import AsyncFashionRepository
-from embedding.other_api import GeminiEmbedding
+from embedding.gemini import GeminiEmbedding
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
 
 

@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 import json
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -11,11 +12,183 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 from loguru import logger
 
+from graph.constants import COLOR_EXPERT, FITTING_COORDINATER, SKIP_STREAM, STYLE_ANALYST, GraphName, SSETypes, StateName
 from graph.model.api_schema import ChatMessage, StreamInput, UserInput
-from graph.model.constants import SSETypes
 from graph.settings import MonitoringType, settings
 
 from .messages import convert_message_content_to_string, create_ai_message, create_message, langchain_to_chat_message, remove_tool_calls
+
+
+def _get_search_subgraph_initial_state(user_input: UserInput) -> dict[str, Any]:
+    """
+    search_subgraph 테스트를 위한 다양한 시나리오별 초기 state 생성
+
+    시나리오 키워드:
+    - "최초검색" or 기본: 새로운 벡터 검색 시작
+    - "캐시순환" or "다른거": 캐시된 결과에서 다음 코디 가져오기
+    - "캐시소진": 캐시는 있지만 모두 소진된 상태
+    - "색상변경": 색상 조건만 변경 (color_expert만 재실행)
+    - "스타일변경": 스타일 조건만 변경 (style_analyst만 재실행)
+    """
+    message = user_input.message.lower()
+
+    # 시나리오 1: 캐시 순환 (데이터 충분)
+    if '캐시순환' in message or '다른거' in message:
+        return {
+            StateName.USER_MESSAGE: user_input.message,
+            StateName.LAST_UPDATED_FIELDS: ['__SHOW_CACHED__'],  # 캐시 순환 플래그
+            StateName.MESSAGES: [],
+            StateName.EXPERT_OPINIONS: {
+                COLOR_EXPERT: '밝은 톤의 상의와 청바지 하의의 조화로운 데이트룩',
+                STYLE_ANALYST: '캐주얼하면서도 세련된 주말 외출 스타일',
+                FITTING_COORDINATER: '슬림핏 상의와 스트레이트 핏 하의의 균형잡힌 핏',
+            },
+            StateName.EXPERT_SEARCH_CACHE: {
+                COLOR_EXPERT: {
+                    'TOP': ['P001', 'P002', 'P003', 'P004', 'P005'],
+                    'BOTTOM': ['P101', 'P102', 'P103', 'P104', 'P105'],
+                },
+                STYLE_ANALYST: {
+                    'TOP': ['P011', 'P012', 'P013', 'P014', 'P015'],
+                    'BOTTOM': ['P111', 'P112', 'P113', 'P114', 'P115'],
+                },
+                FITTING_COORDINATER: {
+                    'TOP': ['P021', 'P022', 'P023', 'P024', 'P025'],
+                    'BOTTOM': ['P121', 'P122', 'P123', 'P124', 'P125'],
+                },
+            },
+            StateName.EXPERT_OFFSETS: {
+                COLOR_EXPERT: 1,  # 이미 첫 번째 코디 표시함
+                STYLE_ANALYST: 1,
+                FITTING_COORDINATER: 1,
+            },
+            StateName.SHOWN_IN_PRODUCT_IDS: {'P001', 'P101', 'P011', 'P111', 'P021', 'P121'},
+        }
+
+    # 시나리오 2: 캐시 소진
+    elif '캐시소진' in message:
+        return {
+            StateName.USER_MESSAGE: user_input.message,
+            StateName.LAST_UPDATED_FIELDS: ['__SHOW_CACHED__'],
+            StateName.MESSAGES: [],
+            StateName.EXPERT_OPINIONS: {
+                COLOR_EXPERT: '밝은 톤의 상의와 청바지 하의',
+                STYLE_ANALYST: '캐주얼 스타일',
+                FITTING_COORDINATER: '슬림핏 코디',
+            },
+            StateName.EXPERT_SEARCH_CACHE: {
+                COLOR_EXPERT: {
+                    'TOP': ['P001', 'P002', 'P003'],
+                    'BOTTOM': ['P101', 'P102', 'P103'],
+                },
+                STYLE_ANALYST: {
+                    'TOP': ['P011', 'P012'],
+                    'BOTTOM': ['P111', 'P112'],
+                },
+                FITTING_COORDINATER: {
+                    'TOP': ['P021', 'P022', 'P023'],
+                    'BOTTOM': ['P121', 'P122', 'P123'],
+                },
+            },
+            StateName.EXPERT_OFFSETS: {
+                COLOR_EXPERT: 3,  # 모든 캐시 소진
+                STYLE_ANALYST: 2,  # 모든 캐시 소진
+                FITTING_COORDINATER: 3,  # 모든 캐시 소진
+            },
+            StateName.SHOWN_IN_PRODUCT_IDS: {
+                'P001',
+                'P101',
+                'P002',
+                'P102',
+                'P003',
+                'P103',
+                'P011',
+                'P111',
+                'P012',
+                'P112',
+                'P021',
+                'P121',
+                'P022',
+                'P122',
+                'P023',
+                'P123',
+            },
+        }
+
+    # 시나리오 3: 색상 조건만 변경
+    elif '색상변경' in message or '색상' in message:
+        return {
+            StateName.USER_MESSAGE: user_input.message,
+            StateName.LAST_UPDATED_FIELDS: ['color'],  # 색상만 변경
+            StateName.MESSAGES: [],
+            StateName.EXPERT_OPINIONS: {
+                STYLE_ANALYST: '캐주얼 스타일',
+                FITTING_COORDINATER: '슬림핏 코디',
+            },
+            StateName.EXPERT_SEARCH_CACHE: {},  # 조건 변경 시 캐시 초기화됨
+            StateName.EXPERT_OFFSETS: {
+                COLOR_EXPERT: 0,
+                STYLE_ANALYST: 0,
+                FITTING_COORDINATER: 0,
+            },
+            StateName.SHOWN_IN_PRODUCT_IDS: set(),
+        }
+
+    # 시나리오 4: 스타일 조건만 변경
+    elif '스타일변경' in message or '스타일' in message:
+        return {
+            StateName.USER_MESSAGE: user_input.message,
+            StateName.LAST_UPDATED_FIELDS: ['style'],  # 스타일만 변경
+            StateName.MESSAGES: [],
+            StateName.EXPERT_OPINIONS: {
+                COLOR_EXPERT: '밝은 톤의 상의와 청바지 하의',
+                FITTING_COORDINATER: '슬림핏 코디',
+            },
+            StateName.EXPERT_SEARCH_CACHE: {},  # 조건 변경 시 캐시 초기화됨
+            StateName.EXPERT_OFFSETS: {
+                COLOR_EXPERT: 0,
+                STYLE_ANALYST: 0,
+                FITTING_COORDINATER: 0,
+            },
+            StateName.SHOWN_IN_PRODUCT_IDS: set(),
+        }
+
+    # 시나리오 0: 최초 검색 (기본값)
+    else:
+        return {
+            StateName.USER_MESSAGE: user_input.message,
+            StateName.LAST_UPDATED_FIELDS: [],  # 빈 리스트 = 최초 검색
+            StateName.MESSAGES: [],
+            StateName.EXPERT_OPINIONS: {},  # 아직 전문가 의견 없음
+            StateName.EXPERT_SEARCH_CACHE: {},  # 캐시 없음
+            StateName.EXPERT_OFFSETS: {
+                COLOR_EXPERT: 0,
+                STYLE_ANALYST: 0,
+                FITTING_COORDINATER: 0,
+            },
+            StateName.SHOWN_IN_PRODUCT_IDS: set(),
+        }
+
+
+def get_initial_state(agent: CompiledStateGraph, user_input: UserInput) -> dict[str, Any]:
+    if agent.name == GraphName.LLM_SEARCH:
+        return {
+            StateName.MESSAGES: create_message(message_type='human', content=user_input.message),
+            StateName.USER_MESSAGE: user_input.message,
+            StateName.EXPERTS_TO_RUN: [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATER],
+            StateName.CURRENT_EXPERT: COLOR_EXPERT,
+            StateName.USER_NAME: 'kkh',
+        }
+    elif agent.name == GraphName.SEARCH_SUBGRAPH:
+        return _get_search_subgraph_initial_state(user_input)
+    else:
+        return {
+            StateName.MESSAGES: create_message(message_type='human', content=user_input.message),
+            StateName.USER_MESSAGE: user_input.message,
+            StateName.EXPERTS_TO_RUN: [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATER],
+            StateName.CURRENT_EXPERT: COLOR_EXPERT,
+            StateName.USER_NAME: 'kkh',
+        }
 
 
 async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **kwargs) -> tuple[dict[str, Any], UUID]:
@@ -81,20 +254,14 @@ async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **
 
         if interrupted_task:
             input = Command(resume=user_input.message)
-        else:
-            input = {
-                'messages': create_message(message_type='human', content=user_input.message),
-                'user_message': user_input.message,
-                'experts_to_run': ['color_expert', 'style_analyst', 'fitting_coordinator'],
-                'current_expert': 'color_expert',
-            }
 
+        # TODO : 그래프의 이름에 따라서 초기 state 지정하기
+        else:
+            input = get_initial_state(agent, user_input)
             kwargs = {
                 'input': input,
                 'config': config,
             }
-
-            logger.info(f'Successfully handled user input for graph: {run_id}')
         return kwargs, run_id
 
     except HTTPException:
@@ -118,7 +285,7 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
 
     except Exception as e:
         logger.error(f'Failed to handle user input: {e}', exc_info=True)
-        yield f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Failed to process user input: {str(e)}"})}\n\n'
+        yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Failed to process user input: {str(e)}"})}\n\n'
         return
 
     try:
@@ -156,11 +323,9 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
 
                     # node_name 이름에 따라 처리 (supervisor 노드의 도구 호출 결과가 필요한 경우만 처리, 나머지 중간노드 결과는 pass)
                     if node_name == 'supervisor':
-                        if updated_messages and isinstance(updated_messages[-1], ToolMessage):  # tool 메세지만 필요
-                            updated_messages = [updated_messages[-1]]
-                        else:
-                            # 중간 노드 메세지 제거
-                            updated_messages = []
+                        updated_messages = (
+                            [updated_messages[-1]] if updated_messages and isinstance(updated_messages[-1], ToolMessage) else []
+                        )  # tool 메세지만 필요
 
                     if node_name in ('research_expert', 'math_expert'):
                         # 중간 노드 메세지 제거
@@ -209,21 +374,22 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                         chat_message = langchain_to_chat_message(message)
                         # chat_message.run_id = str(run_id)
                     else:
-                        data = {
+                        d = {
                             'type': 'ai',
                             'content': message,
                         }
-                        chat_message = ChatMessage.model_validate(data)
+                        chat_message = ChatMessage.model_validate(d)
                 except Exception as e:
                     logger.error(f'Error parsing message: {e}, message: {message}', exc_info=True)
-                    yield f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Error parsing message: {str(e)}"})}\n\n'
+                    yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Error parsing message: {str(e)}"})}\n\n'
                     continue
 
                 # 사용자가 입력한 메세지를 다시 전송하는 것을 방지
                 if chat_message.type == 'human' and chat_message.content == user_input.message:
                     continue
-                logger.debug(f'stream_mode_type: update인 경우 : {chat_message.model_dump()}')
-                yield f'data: {json.dumps({"type": SSETypes.MESSAGE.value, "content": chat_message.model_dump()})}\n\n'
+                content = chat_message.model_dump()
+                logger.info(f'SSE response => type : {SSETypes.MESSAGE}, content : {content}')
+                yield f'data: {json.dumps({"type": SSETypes.MESSAGE, "content": content})}\n\n'
 
             # ===============================================================================================================
             # SSE 응답에 대한 처리 (stream_mode_type == "messages" 인 경우) => {"type": "token", "content": ChatMessage}
@@ -233,7 +399,7 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                     if not user_input.stream_tokens:
                         continue
                     msg, metadata = data
-                    if 'skip_stream' in metadata.get('tags', []):
+                    if SKIP_STREAM in metadata.get('tags', []):
                         continue
 
                     # ===============================================================================================================
@@ -247,11 +413,12 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                         # Empty content in the context of OpenAI usually means
                         # that the model is asking for a tool to be invoked.
                         # So we only print non-empty content.
-                        logger.info(f'stream_mode_type: messages인 경우 : {convert_message_content_to_string(content)}')
-                        yield f'data: {json.dumps({"type": SSETypes.TOKEN.value, "content": convert_message_content_to_string(content)})}\n\n'
+                        content = convert_message_content_to_string(content)
+                        logger.info(f'SSE response => type : {SSETypes.TOKEN}, content : {content}')
+                        yield f'data: {json.dumps({"type": SSETypes.TOKEN, "content": content})}\n\n'
                 except Exception as e:
                     logger.error(f'Error processing messages stream: {e}', exc_info=True)
-                    yield f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Error processing messages: {str(e)}"})}\n\n'
+                    yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Error processing messages: {str(e)}"})}\n\n'
 
             # ===============================================================================================================
             # stream_mode_type == "custom" 인 경우 처리 (외부 LLM 스트리밍 결과 처리 및 writer를 이용해서 출력을 내보내는 경우 처리)
@@ -264,25 +431,26 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                         logger.warning(f'Invalid custom data format: {data}')
                         continue
 
-                    type, content = data['type'], data['content']
-                    logger.info(f'stream_mode_type: custom인 경우 : {type} , {content}')
-                    match type:
-                        case SSETypes.TOKEN.value:
-                            yield f'data: {json.dumps({"type": SSETypes.TOKEN.value, "content": content})}\n\n'
-                        case SSETypes.STATUS.value:
-                            yield f'data: {json.dumps({"type": SSETypes.STATUS.value, "content": content})}\n\n'
+                    event_type, content = data['type'], data['content']
+                    match event_type:
+                        case SSETypes.TOKEN:
+                            logger.info(f'SSE response => type : {SSETypes.TOKEN} , content : {content}')
+                            yield f'data: {json.dumps({"type": SSETypes.TOKEN, "content": content})}\n\n'
+                        case SSETypes.STATUS:
+                            logger.info(f'SSE response => type : {SSETypes.STATUS} , content : {content}')
+                            yield f'data: {json.dumps({"type": SSETypes.STATUS, "content": content})}\n\n'
                         case _:
-                            logger.warning(f'Unknown custom type: {type}')
+                            logger.warning(f'Unknown custom type: {event_type}')
                 except Exception as e:
                     logger.error(f'Error processing custom stream: {e}', exc_info=True)
-                    yield f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Error processing custom stream: {str(e)}"})}\n\n'
+                    yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Error processing custom stream: {str(e)}"})}\n\n'
 
     except Exception as e:
         logger.error(f'Critical error in message generator: {e}', exc_info=True)
-        yield f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Critical error: {str(e)}"})}\n\n'
+        yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Critical error: {str(e)}"})}\n\n'
     finally:
         logger.info('Message generation completed')
-        yield f'data: {json.dumps({"type": SSETypes.END.value, "content": ""})}\n\n'
+        yield f'data: {json.dumps({"type": SSETypes.END, "content": ""})}\n\n'
 
 
 async def show_graph_stream(
@@ -401,9 +569,13 @@ async def show_graph_stream(
                         # Empty content in the context of OpenAI usually means
                         # that the model is asking for a tool to be invoked.
                         # So we only print non-empty content.
-                        logger.info(f'data: {json.dumps({"type": SSETypes.TOKEN.value, "content": convert_message_content_to_string(content)})}\n\n')
+                        logger.info(
+                            f'SSE response => data : {json.dumps({"type": SSETypes.TOKEN.value, "content": convert_message_content_to_string(content)})}\n\n'
+                        )
                 except Exception as e:
-                    logger.error(f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Error processing messages: {str(e)}"})}\n\n')
+                    logger.error(
+                        f'SSE response => data : {json.dumps({"type": SSETypes.ERROR.value, "content": f"Error processing messages: {str(e)}"})}\n\n'
+                    )
 
             # ===============================================================================================================
             # stream_mode_type == "custom" 인 경우 처리 (외부 LLM 스트리밍 결과 처리 및 writer를 이용해서 출력을 내보내는 경우 처리)
@@ -416,15 +588,15 @@ async def show_graph_stream(
                         logger.warning(f'Invalid custom data format: {data}')
                         continue
 
-                    type, content = data['type'], data['content']
-                    logger.debug(f'stream_mode_type: custom인 경우 : {type} , {content}')
-                    match type:
+                    event_type, content = data['type'], data['content']
+                    logger.debug(f'stream_mode_type: custom인 경우 : {event_type} , {content}')
+                    match event_type:
                         case SSETypes.TOKEN.value:
                             logger.info(f'data: {json.dumps({"type": SSETypes.TOKEN.value, "content": content})}\n\n')
                         case SSETypes.STATUS.value:
                             logger.info(f'data: {json.dumps({"type": SSETypes.STATUS.value, "content": content})}\n\n')
                         case _:
-                            logger.warning(f'Unknown custom type: {type}')
+                            logger.warning(f'Unknown custom type: {event_type}')
                 except Exception as e:
                     logger.error(f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Error processing custom stream: {str(e)}"})}\n\n')
 
@@ -580,14 +752,14 @@ async def test_message_generator(agent: CompiledStateGraph, input: dict, config:
             # 이때 content 데이터는 StatusUpdate 모델 형식으로 전달됨
             # ===============================================================================================================
             if stream_mode_type == 'custom':
-                type, content = None, None
+                event_type, content = None, None
                 try:
                     if not isinstance(data, dict) or 'type' not in data or 'content' not in data:
                         logger.warning(f'Invalid custom data format: {data}')
                         continue
 
-                    type, content = data['type'], data['content']
-                    match type:
+                    event_type, content = data['type'], data['content']
+                    match event_type:
                         case SSETypes.TOKEN.value:
                             logger.info(f'type: {SSETypes.TOKEN} , content: {content}')
                             yield f'data: {json.dumps({"type": SSETypes.TOKEN.value, "content": content})}\n\n'

@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
         DB_ENV: "cloud"
-        POSTGRES_USER: "postgres.mrnvymnblankzratdavt"
-        POSTGRES_HOST: "aws-1-ap-northeast-2.pooler.supabase.com"
-        POSTGRES_PORT: "6543"
-        POSTGRES_DB: "postgres"
+        POSTGRES_USER: "postgres"
+        POSTGRES_HOST: "langgraph.cd6cwm4qy5ph.ap-northeast-2.rds.amazonaws.com"
+        POSTGRES_PORT: "5432"
+        POSTGRES_DB: "langgraph"
         
 
 

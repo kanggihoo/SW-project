@@ -28,7 +28,7 @@ async def get_connection_info(db_connection: DBConnectionDep):
     try:
         return await database_metadata_service.get_connection_info(db_connection)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Failed to get connection info: {str(e)}')
+        raise HTTPException(status_code=500, detail=f'Failed to get connection info: {str(e)}') from e
 
 
 @router.get('/info')
@@ -37,7 +37,7 @@ async def get_database_info(db_connection: DBConnectionDep):
     try:
         return await database_metadata_service.get_database_info(db_connection)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Failed to get database info: {str(e)}')
+        raise HTTPException(status_code=500, detail=f'Failed to get database info: {str(e)}') from e
 
 
 @router.get('/tables/stats')
@@ -46,16 +46,7 @@ async def get_table_statistics(db_connection: DBConnectionDep):
     try:
         return await database_metadata_service.get_table_statistics(db_connection)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Failed to get table statistics: {str(e)}')
-
-
-@router.get('/size')
-async def get_database_size_info(db_connection: DBConnectionDep):
-    """데이터베이스 크기 정보 조회"""
-    try:
-        return await database_metadata_service.get_database_size_info(db_connection)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Failed to get database size info: {str(e)}')
+        raise HTTPException(status_code=500, detail=f'Failed to get table statistics: {str(e)}') from e
 
 
 # 종합 대시보드 엔드포인트
@@ -78,4 +69,4 @@ async def get_database_dashboard(db_connection: DBConnectionDep):
             'size': size if not isinstance(size, Exception) else {'error': str(size)},
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f'Failed to get dashboard info: {str(e)}')
+        raise HTTPException(status_code=500, detail=f'Failed to get dashboard info: {str(e)}') from e

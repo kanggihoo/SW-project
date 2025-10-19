@@ -3,11 +3,12 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from app.config.settings import Environment, settings
 from graph.common.mock_node import mock_external_llm_node
 from graph.common.node import external_llm_node, pop_next_expert_node, search_node
 from graph.common.router import route_expert_loop
 from graph.common.state import State
+from graph.constants import GraphName
+from graph.settings import Environment, settings
 
 
 def build_llm_search_graph() -> CompiledStateGraph:
@@ -45,6 +46,6 @@ def build_llm_search_graph() -> CompiledStateGraph:
     )
 
     compiled_graph = graph_builder.compile()
-    compiled_graph.name = 'llm_search_graph'
+    compiled_graph.name = GraphName.LLM_SEARCH
 
     return compiled_graph

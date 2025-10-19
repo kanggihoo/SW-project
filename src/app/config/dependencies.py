@@ -23,8 +23,8 @@ from aws.s3 import S3Manager
 from db import get_async_fashion_repo, get_async_fashion_sku_repo
 from db.repository.fashion_async import AsyncFashionRepository
 from db.services.search import SearchService
-from embedding.other_api import GeminiEmbedding, gemini_embedding
-from graph.agents import get_all_agent_info
+from embedding.gemini import GeminiEmbedding, gemini_embedding
+from graph.builders import get_all_agent_info
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
 
 
@@ -62,7 +62,7 @@ async def get_db_cursor(request: Request) -> AsyncGenerator[AsyncCursor, None]:
             yield cursor
     except Exception as e:
         logger.error(f'Error getting db cursor: {e}')
-        raise HTTPException(status_code=500, detail='Internal server error')
+        raise HTTPException(status_code=500, detail='Internal server error') from e
 
 
 async def get_db_connection(request: Request) -> AsyncGenerator[AsyncConnection, None]:
@@ -72,7 +72,7 @@ async def get_db_connection(request: Request) -> AsyncGenerator[AsyncConnection,
             yield conn
     except Exception as e:
         logger.error(f'Error getting db connection: {e}')
-        raise HTTPException(status_code=500, detail='Internal server error')
+        raise HTTPException(status_code=500, detail='Internal server error') from e
 
 
 # =============================================================================

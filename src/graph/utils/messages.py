@@ -190,8 +190,8 @@ def langchain_to_chat_message(message: BaseMessage) -> ChatMessage:
                     )
                     if hasattr(message, 'tool_calls') and message.tool_calls:
                         ai_message.tool_calls = message.tool_calls
-                    if hasattr(message, 'response_metadata') and message.response_metadata:
-                        ai_message.response_metadata = message.response_metadata
+                    # if hasattr(message, 'response_metadata') and message.response_metadata:
+                    #     ai_message.response_metadata = message.response_metadata
                     logger.debug(f'Converted AIMessage to ChatMessage: {content[:100]}...')
                     return ai_message
                 except Exception as e:

@@ -5,10 +5,11 @@
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from app.config.settings import Environment, settings
 from graph.common.mock_node import mock_external_llm_node
 from graph.common.node import external_llm_node, search_node
 from graph.common.state import State
+from graph.constants import GraphName
+from graph.settings import Environment, settings
 
 
 def build_llm_search_once_graph() -> CompiledStateGraph:
@@ -40,6 +41,6 @@ def build_llm_search_once_graph() -> CompiledStateGraph:
     graph_builder.add_edge('external_llm', 'search')
 
     compiled_graph = graph_builder.compile()
-    compiled_graph.name = 'llm_search_once_graph'
+    compiled_graph.name = GraphName.LLM_SEARCH_ONCE
 
     return compiled_graph

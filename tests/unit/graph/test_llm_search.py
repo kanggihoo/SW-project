@@ -52,6 +52,15 @@ class TestSearchNode:
                 #     assert parsed.additional_kwargs.get('type') == 'refer'
                 #     assert parsed.additional_kwargs.get('product_ids')
 
+    async def test_graph_properties(self, test_state, test_config, capture_log):
+        agent = build_llm_search_graph()
+        assert isinstance(agent, CompiledStateGraph)
+        logger.info(dir(agent))
+        logger.info(agent.get_input_jsonschema())
+        logger.info(agent.get_input_schema())
+        logger.info(agent.get_name())
+        logger.info(agent.name)
+
     # @pytest.mark.asyncio
     # async def test_search_node_success(self, mock_state, mock_config_for_search_node):
     #     """Test successful search operation"""

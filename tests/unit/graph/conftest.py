@@ -15,7 +15,7 @@ from graph.model.graph_schemas import ClothSearch
 from loguru import logger
 import sys
 import json
-from graph.model.constants import SSETypes
+from graph.constants import SSETypes
 from graph.model.api_schema import ChatMessage, StatusUpdate
 
 

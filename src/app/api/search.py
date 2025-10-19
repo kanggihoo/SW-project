@@ -1,15 +1,26 @@
 import asyncio
+import time
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, Body, HTTPException, Path
 from loguru import logger
 
-from app.config.dependencies import HTTPClientDep, MusinsaAPIWrapperDep, RepositoryDep, S3ManagerDep
-from app.model.saarch_api import SearchOneProductResponse
+from app.config.dependencies import (
+    HTTPClientDep,
+    MusinsaAPIWrapperDep,
+    RepositoryDep,
+    S3ManagerDep,
+    SearchServiceDep,
+)
+from app.model.search_api import (
+    SearchOneProductResponse,
+    SearchRequest,
+    SearchResponse,
+    SearchResultItem,
+)
 
 router = APIRouter(
     prefix='/search',
-    tags=['search'],
 )
 
 
@@ -57,7 +68,8 @@ PRODUCT_ID_REGEX = r'^[0-9]+_[가-힣]+$'
 
 
 # TODO : 무신사api로 부터 실시간 정보 업데이트 해서 가져오기 (만약에 판매중인 상품이 아니면??)
-@router.get('/{product_id}', response_model=SearchOneProductResponse)
+# TODO : 여기서 가져온 실시간 정보를 taskqueu 이용해서 mongodb에 반영할 수 있도록 하기
+@router.get('/{product_id}', response_model=SearchOneProductResponse, tags=['search'])
 async def search_product(
     s3_manager: S3ManagerDep,
     repository: RepositoryDep,
@@ -138,6 +150,70 @@ async def search_product(
         }
 
         return SearchOneProductResponse(success=True, data=data, message='상품 조회 성공')
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'An unexpected server error occurred: {e}') from e
+
+
+@router.post('/test/vector_search_pipeline', response_model=SearchResponse, tags=['test'])
+async def test_vector_search_pipeline(
+    search_service: SearchServiceDep,
+    request: Annotated[SearchRequest, Body()],
+):
+    """
+    사용자 쿼리를 기반으로 상품을 검색합니다.
+    - 쿼리 분석 (향후 확장)
+    - 임베딩 생성
+    - 벡터 검색 수행
+    - 결과 반환
+    """
+    try:
+        start_time = time.perf_counter()
+        query = request.messages
+        limit = request.limit
+        # SearchService를 통해 비동기적으로 검색 수행
+        search_result = await search_service.search_by_query(query, limit=limit)  # limit은 예시
+
+        # 결과를 API 응답 모델에 맞게 변환
+        response_data = SearchResultItem(
+            query=search_result['query'],
+            data=search_result['data'],
+            total_count=search_result['total_count'],
+        )
+        logger.info(f'search_api_response_time: {time.perf_counter() - start_time}')
+        return SearchResponse(success=True, data=response_data, message='Search completed successfully')
+
+    except HTTPException as e:
+        # 서비스에서 발생한 HTTPException을 그대로 전달
+        raise e
+    except Exception as e:
+        # 그 외 예상치 못한 예외 처리
+        raise HTTPException(status_code=500, detail=f'An unexpected server error occurred: {e}') from e
+
+
+from pydantic import BaseModel, Field
+
+
+class VectorSearchRequest(BaseModel):
+    messages: Annotated[str, Field(..., description='검색 쿼리')]
+    limit: Annotated[int, Field(default=1, description='검색 결과 개수')]
+    filter: Annotated[dict, Field(default_factory=dict, description='필터', examples=[{'main_category': '하의', 'color': '그린'}])]
+
+
+@router.post('/test/single_vector_search', response_model=SearchResponse, tags=['test'], summary='single_vector_search, skip query analysis')
+async def test_vector_search(
+    search_service: SearchServiceDep,
+    request: Annotated[VectorSearchRequest, Body()],
+):
+    try:
+        start_time = time.perf_counter()
+        query = request.messages
+        limit = request.limit
+        filter = request.filter
+        search_result = await search_service.search_by_single_query_skip_query_analysis(query, limit, filter)
+        logger.info(f'search_api_response_time: {time.perf_counter() - start_time}')
+        return SearchResponse(success=True, data=search_result, message='Search completed successfully')
     except HTTPException as e:
         raise e
     except Exception as e:

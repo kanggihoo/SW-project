@@ -33,6 +33,7 @@ MANIFEST
 .env
 .vscode
 .cursor
+.claude
 
 
 
@@ -75,3 +76,9 @@ test_results/
 .env*
 gui/
 taskqueue/
+test_results/
+results/
+
+# cache file
+.pytest_cache/
+.ruff_cache/

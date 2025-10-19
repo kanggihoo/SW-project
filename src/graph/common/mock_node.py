@@ -7,8 +7,8 @@ from langgraph.config import get_stream_writer
 from loguru import logger
 
 from graph.common.state import State
+from graph.constants import SSETypes
 from graph.model.api_schema import StatusUpdate
-from graph.model.constants import SSETypes
 
 MOCK_DATA_COLOR_EXPERT = [
     'data: {"type": "status", "content": {"task_id": "color_expert", "state": "progress", "content": "착장 매칭 시작...", "error_details": null}}\n\n',

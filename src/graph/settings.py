@@ -14,6 +14,12 @@ def check_str_is_http(x: str) -> str:
     return str(http_url_adapter.validate_python(x))
 
 
+class Environment(StrEnum):
+    DEVELOPMENT = 'development'  # 개발환경(실제 API 호출)
+    PRODUCTION = 'production'  # 운영환경 (실제 API 호출)
+    TESTING = 'test'  # 테스트 환경 (Mock API 호출 및 MOCK 그래프 노드 호출)
+
+
 class EnvType(StrEnum):
     """Environment type"""
 
@@ -58,6 +64,8 @@ class Settings(BaseSettings):
     # DEFAULT_LLM_MODEL : AllModelEnum  = OpenRouterModelName.GEMINI_20_FLASH_LITE
     DEFAULT_LLM_MODEL: AllModelEnum = OpenRouterModelName.OPENROUTER_GEMINI_20_FLASH_LITE
     AVAILABLE_LLM_MODELS: Annotated[set[AllModelEnum], '사용 가능한 모든 LLM 모델 집합'] = Field(default_factory=set)
+
+    ENV: Annotated[Environment, '실행 환경변수 : development, production, test'] = Field(default=Environment.PRODUCTION)
 
     # monitoering type
     MONITORING_TYPE: MonitoringType = MonitoringType.NONE

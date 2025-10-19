@@ -11,7 +11,7 @@ from langfuse import get_client
 from loguru import logger
 
 # langgraph 관련 모듈 import
-from graph.agents import get_agent, get_all_agent_info
+from graph.builders import get_agent, get_all_agent_info
 from graph.memory import initialize_database
 from graph.settings import DatabaseType, MonitoringType, settings
 
@@ -115,7 +115,7 @@ async def lifespan(app: FastAPI):
             agent_names = get_all_agent_info()
             agents = {}
             for agent_name in agent_names:
-                agent = get_agent(agent_name)
+                agent = get_agent(agent_name, client=app.state.http_session)
                 # if agent_name == "llm_search":
                 #     agent = builder(app.state.http_session, app.state.db_repo)
                 # else:
