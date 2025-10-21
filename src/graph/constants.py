@@ -5,7 +5,7 @@ HTTP_SESSION = 'http_session'
 SEARCH_SERVICE = 'search_service'
 COLOR_EXPERT = 'color_expert'
 STYLE_ANALYST = 'style_analyst'
-FITTING_COORDINATER = 'fitting_coordinater'
+FITTING_COORDINATOR = 'fitting_coordinator'
 SHOW_CACHED = '__SHOW_CACHED__'
 SKIP_STREAM = 'skip_stream'
 

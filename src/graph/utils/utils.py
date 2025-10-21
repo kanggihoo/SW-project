@@ -14,7 +14,7 @@ from loguru import logger
 
 from graph.constants import (
     COLOR_EXPERT,
-    FITTING_COORDINATER,
+    FITTING_COORDINATOR,
     SHOW_CACHED,
     SKIP_STREAM,
     STYLE_ANALYST,
@@ -73,7 +73,7 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
             StateName.EXPERT_OPINIONS: {
                 COLOR_EXPERT: '블루 셔츠에 네이비 베스트와 그레이 와이드 슬랙스는톤온톤 원리로 세련된 색상 조화를 이루고 있어. 차가운 계열의 블루와 네이비의 레이어드는 명도 대비를 통해 깊이감을 만들어내. 화이트 셔츠의 포인트와 블랙 로퍼의 마무리로 전체적인 색상밸런스가 안정적으로 구성되어 있어.',
                 STYLE_ANALYST: '화이트 버튼다운 반팔 셔츠에 블랙 핀스트라이프 슬랙스가 잘 어울려. 셔츠 앞부분만 살짝 넣어서 캐주얼하면서도 세련된 데이트룩을 완성할 수 있어. 브라운 옥스포드 슈즈로 포멀한 느낌을 더하고 실버 가죽 시계로 포인트를 줘.셔츠 버튼 1-2개 풀어서 답답해보이지 않게 연출하면 돼.',
-                FITTING_COORDINATER: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
+                FITTING_COORDINATOR: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
             },
             StateName.EXPERT_SEARCH_CACHE: {
                 COLOR_EXPERT: {
@@ -84,7 +84,7 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
                     'TOP': ['3847744_화이트', '4989731_화이트', '4898914_화이트', '4989730_화이트', '2171532_화이트'],
                     'BOTTOM': ['2503135_블랙', '3201942_블랙', '4149670_블랙', '4750059_블랙', '3187939_블랙'],
                 },
-                FITTING_COORDINATER: {
+                FITTING_COORDINATOR: {
                     'TOP': ['4227290_베이지', '4045199_베이지', '4917809_베이지', '3847744_베이지', '4045204_베이지'],
                     'BOTTOM': ['2711142_블랙', '3201942_블랙', '3139448_블랙', '4149670_블랙', '3187939_블랙'],
                 },
@@ -92,7 +92,7 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
             StateName.EXPERT_OFFSETS: {
                 COLOR_EXPERT: 1,  # 이미 첫 번째 코디 표시함
                 STYLE_ANALYST: 1,
-                FITTING_COORDINATER: 1,
+                FITTING_COORDINATOR: 1,
             },
             StateName.SHOWN_IN_PRODUCT_IDS: {'4255016_블루', '5081343_그레이', '3847744_화이트', '2503135_블랙', '4227290_베이지', '2711142_블랙'},
         }
@@ -116,7 +116,7 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
             StateName.EXPERT_OPINIONS: {
                 COLOR_EXPERT: '블루 셔츠에 네이비 베스트와 그레이 와이드 슬랙스는톤온톤 원리로 세련된 색상 조화를 이루고 있어. 차가운 계열의 블루와 네이비의 레이어드는 명도 대비를 통해 깊이감을 만들어내. 화이트 셔츠의 포인트와 블랙 로퍼의 마무리로 전체적인 색상밸런스가 안정적으로 구성되어 있어.',
                 STYLE_ANALYST: '화이트 버튼다운 반팔 셔츠에 블랙 핀스트라이프 슬랙스가 잘 어울려. 셔츠 앞부분만 살짝 넣어서 캐주얼하면서도 세련된 데이트룩을 완성할 수 있어. 브라운 옥스포드 슈즈로 포멀한 느낌을 더하고 실버 가죽 시계로 포인트를 줘.셔츠 버튼 1-2개 풀어서 답답해보이지 않게 연출하면 돼.',
-                FITTING_COORDINATER: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
+                FITTING_COORDINATOR: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
             },
             StateName.EXPERT_SEARCH_CACHE: {
                 COLOR_EXPERT: {
@@ -127,7 +127,7 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
                     'TOP': ['3847744_화이트', '4989731_화이트'],
                     'BOTTOM': ['2503135_블랙', '3201942_블랙'],
                 },
-                FITTING_COORDINATER: {
+                FITTING_COORDINATOR: {
                     'TOP': ['4227290_베이지', '4045199_베이지', '4917809_베이지'],
                     'BOTTOM': ['2711142_블랙', '3201942_블랙', '3139448_블랙'],
                 },
@@ -135,7 +135,7 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
             StateName.EXPERT_OFFSETS: {
                 COLOR_EXPERT: 3,  # 모든 캐시 소진
                 STYLE_ANALYST: 2,  # 모든 캐시 소진
-                FITTING_COORDINATER: 3,  # 모든 캐시 소진
+                FITTING_COORDINATOR: 3,  # 모든 캐시 소진
             },
             StateName.SHOWN_IN_PRODUCT_IDS: {
                 '4255016_블루',
@@ -168,7 +168,7 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
                 StateName.EXPERT_OFFSETS: {
                     COLOR_EXPERT: 0,
                     STYLE_ANALYST: 0,
-                    FITTING_COORDINATER: 0,
+                    FITTING_COORDINATOR: 0,
                 },
                 StateName.SHOWN_IN_PRODUCT_IDS: set(),
             }
@@ -181,13 +181,13 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
             StateName.MESSAGES: [],
             StateName.EXPERT_OPINIONS: {
                 STYLE_ANALYST: '화이트 버튼다운 반팔 셔츠에 블랙 핀스트라이프 슬랙스가 잘 어울려. 셔츠 앞부분만 살짝 넣어서 캐주얼하면서도 세련된 데이트룩을 완성할 수 있어. 브라운 옥스포드 슈즈로 포멀한 느낌을 더하고 실버 가죽 시계로 포인트를 줘.셔츠 버튼 1-2개 풀어서 답답해보이지 않게 연출하면 돼.',
-                FITTING_COORDINATER: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
+                FITTING_COORDINATOR: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
             },
             StateName.EXPERT_SEARCH_CACHE: {},  # 조건 변경 시 캐시 초기화됨
             StateName.EXPERT_OFFSETS: {
                 COLOR_EXPERT: 0,
                 STYLE_ANALYST: 0,
-                FITTING_COORDINATER: 0,
+                FITTING_COORDINATOR: 0,
             },
             StateName.SHOWN_IN_PRODUCT_IDS: set(),
         }
@@ -204,7 +204,7 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
                 StateName.EXPERT_OFFSETS: {
                     COLOR_EXPERT: 0,
                     STYLE_ANALYST: 0,
-                    FITTING_COORDINATER: 0,
+                    FITTING_COORDINATOR: 0,
                 },
                 StateName.SHOWN_IN_PRODUCT_IDS: set(),
             }
@@ -217,13 +217,13 @@ def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dic
             StateName.MESSAGES: [],
             StateName.EXPERT_OPINIONS: {
                 COLOR_EXPERT: '블루 셔츠에 네이비 베스트와 그레이 와이드 슬랙스는톤온톤 원리로 세련된 색상 조화를 이루고 있어. 차가운 계열의 블루와 네이비의 레이어드는 명도 대비를 통해 깊이감을 만들어내. 화이트 셔츠의 포인트와 블랙 로퍼의 마무리로 전체적인 색상밸런스가 안정적으로 구성되어 있어.',
-                FITTING_COORDINATER: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
+                FITTING_COORDINATOR: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
             },
             StateName.EXPERT_SEARCH_CACHE: {},  # 조건 변경 시 캐시 초기화됨
             StateName.EXPERT_OFFSETS: {
                 COLOR_EXPERT: 0,
                 STYLE_ANALYST: 0,
-                FITTING_COORDINATER: 0,
+                FITTING_COORDINATOR: 0,
             },
             StateName.SHOWN_IN_PRODUCT_IDS: set(),
         }
@@ -252,7 +252,7 @@ def get_initial_state(agent: CompiledStateGraph, user_input: UserInput, current_
         return {
             StateName.MESSAGES: create_message(message_type='human', content=user_input.message),
             StateName.USER_MESSAGE: user_input.message,
-            StateName.EXPERTS_TO_RUN: [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATER],
+            StateName.EXPERTS_TO_RUN: [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR],
             StateName.CURRENT_EXPERT: COLOR_EXPERT,
             StateName.USER_NAME: 'kkh',
             StateName.IS_PREDEFINED_TEMPLATE: user_input.is_predefined_template,

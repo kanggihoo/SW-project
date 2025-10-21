@@ -10,7 +10,7 @@ from graph.common.utils import external_streaming_llm
 from graph.constants import (
     COLOR_EXPERT,
     CONFIG,
-    FITTING_COORDINATER,
+    FITTING_COORDINATOR,
     HTTP_SESSION,
     SEARCH_SERVICE,
     STYLE_ANALYST,
@@ -372,7 +372,7 @@ def prepare_search_cycle_node(state: State) -> dict:
 
     if not changed_fields:
         logger.info('- 최초 검색 -> 전문가 전체 호출')
-        experts_to_run = [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATER]
+        experts_to_run = [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR]
         return {
             StateName.EXPERTS_TO_RUN: experts_to_run,
         }
@@ -391,10 +391,10 @@ def prepare_search_cycle_node(state: State) -> dict:
 
         # TPO 변경 또는 복합 변경 -> 전체 재평가
         elif 'tpo' in changed_fields or len(changed_fields) > 1:
-            experts_set.update([COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATER])
+            experts_set.update([COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR])
             logger.info('  → 전체 전문가 재평가')
         else:
-            experts_set.update([COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATER])
+            experts_set.update([COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR])
             logger.info('  → 기본: 전체 전문가 실행')
 
         experts_to_run = list(experts_set)

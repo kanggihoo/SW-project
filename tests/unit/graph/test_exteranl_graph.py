@@ -84,14 +84,14 @@
 #     return _get_mock_stream(kwargs.get('expert_type'))
 
 
-# # @pytest.mark.asyncio
-# # @patch('graph.common.node.external_streaming_llm', side_effect=mock_async_generator)
-# # async def test_build_external_llm_graph(mock_llm_call, test_state, test_config, capture_log):
-# #     graph = build_external_llm_graph()
-# #     assert isinstance(graph, CompiledStateGraph)
-# #     state = test_state(messages=[HumanMessage(content='데이트')], current_expert='fitting_coordinator')
-# #     logger.info(f'state: {state}')
-# #     await show_graph_stream(graph=graph, input=state, config=test_config, user_input=UserInput(message='데이트'))
+# @pytest.mark.asyncio
+# @patch('graph.common.node.external_streaming_llm', side_effect=mock_async_generator)
+# async def test_build_external_llm_graph(mock_llm_call, test_state, test_config, capture_log):
+#     graph = build_external_llm_graph()
+#     assert isinstance(graph, CompiledStateGraph)
+#     state = test_state(messages=[HumanMessage(content='데이트')], current_expert='fitting_coordinator')
+#     logger.info(f'state: {state}')
+#     await show_graph_stream(graph=graph, input=state, config=test_config, user_input=UserInput(message='데이트'))
 
 
 # @pytest.mark.asyncio

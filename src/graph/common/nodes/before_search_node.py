@@ -8,7 +8,7 @@ from loguru import logger
 from graph.common.state import State
 from graph.constants import (
     COLOR_EXPERT,
-    FITTING_COORDINATER,
+    FITTING_COORDINATOR,
     HISTORY_WINDOW_LARGE,
     HISTORY_WINDOW_MEDIUM,
     HISTORY_WINDOW_SMALL,
@@ -248,7 +248,7 @@ async def information_update_node(state: State):
         StateName.EXPERT_OFFSETS: {
             COLOR_EXPERT: 0,
             STYLE_ANALYST: 0,
-            FITTING_COORDINATER: 0,
+            FITTING_COORDINATOR: 0,
         },
     }
 
