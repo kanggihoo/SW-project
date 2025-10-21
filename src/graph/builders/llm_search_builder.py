@@ -7,7 +7,7 @@ from graph.common.nodes.mock_node import mock_external_llm_node
 from graph.common.nodes.search_node import pop_next_expert_node, run_expert_evaluation_node, search_node
 from graph.common.router import route_expert_loop
 from graph.common.state import State
-from graph.constants import GraphName
+from graph.constants import GraphName, NodeName, RouterReturnNames
 from graph.settings import Environment, settings
 
 
@@ -26,24 +26,24 @@ def build_llm_search_graph() -> CompiledStateGraph:
     graph_builder = StateGraph(State)
 
     # Add nodes
-    graph_builder.add_node('pop_next_expert', pop_next_expert_node)
+    graph_builder.add_node(NodeName.POP_NEXT_EXPERT, pop_next_expert_node)
     if settings.ENV == Environment.TESTING:
-        graph_builder.add_node('external_llm', mock_external_llm_node)
+        graph_builder.add_node(NodeName.RUN_EXPERT_EVALUATION, mock_external_llm_node)
     else:
-        graph_builder.add_node('external_llm', run_expert_evaluation_node)
-    graph_builder.add_node('search', search_node)
+        graph_builder.add_node(NodeName.RUN_EXPERT_EVALUATION, run_expert_evaluation_node)
+    graph_builder.add_node(NodeName.VECTOR_SEARCH, search_node)
 
     # Add edges
-    graph_builder.add_edge(START, 'pop_next_expert')
-    graph_builder.add_edge('pop_next_expert', 'external_llm')
-    graph_builder.add_edge('external_llm', 'search')
+    graph_builder.add_edge(START, NodeName.POP_NEXT_EXPERT)
+    graph_builder.add_edge(NodeName.POP_NEXT_EXPERT, NodeName.RUN_EXPERT_EVALUATION)
+    graph_builder.add_edge(NodeName.RUN_EXPERT_EVALUATION, NodeName.VECTOR_SEARCH)
 
     # Add conditional edges for expert loop control
     graph_builder.add_conditional_edges(
-        'search',
+        NodeName.VECTOR_SEARCH,
         route_expert_loop,
         {
-            'continue_loop': 'pop_next_expert',
+            RouterReturnNames.CONTINUE_LOOP: NodeName.POP_NEXT_EXPERT,
             END: END,
         },
     )
