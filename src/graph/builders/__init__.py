@@ -5,7 +5,7 @@ from loguru import logger
 
 from graph.constants import GraphName
 
-from .chatbot_builder import build_chatbot_graph
+from .before_search_builder import build_before_search_graph
 from .fashion_search_builder import build_fashion_search_graph
 from .llm_search_builder import build_llm_search_graph
 from .llm_search_once_builder import build_llm_search_once_graph
@@ -14,12 +14,12 @@ from .search_subgraph_builder import build_search_subgraph
 DEFAULT_AGENT_NAME = GraphName.FASHION_SEARCH
 
 agents = {
-    GraphName.CHATBOT: build_chatbot_graph,
     # 'product' : build_product_graph,
     GraphName.SEARCH_SUBGRAPH: build_search_subgraph,
     GraphName.LLM_SEARCH: build_llm_search_graph,
     GraphName.LLM_SEARCH_ONCE: build_llm_search_once_graph,
     GraphName.FASHION_SEARCH: build_fashion_search_graph,
+    GraphName.BEFORE_SEARCH: build_before_search_graph,
 }
 
 # def get_graph_builder(agent_name:str)->Callable[[httpx.AsyncClient | None],CompiledStateGraph]:

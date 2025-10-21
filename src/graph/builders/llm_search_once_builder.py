@@ -5,8 +5,8 @@
 from langgraph.graph import START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from graph.common.mock_node import mock_external_llm_node
-from graph.common.node import external_llm_node, search_node
+from graph.common.nodes.mock_node import mock_external_llm_node
+from graph.common.nodes.search_node import run_expert_evaluation_node, search_node
 from graph.common.state import State
 from graph.constants import GraphName
 from graph.settings import Environment, settings
@@ -33,7 +33,7 @@ def build_llm_search_once_graph() -> CompiledStateGraph:
     if settings.ENV == Environment.TESTING:
         graph_builder.add_node('external_llm', mock_external_llm_node)
     else:
-        graph_builder.add_node('external_llm', external_llm_node)
+        graph_builder.add_node('external_llm', run_expert_evaluation_node)
     graph_builder.add_node('search', search_node)
 
     # Add edges

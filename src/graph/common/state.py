@@ -21,12 +21,14 @@ class State(TypedDict):
 
     # ----------------------------------------- 유저 정보
     user_name: str
+    is_predefined_template: Annotated[bool, Field(description='미리 정의된 템플릿 클릭 여부. True: 템플릿, False: 직접 입력')]
 
     # -----------------------------------------
     last_updated_fields: Annotated[list[str], Field(description='마지막으로 업데이트된 필드')]
     experts_to_run: Annotated[list[str], Field(description='실행할 전문가 목록')]
     current_expert: Annotated[str, Field(description='현재 실행중인 전문가')]
     expert_opinions: Annotated[dict[str, str], Field(description='전문가별 의견 저장. {"expert_name": "expert_opinion"}')]
+    cache_cyclable: Annotated[bool, Field(description='캐시 순환 가능 여부')]
 
     # --- ▼ [추가] 캐시 순환 로직을 위한 상태 ---
     # 벡터 검색 결과를 전문가별로 저장할 딕셔너리입니다.

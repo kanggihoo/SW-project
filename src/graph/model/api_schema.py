@@ -26,6 +26,7 @@ class UserInput(BaseModel):
     thread_id : 대화 스레드 ID(고유한 유저에 대한 채팅방 식별 ID)
     user_id : 사용자 ID(동일한 사용자의 여러 채팅방에서 대화를 유지하기 위한 식별 ID)
     agent_config : 에이전트 설정
+    is_predefined_template : 미리 정의된 템플릿 클릭 여부 (Perplexity처럼)
     """
 
     message: str = Field(
@@ -52,6 +53,16 @@ class UserInput(BaseModel):
         description='Additional configuration to pass through to the agent',
         default_factory=dict,
         examples=[{'spicy_level': 0.8}],
+    )
+    is_predefined_template: bool = Field(
+        description='미리 정의된 템플릿(버튼) 클릭 여부. True: 템플릿 클릭, False: 직접 입력',
+        default=False,
+        examples=[False, True],
+    )
+    product_id: str | None = Field(
+        description='채팅 UI에서 클릭한 제품 ID. None: 제품 클릭 안 함, str: 제품 ID',
+        default=None,
+        examples=[None, '4255016_블루'],
     )
 
 

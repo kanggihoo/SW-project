@@ -3,18 +3,20 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from graph.common.node import (
-    external_llm_node,
+from graph.common.nodes.mock_node import mock_external_llm_node
+from graph.common.nodes.search_node import (
     get_cached_item_node,
     pop_next_expert_node,
     prepare_cache_cycle_node,
     prepare_search_cycle_node,
+    run_expert_evaluation_node,
     search_node,
     send_refinement_prompt_node,
 )
 from graph.common.router import decide_work_after_pop, route_after_cache_preparation, route_expert_loop, route_search_entry
 from graph.common.state import State
 from graph.constants import GraphName, NodeName, RouterReturnNames
+from graph.settings import Environment, settings
 
 # def information_update_node(state: State):
 
@@ -34,7 +36,10 @@ def build_search_subgraph() -> CompiledStateGraph:
     graph_builder.add_node(NodeName.POP_NEXT_EXPERT, pop_next_expert_node)
 
     # 실제 벡터 검색 관련 노드들
-    graph_builder.add_node(NodeName.RUN_EXPERT_EVALUATION, external_llm_node)
+    if settings.ENV == Environment.TESTING:
+        graph_builder.add_node(NodeName.RUN_EXPERT_EVALUATION, mock_external_llm_node)
+    else:
+        graph_builder.add_node(NodeName.RUN_EXPERT_EVALUATION, run_expert_evaluation_node)
     graph_builder.add_node(NodeName.VECTOR_SEARCH, search_node)
 
     # 캐시 순환 가능한 경우 캐쉬로 부터 데이터 가져오기 / 캐쉬 순환 불가능 경우 사용자에게 안내 메시지 전송
@@ -109,6 +114,3 @@ def build_search_subgraph() -> CompiledStateGraph:
     search_subgraph = graph_builder.compile()
     search_subgraph.name = GraphName.SEARCH_SUBGRAPH
     return search_subgraph
-
-
-search_subgraph = build_search_subgraph()

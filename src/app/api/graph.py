@@ -106,7 +106,7 @@ async def stream(
     logger.info(f'user_input: {user_input}')
 
     return StreamingResponse(
-        message_generator(user_input, agent, http_session=http_session, search_service=search_service),
+        message_generator(user_input, agent, http_session=http_session, search_service=search_service, search_limit=5),
         media_type='text/event-stream',
     )
 

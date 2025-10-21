@@ -100,6 +100,9 @@ def create_message(
             for key, value in metadata.items():
                 additional_kwargs[key] = value
 
+        if 'type' not in additional_kwargs:
+            additional_kwargs['type'] = 'message'
+
         # 메시지 타입에 따른 객체 생성
         try:
             match message_type:

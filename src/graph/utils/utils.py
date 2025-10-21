@@ -12,14 +12,29 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 from loguru import logger
 
-from graph.constants import COLOR_EXPERT, FITTING_COORDINATER, SKIP_STREAM, STYLE_ANALYST, GraphName, SSETypes, StateName
+from graph.constants import (
+    COLOR_EXPERT,
+    FITTING_COORDINATER,
+    SHOW_CACHED,
+    SKIP_STREAM,
+    STYLE_ANALYST,
+    GraphName,
+    SSETypes,
+    StateName,
+)
 from graph.model.api_schema import ChatMessage, StreamInput, UserInput
 from graph.settings import MonitoringType, settings
 
-from .messages import convert_message_content_to_string, create_ai_message, create_message, langchain_to_chat_message, remove_tool_calls
+from .messages import (
+    convert_message_content_to_string,
+    create_ai_message,
+    create_message,
+    langchain_to_chat_message,
+    remove_tool_calls,
+)
 
 
-def _get_search_subgraph_initial_state(user_input: UserInput) -> dict[str, Any]:
+def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dict[str, Any] | None = None) -> dict[str, Any]:
     """
     search_subgraph 테스트를 위한 다양한 시나리오별 초기 state 생성
 
@@ -29,32 +44,49 @@ def _get_search_subgraph_initial_state(user_input: UserInput) -> dict[str, Any]:
     - "캐시소진": 캐시는 있지만 모두 소진된 상태
     - "색상변경": 색상 조건만 변경 (color_expert만 재실행)
     - "스타일변경": 스타일 조건만 변경 (style_analyst만 재실행)
+
+    Args:
+        user_input: 사용자 입력
+        current_state: 현재 그래프의 state (있으면 기존 상태 유지/병합, 없으면 새로 생성)
     """
     message = user_input.message.lower()
 
+    # 기존 state가 있는지 확인
+    has_existing_state = current_state is not None and bool(current_state)
+
     # 시나리오 1: 캐시 순환 (데이터 충분)
     if '캐시순환' in message or '다른거' in message:
+        # 기존 state가 있으면 기존 데이터 유지하고 필요한 필드만 업데이트
+        if has_existing_state:
+            logger.info('기존 state 유지 - 캐시 순환 모드')
+            return {
+                StateName.USER_MESSAGE: user_input.message,
+                StateName.LAST_UPDATED_FIELDS: [SHOW_CACHED],  # 캐시 순환 플래그
+            }
+
+        # 기존 state가 없으면 테스트용 mock state 생성
+        logger.info('테스트용 mock state 생성 - 캐시 순환')
         return {
             StateName.USER_MESSAGE: user_input.message,
-            StateName.LAST_UPDATED_FIELDS: ['__SHOW_CACHED__'],  # 캐시 순환 플래그
+            StateName.LAST_UPDATED_FIELDS: [SHOW_CACHED],  # 캐시 순환 플래그
             StateName.MESSAGES: [],
             StateName.EXPERT_OPINIONS: {
-                COLOR_EXPERT: '밝은 톤의 상의와 청바지 하의의 조화로운 데이트룩',
-                STYLE_ANALYST: '캐주얼하면서도 세련된 주말 외출 스타일',
-                FITTING_COORDINATER: '슬림핏 상의와 스트레이트 핏 하의의 균형잡힌 핏',
+                COLOR_EXPERT: '블루 셔츠에 네이비 베스트와 그레이 와이드 슬랙스는톤온톤 원리로 세련된 색상 조화를 이루고 있어. 차가운 계열의 블루와 네이비의 레이어드는 명도 대비를 통해 깊이감을 만들어내. 화이트 셔츠의 포인트와 블랙 로퍼의 마무리로 전체적인 색상밸런스가 안정적으로 구성되어 있어.',
+                STYLE_ANALYST: '화이트 버튼다운 반팔 셔츠에 블랙 핀스트라이프 슬랙스가 잘 어울려. 셔츠 앞부분만 살짝 넣어서 캐주얼하면서도 세련된 데이트룩을 완성할 수 있어. 브라운 옥스포드 슈즈로 포멀한 느낌을 더하고 실버 가죽 시계로 포인트를 줘.셔츠 버튼 1-2개 풀어서 답답해보이지 않게 연출하면 돼.',
+                FITTING_COORDINATER: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
             },
             StateName.EXPERT_SEARCH_CACHE: {
                 COLOR_EXPERT: {
-                    'TOP': ['P001', 'P002', 'P003', 'P004', 'P005'],
-                    'BOTTOM': ['P101', 'P102', 'P103', 'P104', 'P105'],
+                    'TOP': ['4255016_블루', '3271408_블루', '4045204_블루', '3858441_블루', '3290710_블루'],
+                    'BOTTOM': ['5081343_그레이', '2711142_그레이', '3201942_그레이', '4897566_그레이', '4750059_그레이'],
                 },
                 STYLE_ANALYST: {
-                    'TOP': ['P011', 'P012', 'P013', 'P014', 'P015'],
-                    'BOTTOM': ['P111', 'P112', 'P113', 'P114', 'P115'],
+                    'TOP': ['3847744_화이트', '4989731_화이트', '4898914_화이트', '4989730_화이트', '2171532_화이트'],
+                    'BOTTOM': ['2503135_블랙', '3201942_블랙', '4149670_블랙', '4750059_블랙', '3187939_블랙'],
                 },
                 FITTING_COORDINATER: {
-                    'TOP': ['P021', 'P022', 'P023', 'P024', 'P025'],
-                    'BOTTOM': ['P121', 'P122', 'P123', 'P124', 'P125'],
+                    'TOP': ['4227290_베이지', '4045199_베이지', '4917809_베이지', '3847744_베이지', '4045204_베이지'],
+                    'BOTTOM': ['2711142_블랙', '3201942_블랙', '3139448_블랙', '4149670_블랙', '3187939_블랙'],
                 },
             },
             StateName.EXPERT_OFFSETS: {
@@ -62,32 +94,42 @@ def _get_search_subgraph_initial_state(user_input: UserInput) -> dict[str, Any]:
                 STYLE_ANALYST: 1,
                 FITTING_COORDINATER: 1,
             },
-            StateName.SHOWN_IN_PRODUCT_IDS: {'P001', 'P101', 'P011', 'P111', 'P021', 'P121'},
+            StateName.SHOWN_IN_PRODUCT_IDS: {'4255016_블루', '5081343_그레이', '3847744_화이트', '2503135_블랙', '4227290_베이지', '2711142_블랙'},
         }
 
     # 시나리오 2: 캐시 소진
     elif '캐시소진' in message:
+        # 기존 state가 있으면 기존 데이터 유지하고 필요한 필드만 업데이트
+        if has_existing_state:
+            logger.info('기존 state 유지 - 캐시 소진 테스트')
+            return {
+                StateName.USER_MESSAGE: user_input.message,
+                StateName.LAST_UPDATED_FIELDS: [SHOW_CACHED],
+            }
+
+        # 기존 state가 없으면 테스트용 mock state 생성
+        logger.info('테스트용 mock state 생성 - 캐시 소진')
         return {
             StateName.USER_MESSAGE: user_input.message,
-            StateName.LAST_UPDATED_FIELDS: ['__SHOW_CACHED__'],
+            StateName.LAST_UPDATED_FIELDS: [SHOW_CACHED],
             StateName.MESSAGES: [],
             StateName.EXPERT_OPINIONS: {
-                COLOR_EXPERT: '밝은 톤의 상의와 청바지 하의',
-                STYLE_ANALYST: '캐주얼 스타일',
-                FITTING_COORDINATER: '슬림핏 코디',
+                COLOR_EXPERT: '블루 셔츠에 네이비 베스트와 그레이 와이드 슬랙스는톤온톤 원리로 세련된 색상 조화를 이루고 있어. 차가운 계열의 블루와 네이비의 레이어드는 명도 대비를 통해 깊이감을 만들어내. 화이트 셔츠의 포인트와 블랙 로퍼의 마무리로 전체적인 색상밸런스가 안정적으로 구성되어 있어.',
+                STYLE_ANALYST: '화이트 버튼다운 반팔 셔츠에 블랙 핀스트라이프 슬랙스가 잘 어울려. 셔츠 앞부분만 살짝 넣어서 캐주얼하면서도 세련된 데이트룩을 완성할 수 있어. 브라운 옥스포드 슈즈로 포멀한 느낌을 더하고 실버 가죽 시계로 포인트를 줘.셔츠 버튼 1-2개 풀어서 답답해보이지 않게 연출하면 돼.',
+                FITTING_COORDINATER: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
             },
             StateName.EXPERT_SEARCH_CACHE: {
                 COLOR_EXPERT: {
-                    'TOP': ['P001', 'P002', 'P003'],
-                    'BOTTOM': ['P101', 'P102', 'P103'],
+                    'TOP': ['4255016_블루', '3271408_블루', '4045204_블루'],
+                    'BOTTOM': ['5081343_그레이', '2711142_그레이', '3201942_그레이'],
                 },
                 STYLE_ANALYST: {
-                    'TOP': ['P011', 'P012'],
-                    'BOTTOM': ['P111', 'P112'],
+                    'TOP': ['3847744_화이트', '4989731_화이트'],
+                    'BOTTOM': ['2503135_블랙', '3201942_블랙'],
                 },
                 FITTING_COORDINATER: {
-                    'TOP': ['P021', 'P022', 'P023'],
-                    'BOTTOM': ['P121', 'P122', 'P123'],
+                    'TOP': ['4227290_베이지', '4045199_베이지', '4917809_베이지'],
+                    'BOTTOM': ['2711142_블랙', '3201942_블랙', '3139448_블랙'],
                 },
             },
             StateName.EXPERT_OFFSETS: {
@@ -96,34 +138,50 @@ def _get_search_subgraph_initial_state(user_input: UserInput) -> dict[str, Any]:
                 FITTING_COORDINATER: 3,  # 모든 캐시 소진
             },
             StateName.SHOWN_IN_PRODUCT_IDS: {
-                'P001',
-                'P101',
-                'P002',
-                'P102',
-                'P003',
-                'P103',
-                'P011',
-                'P111',
-                'P012',
-                'P112',
-                'P021',
-                'P121',
-                'P022',
-                'P122',
-                'P023',
-                'P123',
+                '4255016_블루',
+                '5081343_그레이',
+                '3271408_블루',
+                '2711142_그레이',
+                '4045204_블루',
+                '3201942_그레이',
+                '3847744_화이트',
+                '2503135_블랙',
+                '4989731_화이트',
+                '3201942_블랙',
+                '4227290_베이지',
+                '2711142_블랙',
+                '4045199_베이지',
+                '4917809_베이지',
+                '3139448_블랙',
             },
         }
 
     # 시나리오 3: 색상 조건만 변경
     elif '색상변경' in message or '색상' in message:
+        # 기존 state가 있으면 기존 의견 유지하고 캐시/offset 초기화
+        if has_existing_state:
+            logger.info('기존 state 유지 - 색상 조건 변경, 캐시 초기화')
+            return {
+                StateName.USER_MESSAGE: user_input.message,
+                StateName.LAST_UPDATED_FIELDS: ['color'],  # 색상만 변경
+                StateName.EXPERT_SEARCH_CACHE: {},  # 조건 변경 시 캐시 초기화
+                StateName.EXPERT_OFFSETS: {
+                    COLOR_EXPERT: 0,
+                    STYLE_ANALYST: 0,
+                    FITTING_COORDINATER: 0,
+                },
+                StateName.SHOWN_IN_PRODUCT_IDS: set(),
+            }
+
+        # 기존 state가 없으면 테스트용 mock state 생성
+        logger.info('테스트용 mock state 생성 - 색상 조건 변경')
         return {
             StateName.USER_MESSAGE: user_input.message,
             StateName.LAST_UPDATED_FIELDS: ['color'],  # 색상만 변경
             StateName.MESSAGES: [],
             StateName.EXPERT_OPINIONS: {
-                STYLE_ANALYST: '캐주얼 스타일',
-                FITTING_COORDINATER: '슬림핏 코디',
+                STYLE_ANALYST: '화이트 버튼다운 반팔 셔츠에 블랙 핀스트라이프 슬랙스가 잘 어울려. 셔츠 앞부분만 살짝 넣어서 캐주얼하면서도 세련된 데이트룩을 완성할 수 있어. 브라운 옥스포드 슈즈로 포멀한 느낌을 더하고 실버 가죽 시계로 포인트를 줘.셔츠 버튼 1-2개 풀어서 답답해보이지 않게 연출하면 돼.',
+                FITTING_COORDINATER: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
             },
             StateName.EXPERT_SEARCH_CACHE: {},  # 조건 변경 시 캐시 초기화됨
             StateName.EXPERT_OFFSETS: {
@@ -136,13 +194,30 @@ def _get_search_subgraph_initial_state(user_input: UserInput) -> dict[str, Any]:
 
     # 시나리오 4: 스타일 조건만 변경
     elif '스타일변경' in message or '스타일' in message:
+        # 기존 state가 있으면 기존 의견 유지하고 캐시/offset 초기화
+        if has_existing_state:
+            logger.info('기존 state 유지 - 스타일 조건 변경, 캐시 초기화')
+            return {
+                StateName.USER_MESSAGE: user_input.message,
+                StateName.LAST_UPDATED_FIELDS: ['style'],  # 스타일만 변경
+                StateName.EXPERT_SEARCH_CACHE: {},  # 조건 변경 시 캐시 초기화
+                StateName.EXPERT_OFFSETS: {
+                    COLOR_EXPERT: 0,
+                    STYLE_ANALYST: 0,
+                    FITTING_COORDINATER: 0,
+                },
+                StateName.SHOWN_IN_PRODUCT_IDS: set(),
+            }
+
+        # 기존 state가 없으면 테스트용 mock state 생성
+        logger.info('테스트용 mock state 생성 - 스타일 조건 변경')
         return {
             StateName.USER_MESSAGE: user_input.message,
             StateName.LAST_UPDATED_FIELDS: ['style'],  # 스타일만 변경
             StateName.MESSAGES: [],
             StateName.EXPERT_OPINIONS: {
-                COLOR_EXPERT: '밝은 톤의 상의와 청바지 하의',
-                FITTING_COORDINATER: '슬림핏 코디',
+                COLOR_EXPERT: '블루 셔츠에 네이비 베스트와 그레이 와이드 슬랙스는톤온톤 원리로 세련된 색상 조화를 이루고 있어. 차가운 계열의 블루와 네이비의 레이어드는 명도 대비를 통해 깊이감을 만들어내. 화이트 셔츠의 포인트와 블랙 로퍼의 마무리로 전체적인 색상밸런스가 안정적으로 구성되어 있어.',
+                FITTING_COORDINATER: '베이지 오버핏 반팔 셔츠에 블랙 와이드슬랙스가잘 어울려. 면소재의 여유로운 셔츠 실루엣에깔끔한블랙 슬랙스로세련된 데이트룩이완성될거야. 셔츠 앞부분만살짝 넣어서자연스러운 느낌을 주고, 위쪽 버튼 1-2개 정도는풀어두는게좋아.블랙 옥스포드 슈즈로포멀함을 더하고브라운 가죽 서류가방으로 포인트를 더하고줘서세련된 분위기를 연출할수 있어. 여유로운 실루엣이지만 전체적으로 균형 잡힌 비율이라데이트 장소 어디든잘 어울릴 거야.',
             },
             StateName.EXPERT_SEARCH_CACHE: {},  # 조건 변경 시 캐시 초기화됨
             StateName.EXPERT_OFFSETS: {
@@ -155,32 +230,24 @@ def _get_search_subgraph_initial_state(user_input: UserInput) -> dict[str, Any]:
 
     # 시나리오 0: 최초 검색 (기본값)
     else:
+        logger.info('최초 검색 - 새로운 state 생성')
         return {
             StateName.USER_MESSAGE: user_input.message,
             StateName.LAST_UPDATED_FIELDS: [],  # 빈 리스트 = 최초 검색
-            StateName.MESSAGES: [],
-            StateName.EXPERT_OPINIONS: {},  # 아직 전문가 의견 없음
-            StateName.EXPERT_SEARCH_CACHE: {},  # 캐시 없음
-            StateName.EXPERT_OFFSETS: {
-                COLOR_EXPERT: 0,
-                STYLE_ANALYST: 0,
-                FITTING_COORDINATER: 0,
-            },
-            StateName.SHOWN_IN_PRODUCT_IDS: set(),
         }
 
 
-def get_initial_state(agent: CompiledStateGraph, user_input: UserInput) -> dict[str, Any]:
-    if agent.name == GraphName.LLM_SEARCH:
-        return {
-            StateName.MESSAGES: create_message(message_type='human', content=user_input.message),
-            StateName.USER_MESSAGE: user_input.message,
-            StateName.EXPERTS_TO_RUN: [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATER],
-            StateName.CURRENT_EXPERT: COLOR_EXPERT,
-            StateName.USER_NAME: 'kkh',
-        }
-    elif agent.name == GraphName.SEARCH_SUBGRAPH:
-        return _get_search_subgraph_initial_state(user_input)
+def get_initial_state(agent: CompiledStateGraph, user_input: UserInput, current_state: dict[str, Any] | None = None) -> dict[str, Any]:
+    """
+    그래프 초기 state 생성
+
+    Args:
+        agent: 실행할 그래프
+        user_input: 사용자 입력
+        current_state: 현재 그래프의 state (있으면 병합, 없으면 새로 생성)
+    """
+    if agent.name == GraphName.SEARCH_SUBGRAPH:
+        return _get_search_subgraph_initial_state(user_input, current_state)
     else:
         return {
             StateName.MESSAGES: create_message(message_type='human', content=user_input.message),
@@ -188,7 +255,25 @@ def get_initial_state(agent: CompiledStateGraph, user_input: UserInput) -> dict[
             StateName.EXPERTS_TO_RUN: [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATER],
             StateName.CURRENT_EXPERT: COLOR_EXPERT,
             StateName.USER_NAME: 'kkh',
+            StateName.IS_PREDEFINED_TEMPLATE: user_input.is_predefined_template,
+            StateName.PRODUCT_ID: user_input.product_id,
         }
+    # elif agent.name == GraphName.SEARCH_SUBGRAPH:
+    #     return _get_search_subgraph_initial_state(user_input, current_state)
+    # elif agent.name == GraphName.BEFORE_SEARCH:
+    #     return {
+
+    #     }
+    # else:
+    #     return {
+    #         StateName.MESSAGES: create_message(message_type='human', content=user_input.message),
+    #         StateName.USER_MESSAGE: user_input.message,
+    #         StateName.EXPERTS_TO_RUN: [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATER],
+    #         StateName.CURRENT_EXPERT: COLOR_EXPERT,
+    #         StateName.USER_NAME: 'kkh',
+    #         StateName.IS_PREDEFINED_TEMPLATE: user_input.is_predefined_template,
+    #         StateName.PRODUCT_ID: user_input.product_id,
+    #     }
 
 
 async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **kwargs) -> tuple[dict[str, Any], UUID]:
@@ -257,7 +342,8 @@ async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **
 
         # TODO : 그래프의 이름에 따라서 초기 state 지정하기
         else:
-            input = get_initial_state(agent, user_input)
+            # 현재 state를 전달하여 기존 state 유지 여부 결정
+            input = get_initial_state(agent, user_input, state.values if state else None)
             kwargs = {
                 'input': input,
                 'config': config,
@@ -284,7 +370,7 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
         kwargs, run_id = await handle_user_input(user_input, agent, **kwargs)
 
     except Exception as e:
-        logger.error(f'Failed to handle user input: {e}', exc_info=True)
+        logger.error(f'Failed to handle user input: {e}')
         yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Failed to process user input: {str(e)}"})}\n\n'
         return
 
@@ -442,11 +528,11 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                         case _:
                             logger.warning(f'Unknown custom type: {event_type}')
                 except Exception as e:
-                    logger.error(f'Error processing custom stream: {e}', exc_info=True)
+                    logger.exception(f'Error processing custom stream: {e}')
                     yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Error processing custom stream: {str(e)}"})}\n\n'
 
     except Exception as e:
-        logger.error(f'Critical error in message generator: {e}', exc_info=True)
+        logger.exception(f'Critical error in message generator: {e}')
         yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Critical error: {str(e)}"})}\n\n'
     finally:
         logger.info('Message generation completed')

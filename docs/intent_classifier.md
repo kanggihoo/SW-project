@@ -1,11 +1,15 @@
-이 시스템은 크게 **두 가지 주요 흐름**으로 나뉩니다.
+이 시스템은 크게 **세 가지 주요 흐름**으로 나뉩니다.
 
 1. **제품 ID 기반 검색**: 사용자가 명확한 제품 ID를 제공하면, `product_info_agent` 노드로 직접 라우팅되어 해당 제품에 대한 정보를 제공합니다.
 2. **자연어 기반 검색**: 제품 ID가 없는 경우, **사용자의 의도를 먼저 파악하고, 의도에 따라 적절한 경로로 분기**하여 처리합니다.
+3. **템플릿 기반 검색**: 사용자가 "주말 데이트룩 찾아줘"와 같이 미리 만들어진 버튼/템플릿을 클릭하면, **의도 분류 과정을 생략하고 즉시 정보 수정 및 검색 단계로 진입**하여 빠른 사용자 경험을 제공합니다.
 
 ## 1. 사용자 의도 파악
 
-의도 분류기의 핵심 목표는 **속도와 정확성의 균형**을 맞추는 것입니다. 이를 위해 다음과 같은 2단계 하이브리드(Hybrid) 전략을 사용합니다.
+의도 분류기의 핵심 목표는 **속도와 정확성의 균형**을 맞추는 것입니다.
+하지만 `is_predefined_template` 상태가 True인 경우, 즉 사용자가 미리 정의된 템플릿을 클릭한 경우에는 이 의도 분류 과정을 완전히 건너뛰고 다음 단계로 바로 진행하여 응답 속도를 극대화합니다.
+
+자연어 입력에 대해서는 다음과 같은 2단계 하이브리드(Hybrid) 전략을 사용합니다.
 
 1. **1단계: 빠른 초벌 분류 (Fast Initial Pass)**
     - 분류기는 먼저 사용자의 가장 최근 메시지만을 보고 의도를 파악합니다. 이 방식은 90% 이상의 일반적인 경우에 해당하며, 매우 빠르고 효율적으로 작동합니다.
@@ -106,6 +110,7 @@ class UserIntent(BaseModel):
 - `product_id`: 사용자가 제공한 제품 ID를 저장합니다. `master_router`의 첫 번째 분기 조건으로 사용됩니다.
 - `intent`: 분류된 사용자의 의도를 저장합니다.
 - `user_message`: 현재 사용자의 입력 메시지를 저장합니다.
+- `is_predefined_template`: 사용자가 미리 정의된 템플릿을 클릭했는지 여부를 나타냅니다. `master_router`의 핵심 분기 조건 중 하나입니다.
 
 ```python
 # 그래프 state
@@ -122,6 +127,8 @@ class State(TypedDict):
     intent: str
     # 사용자가 마지막으로 입력한 메시지
     user_message: str
+    # 미리 정의된 템플릿 클릭 여부
+    is_predefined_template: bool
     # 정보 업데이트 시 어떤 필드가 변경되었는지 기록
     last_updated_fields: Annotated[list[str], Field(description='마지막으로 업데이트된 필드')]
     
@@ -133,17 +140,22 @@ class State(TypedDict):
 
 ## 2. 라우터 (Routers)
 
-- `master_router`: 시스템의 가장 첫 관문입니다. `product_id`의 유무에 따라 `product_info_agent`로 보낼지, `classify_intent`로 보내 의도 분석을 시작할지 결정합니다.
+- `master_router`: 시스템의 가장 첫 관문입니다. `State`에 담긴 정보를 바탕으로 다음 세 가지 경로 중 하나를 결정합니다.
+    1. `product_id`가 있으면 → `product_info_agent`로 라우팅합니다.
+    2. `is_predefined_template`이 `True`이면(사용자가 템플릿을 클릭한 경우) → `prepare_template_search_node`로 라우팅하여 검색 준비를 시작합니다.
+    3. 위 두 가지에 해당하지 않으면 → `classify_intent`로 보내 일반적인 의도 분석을 시작합니다.
   ```python
   def master_router(state: State):
-    logger.debug('---\n--- 라우팅: master_router ---')
-    if state.get(StateName.PRODUCT_ID):
-        logger.debug('- 라우팅: product_info_agent_node로 이동')
-        return NodeName.PRODUCT_INFO_AGENT
-    else:
-        logger.debug('- 라우팅: classify_intent_node로 이동')
-        return NodeName.CLASSIFY_INTENT
-  
+      logger.debug('---\n--- 라우팅: master_router ---')
+      if state.get(StateName.PRODUCT_ID):
+          logger.debug('- 라우팅: product_info_agent_node로 이동')
+          return RouterReturnNames.PRODUCT_INFO_AGENT
+      elif state.get(StateName.IS_PREDEFINED_TEMPLATE):
+          logger.debug('- 라우팅: prepare_template_search_node로 이동 (템플릿 처리 준비)')
+          return RouterReturnNames.PREPARE_TEMPLATE_SEARCH
+      else:
+          logger.debug('- 라우팅: classify_intent_node로 이동')
+          return RouterReturnNames.CLASSIFY_INTENT
   ```
 - `route_after_classification`: `classify_intent` 노드에서 분류된 `intent` 값을 기반으로, 정보 수집, 부적절한 질문 처리, 챗봇 등 다음 단계로 작업을 분배합니다.
     
@@ -306,6 +318,7 @@ class StateName(StrEnum):
     SEARCH_RESULT_OFFSET = 'search_result_offset'
     EXPERT_TO_RUN = 'expert_to_run'
     CURRENT_EXPERT = 'current_expert'
+    IS_PREDEFINED_TEMPLATE = 'is_predefined_template'
 
 ```
 
@@ -359,6 +372,30 @@ is_info_gathering_complete는 True이고 intent는 SEARCH_REFINEMENT이므로 in
 -> search_node (직선 연결)
 
 수정된 cloth_search 정보로 다시 검색 실행.
+
+-> END
+```
+
+### 시나리오 3: 미리 정의된 템플릿 검색
+```plaintext
+사용자: (미리 정의된 "출근할 때 입을 깔끔한 스타일 옷 추천" 템플릿 버튼 클릭)
+
+START -> master_router
+
+`is_predefined_template`이 True이므로 prepare_template_search_node로 이동.
+
+-> prepare_template_search_node
+
+`is_info_gathering_complete`를 True로, `cloth_search`를 빈 객체로 초기화.
+
+-> information_update_node (직선 연결)
+
+템플릿에 담긴 "출근할 때 입을 깔끔한 스타일 옷 추천" 메시지를 바탕으로 `cloth_search` 상태를 'tpo: 출근', 'style: 깔끔한'으로 채움.
+새로운 검색을 위해 캐시 등 관련 상태 초기화.
+
+-> search_node (직선 연결)
+
+업데이트된 `cloth_search` 정보로 검색 실행.
 
 -> END
 ```

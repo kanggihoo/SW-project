@@ -17,10 +17,13 @@ def master_router(state: State):
     logger.debug('---\n--- 라우팅: master_router ---')
     if state.get(StateName.PRODUCT_ID):
         logger.debug('- 라우팅: product_info_agent_node로 이동')
-        return NodeName.PRODUCT_INFO_AGENT
+        return RouterReturnNames.PRODUCT_INFO_AGENT
+    elif state.get(StateName.IS_PREDEFINED_TEMPLATE):
+        logger.debug('- 라우팅: prepare_template_search_node로 이동 (템플릿 처리 준비)')
+        return RouterReturnNames.PREPARE_TEMPLATE_SEARCH
     else:
         logger.debug('- 라우팅: classify_intent_node로 이동')
-        return NodeName.CLASSIFY_INTENT
+        return RouterReturnNames.CLASSIFY_INTENT
 
 
 def route_after_gathering(state: State):
@@ -34,6 +37,7 @@ def route_after_gathering(state: State):
         return END
 
 
+# TODO : 여기서의 else 구문이 필요한지??
 def route_after_classification(state: State):
     """의도 분류 결과에 따라 다음 노드를 결정
     state에 담긴 intent 와 is_info_gathering_complete 를 사용하여 라우팅 결정
@@ -45,6 +49,7 @@ def route_after_classification(state: State):
     """
     intent = state[StateName.INTENT.value]
     is_info_gathering_complete = state.get(StateName.IS_INFO_GATHERING_COMPLETE, False)
+
     if not is_info_gathering_complete and intent == IntentTypes.DIRECT_SEARCH:
         logger.debug('- 라우팅: information_gathering_node로 이동 (초기 수집)')
         return RouterReturnNames.INFORMATION_GATHERING

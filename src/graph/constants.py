@@ -9,6 +9,10 @@ FITTING_COORDINATER = 'fitting_coordinater'
 SHOW_CACHED = '__SHOW_CACHED__'
 SKIP_STREAM = 'skip_stream'
 
+HISTORY_WINDOW_SMALL = 3  # 짧은 컨텍스트
+HISTORY_WINDOW_MEDIUM = 5  # 중간 컨텍스트
+HISTORY_WINDOW_LARGE = 7  # 긴 컨텍스트
+
 
 class GraphName(StrEnum):
     """Graph name"""
@@ -18,6 +22,7 @@ class GraphName(StrEnum):
     FASHION_SEARCH = 'fashion_search'
     SEARCH_SUBGRAPH = 'search_subgraph'
     CHATBOT = 'chatbot'
+    BEFORE_SEARCH = 'before_search'
 
 
 class SSETypes(StrEnum):
@@ -81,6 +86,7 @@ class NodeName(StrEnum):
     # search_subgraph 관련 노드
     SEARCH_NODE = 'search_node'
 
+    PREPARE_TEMPLATE_SEARCH = 'prepare_template_search'  # ??
     POP_NEXT_EXPERT = 'pop_next_expert'
     RUN_EXPERT_EVALUATION = 'run_expert_evaluation'
     VECTOR_SEARCH = 'vector_search'
@@ -108,16 +114,21 @@ class StateName(StrEnum):
     EXPERTS_TO_RUN = 'experts_to_run'
     CURRENT_EXPERT = 'current_expert'
 
-    SEARCH_RESULT_OFFSET = 'search_result_offset'
     EXPERT_OFFSETS = 'expert_offsets'
     EXPERT_SEARCH_CACHE = 'expert_search_cache'
     SHOWN_IN_PRODUCT_IDS = 'shown_in_product_ids'
     CACHE_CYCLABLE = 'cache_cyclable'
 
     USER_NAME = 'user_name'
+    IS_PREDEFINED_TEMPLATE = 'is_predefined_template'
 
 
 class RouterReturnNames(StrEnum):
+    # master router에서 사용
+    CLASSIFY_INTENT = 'classify_intent'
+    PRODUCT_INFO_AGENT = 'product_info_agent'
+    PREPARE_TEMPLATE_SEARCH = 'prepare_template_search'
+
     INFORMATION_GATHERING = 'information_gathering'
     INFORMATION_UPDATE = 'information_update'
     HANDLE_INAPPROPRIATE = 'handle_inappropriate'
