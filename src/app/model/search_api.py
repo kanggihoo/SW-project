@@ -18,6 +18,7 @@ class SearchRequest(BaseModel):
         ),
     ]
     limit: Annotated[int, Field(default=1, description='검색 결과 개수')]
+    verbose: Annotated[bool, Field(default=False, description='임베딩 리스트 반환 여부')] = False
 
 
 # ===================================================================
@@ -32,6 +33,8 @@ class SearchResultItem(BaseModel):
     query: Annotated[str, Field(..., description='사용자가 입력한 쿼리')]
     data: Annotated[list[dict], Field(..., description='검색 결과 데이터')]
     total_count: Annotated[int, Field(..., description='검색 결과 총 개수')]
+    embeddings: Annotated[list[list[float]] | None, Field(..., description='임베딩 리스트')] = None
+    pre_filter_list: Annotated[list[dict] | None, Field(..., description='필터 리스트')] = None
 
 
 class SearchResponse(BaseResponse):

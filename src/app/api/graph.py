@@ -103,8 +103,7 @@ async def stream(
     이 엔드포인트는 사용자 입력을 받아 지정된 LangGraph 에이전트로 전달하고,
     에이전트의 출력을 실시간으로 클라이언트에 다시 스트리밍합니다.
     """
-    logger.info(f'user_input: {user_input}')
-
+    logger.info(f'user_input_message: {user_input.message}')
     return StreamingResponse(
         message_generator(user_input, agent, http_session=http_session, search_service=search_service, search_limit=5),
         media_type='text/event-stream',

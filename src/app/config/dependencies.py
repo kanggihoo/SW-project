@@ -17,15 +17,17 @@ from app.services.search import SearchServiceTest
 from aws.aws_manager import AWSManager
 from aws.dynamodb import DynamoDBManager
 from aws.s3 import S3Manager
-
-# 필요 모듈 import
-# from .settings import get_settings
 from db import get_async_fashion_repo, get_async_fashion_sku_repo
 from db.repository.fashion_async import AsyncFashionRepository
 from db.services.search import SearchService
 from embedding.gemini import GeminiEmbedding, gemini_embedding
 from graph.builders import get_all_agent_info
 from query_analyzer.multi_step_analyzer import MultiStepAnalyzer
+
+# 필요 모듈 import
+# from .settings import get_settings
+from redis_cache.client import RedisCacheClient
+from taskqueue.client import TaskQueueClient
 
 
 # =============================================================================
@@ -137,6 +139,22 @@ def get_musinsa_api_wrapper(request: Request) -> MusinsaAPIWrapper:
 
 
 # =============================================================================
+# Redis 관련 의존성
+# =============================================================================
+def get_redis_client_dependency(request: Request) -> RedisCacheClient:
+    """RedisCacheClient 의존성 반환"""
+    return request.app.state.redis_client
+
+
+# =============================================================================
+# TaskQueue (ARQ) 관련 의존성
+# =============================================================================
+def get_taskqueue_client_dependency(request: Request) -> TaskQueueClient:
+    """ARQ Redis Pool 의존성 반환"""
+    return request.app.state.taskqueue_client
+
+
+# =============================================================================
 # 서비스 관련 의존성 (비동기)
 # =============================================================================
 def get_gemini_embedding_dependency(request: Request) -> GeminiEmbedding:
@@ -203,6 +221,12 @@ SearchServiceTestDep = Annotated[SearchServiceTest, Depends(get_search_service_t
 SearchServiceDep = Annotated[SearchService, Depends(get_search_service_dependency)]
 
 MusinsaAPIWrapperDep = Annotated[MusinsaAPIWrapper, Depends(get_musinsa_api_wrapper)]
+
+# Redis 관련
+RedisClientDep = Annotated[RedisCacheClient, Depends(get_redis_client_dependency)]
+
+# TaskQueue (ARQ) 관련
+TaskQueueClientDep = Annotated[TaskQueueClient, Depends(get_taskqueue_client_dependency)]
 
 # agent 관련
 AgentDep = Annotated[CompiledStateGraph, Depends(get_agent)]

@@ -37,7 +37,7 @@ async def external_streaming_llm(
                         case 'complete':
                             yield f'data: {json.dumps({"type": SSETypes.END, "content": ""})}\n\n'
     except Exception as e:
-        logger.error(f'Error in {expert_type} external_streaming_llm: {e}')
+        logger.exception(f'Error in {expert_type} external_streaming_llm: {e}')
         yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": "Unexpected error", "agent_name": expert_type})}\n\n'
 
 

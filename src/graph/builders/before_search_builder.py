@@ -1,6 +1,5 @@
 # Combined External LLM and Search graph builder
 
-import httpx
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -13,15 +12,16 @@ from graph.common.nodes.before_search_node import (
     intent_classify_node,
     prepare_template_search_node,
 )
+from graph.common.nodes.product_info_node import custom_pre_model_node
 from graph.common.nodes.search_node import test_search_node
 from graph.common.router import master_router, route_after_classification, route_after_gathering
 from graph.common.state import State
 from graph.constants import GraphName, NodeName, RouterReturnNames
-from graph.subgraph import product_info_agent
+from graph.subgraph.build_product_info_agent import build_product_info_agent_subgraph
 
 
 # TODO : chatbot , info_qa에서의 create_react_agent, product_info_qgent 에서 client 전달해서 tool에서 사용하도록 하기
-def build_before_search_graph(client: httpx.AsyncClient) -> CompiledStateGraph:
+def build_before_search_graph(musinsa_api_wrapper) -> CompiledStateGraph:
     graph_builder = StateGraph(State)
 
     graph_builder.add_node(NodeName.CLASSIFY_INTENT, intent_classify_node)
@@ -34,14 +34,15 @@ def build_before_search_graph(client: httpx.AsyncClient) -> CompiledStateGraph:
 
     graph_builder.add_node(NodeName.SEARCH_NODE, test_search_node)
     # graph_builder.add_node(NodeName.SEARCH_NODE, search_subgraph)
-    graph_builder.add_node(NodeName.PRODUCT_INFO_AGENT, product_info_agent)
+    graph_builder.add_node(NodeName.CUSTOM_PRE_MODEL_NODE, custom_pre_model_node)
+    graph_builder.add_node(NodeName.PRODUCT_INFO_AGENT, build_product_info_agent_subgraph(musinsa_api_wrapper))
 
     # TODO : 미리 정의된 템플릿 내에서 동작시키고 싶은 경우를 위한 master_router 추가
     graph_builder.add_conditional_edges(
         START,
         master_router,
         {
-            RouterReturnNames.PRODUCT_INFO_AGENT: NodeName.PRODUCT_INFO_AGENT,
+            RouterReturnNames.CUSTOM_PRE_MODEL_NODE: NodeName.CUSTOM_PRE_MODEL_NODE,
             RouterReturnNames.CLASSIFY_INTENT: NodeName.CLASSIFY_INTENT,
             RouterReturnNames.PREPARE_TEMPLATE_SEARCH: NodeName.PREPARE_TEMPLATE_SEARCH,
         },
@@ -75,6 +76,9 @@ def build_before_search_graph(client: httpx.AsyncClient) -> CompiledStateGraph:
     )
     # 3. 정보 '업데이트' 후에는 다시 '검색' 노드로 이동
     graph_builder.add_edge(NodeName.INFORMATION_UPDATE, NodeName.SEARCH_NODE)
+
+    # product_id가 주어진 경우 무신사 api 서브 그래프 실행전 message 수정 노드
+    graph_builder.add_edge(NodeName.CUSTOM_PRE_MODEL_NODE, NodeName.PRODUCT_INFO_AGENT)
 
     # 4. 최종 노드 -> END
     graph_builder.add_edge(NodeName.SEARCH_NODE, END)

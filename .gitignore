@@ -34,6 +34,7 @@ MANIFEST
 .vscode
 .cursor
 .claude
+.cursorignore
 
 
 
@@ -75,9 +76,15 @@ checkpoints.*
 test_results/
 .env*
 gui/
-taskqueue/
 test_results/
 results/
+logs/
+test_results/
+tmp.py 
+test_runner_example.py
+langgraph_test.py
+gemini_models.json
+
 
 # cache file
 .pytest_cache/

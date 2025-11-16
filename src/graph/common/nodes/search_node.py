@@ -22,13 +22,47 @@ from graph.model.api_schema import StatusUpdate
 from graph.utils.messages import create_message
 
 
+def _build_cache_from_search_results(search_data: list, shown_ids: set) -> dict:
+    """검색 결과를 캐시로 구성 (중복 제거)"""
+    cached_results = {'TOP': [], 'BOTTOM': []}
+    for item in search_data:
+        product_id = item.get('product_id', '').strip()
+        main_category = item.get('main_category')
+        if product_id and product_id not in shown_ids:
+            cached_results[main_category].append(product_id)
+    return cached_results
+
+
+def _update_cache_and_offsets(state: State, current_expert: str, cached_results: dict) -> tuple:
+    """캐시와 오프셋을 업데이트하고 반환"""
+    updated_cache = state.get(StateName.EXPERT_SEARCH_CACHE.value, {})
+    updated_cache[current_expert] = cached_results
+
+    updated_offsets = state.get(StateName.EXPERT_OFFSETS.value, {})
+    updated_offsets[current_expert] = 0
+
+    return updated_cache, updated_offsets
+
+
+def _create_outfit_message(
+    current_expert: str,
+    current_expert_opinion: str,
+    first_top: str,
+    first_bottom: str,
+):
+    """코디 메시지를 생성"""
+    metadata = {'type': 'refer', 'expert_type': current_expert, 'product_ids': [first_top, first_bottom]}
+    return create_message(message_type='ai', content=current_expert_opinion, metadata=metadata)
+
+
 async def run_expert_evaluation_node(state: State, config: RunnableConfig) -> dict:
     """외부 LLM 스트리밍 결과를 반환하는 노드 - 사용자 입력을 분석하여 검색 쿼리 생성"""
     host = 'https://the-first-take.com'
     path = 'llm/api/expert/single/stream'
     api_endpoint = f'{host}/{path}'
 
-    text = state[StateName.USER_MESSAGE.value]
+    # text = state[StateName.USER_MESSAGE.value]
+    text = state.get(StateName.CLOTH_SEARCH.value).tpo
     current_expert = state.get(StateName.CURRENT_EXPERT.value)
     writer = get_stream_writer()
     response_text = ''
@@ -60,7 +94,12 @@ async def run_expert_evaluation_node(state: State, config: RunnableConfig) -> di
                             content=f'{current_expert} 분석 완료',
                             task_id=current_expert,
                         ).model_dump()
-                        writer({'type': SSETypes.STATUS, 'content': content})
+                        writer(
+                            {
+                                'type': SSETypes.STATUS,
+                                'content': content,
+                            }
+                        )
                         break
     except Exception as e:
         logger.error(f'Error in external external_llm_node : {e}', exc_info=True)
@@ -71,12 +110,19 @@ async def run_expert_evaluation_node(state: State, config: RunnableConfig) -> di
             task_id=current_expert,
             error_details=str(e),
         ).model_dump()
-        writer({'type': SSETypes.STATUS.value, 'content': content})
+        writer(
+            {
+                'type': SSETypes.STATUS.value,
+                'content': content,
+            },
+        )
 
     # dict로 반환하여 전문가별 의견 누적 저장
     current_opinions = state.get(StateName.EXPERT_OPINIONS.value, {})
     current_opinions[current_expert] = response_text
-    return {StateName.EXPERT_OPINIONS: current_opinions}
+    return {
+        StateName.EXPERT_OPINIONS: current_opinions,
+    }
 
 
 async def search_node(state: State, config: RunnableConfig) -> dict:
@@ -94,9 +140,10 @@ async def search_node(state: State, config: RunnableConfig) -> dict:
     current_expert_opinion = expert_opinions.get(current_expert, '')
     search_service: SearchService = config.get(CONFIG, {}).get(SEARCH_SERVICE, '')
     try:
-        # TODO : 반환된 값에 대한 리랭킹 필요(K개 반환, Fallback 처리)
-        # TODO : K는 config에 담아서 제공
-        search_result = await search_service.search_by_query(current_expert_opinion, limit=config.get(CONFIG, {}).get('search_limit', 5))
+        search_limit = config.get(CONFIG, {}).get('search_limit', 5)
+        fallback_delta = config.get(CONFIG, {}).get('search_limit_fallback_delta', 3)
+
+        search_result = await search_service.search_by_query(current_expert_opinion, limit=search_limit)
 
         writer(
             {
@@ -107,19 +154,8 @@ async def search_node(state: State, config: RunnableConfig) -> dict:
 
         # 중복 제거하며 캐시 구성
         shown_ids = state.get(StateName.SHOWN_IN_PRODUCT_IDS.value, set())
-        cached_results = {
-            'TOP': [],
-            'BOTTOM': [],
-        }
+        cached_results = _build_cache_from_search_results(search_result['data'], shown_ids)
         total_results = len(search_result['data'])
-
-        for item in search_result['data']:
-            product_id = item.get('product_id').strip()
-            main_category = item.get('main_category')
-
-            # 중복되지 않은 상품만 캐시에 추가
-            if product_id not in shown_ids:
-                cached_results[main_category].append(product_id)
 
         # 캐시 상태 로깅
         logger.info(
@@ -130,22 +166,65 @@ async def search_node(state: State, config: RunnableConfig) -> dict:
         )
 
         # 캐시 업데이트
-        updated_cache = state.get(StateName.EXPERT_SEARCH_CACHE.value, {})
-        updated_cache[current_expert] = cached_results
+        updated_cache, updated_offsets = _update_cache_and_offsets(state, current_expert, cached_results)
 
-        updated_offsets = state.get(StateName.EXPERT_OFFSETS.value, {})
-        updated_offsets[current_expert] = 0
-
-        # 케이스 1: 빈 캐시 (보여줄 것이 없음) - 전문가 의견만 표시
+        # 케이스 1: 빈 캐시 (보여줄 것이 없음) → 재검색 수행 (임베딩/필터 재사용)
         if not cached_results['TOP'] or not cached_results['BOTTOM']:
+            writer(
+                {
+                    'type': SSETypes.STATUS.value,
+                    'content': StatusUpdate(state=StatusUpdateTypes.START, content=f'{current_expert} 재검색 시작', task_id='search').model_dump(),
+                }
+            )
             logger.warning(f'{current_expert}: 중복 제거 후 표시 가능한 코디 세트 없음. shown_ids={len(shown_ids)}개')
 
-            # 전문가 의견은 표시하되, metadata 없이 (API 호출 방지)
-            empty_cache_message = create_message(
-                message_type='ai',
-                content=current_expert_opinion,
+            last_embeddings = search_result.get('embeddings', None)
+            last_pre_filters = search_result.get('pre_filter_list', None)
+
+            retry_limit = search_limit + fallback_delta
+            retry_result = await search_service.search_by_previous_embeddings_with_relaxed_filters(
+                embeddings=last_embeddings,
+                pre_filters=last_pre_filters,
+                limit=retry_limit,
+            )
+            writer(
+                {
+                    'type': SSETypes.STATUS.value,
+                    'content': StatusUpdate(state=StatusUpdateTypes.END, content='재검색 완료!', task_id='search').model_dump(),
+                }
             )
 
+            # 재검색 결과를 동일 로직으로 캐시 구성
+            cached_results_retry = _build_cache_from_search_results(retry_result['data'], shown_ids)
+            total_results_retry = len(retry_result['data'])
+
+            logger.info(
+                f'[재검색] {current_expert} 결과: 전체 {total_results_retry}개, '
+                f'TOP {len(cached_results_retry["TOP"])}개, BOTTOM {len(cached_results_retry["BOTTOM"])}개'
+            )
+
+            updated_cache[current_expert] = cached_results_retry
+            updated_offsets[current_expert] = 0
+
+            if cached_results_retry['TOP'] and cached_results_retry['BOTTOM']:
+                first_top = cached_results_retry['TOP'][0]
+                first_bottom = cached_results_retry['BOTTOM'][0]
+
+                updated_shown_ids = shown_ids.copy()
+                updated_shown_ids.add(first_top)
+                updated_shown_ids.add(first_bottom)
+
+                retry_message = _create_outfit_message(current_expert, current_expert_opinion, first_top, first_bottom)
+
+                return {
+                    StateName.MESSAGES: [retry_message],
+                    StateName.EXPERT_SEARCH_CACHE: updated_cache,
+                    StateName.EXPERT_OFFSETS: updated_offsets,
+                    StateName.SHOWN_IN_PRODUCT_IDS: updated_shown_ids,
+                }
+
+            # 재검색을 수행할 데이터가 없거나, 재검색도 실패한 경우 → 의견만 반환
+            empty_cache_message = create_message(message_type='ai', content=current_expert_opinion)
             return {
                 StateName.MESSAGES: [empty_cache_message],
                 StateName.EXPERT_SEARCH_CACHE: updated_cache,
@@ -160,9 +239,7 @@ async def search_node(state: State, config: RunnableConfig) -> dict:
         updated_shown_ids.add(first_top)
         updated_shown_ids.add(first_bottom)
 
-        metadata = {'type': 'refer', 'expert_type': current_expert, 'product_ids': [first_top, first_bottom]}
-
-        search_result_message = create_message(message_type='ai', content=current_expert_opinion, metadata=metadata)
+        search_result_message = _create_outfit_message(current_expert, current_expert_opinion, first_top, first_bottom)
 
         return {
             StateName.MESSAGES: [search_result_message],
@@ -366,40 +443,43 @@ def prepare_cache_cycle_node(state: State) -> dict:
 
 
 def prepare_search_cycle_node(state: State) -> dict:
-    """최초 검색 준비 - 3개 전문가 설정"""
+    """
+    information gathering node / information_update_node 에서 변경된 cloth_search에 대한 값에 따라서 실행할(순환할) 전문가 설정
+    최초 검색 준비 - 3개 전문가 설정
+    """
     logger.info('\n--- 노드: prepare_search_cycle ---')
-    changed_fields = state.get(StateName.LAST_UPDATED_FIELDS, [])
+    # changed_fields = state.get(StateName.LAST_UPDATED_FIELDS, [])
 
-    if not changed_fields:
-        logger.info('- 최초 검색 -> 전문가 전체 호출')
-        experts_to_run = [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR]
-        return {
-            StateName.EXPERTS_TO_RUN: experts_to_run,
-        }
-    # TODO : 조건 변경시 전문가 실행할 전문가 설정하는 로직 수정 필요
-    else:
-        experts_set = set()
-        # 색상만 변경
-        if 'color' in changed_fields and len(changed_fields) == 1:
-            experts_set.add(COLOR_EXPERT)
-            logger.info('  → color_expert만 실행')
+    # if not changed_fields:
+    logger.info('- 저ㄴ체 전문가 호출')
+    experts_to_run = [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR]
+    return {
+        StateName.EXPERTS_TO_RUN: experts_to_run,
+    }
+    # # TODO : 조건 변경시 전문가 실행할 전문가 설정하는 로직 수정 필요
+    # else:
+    #     experts_set = set()
+    #     # 색상만 변경
+    #     if 'color' in changed_fields and len(changed_fields) == 1:
+    #         experts_set.add(COLOR_EXPERT)
+    #         logger.info('  → color_expert만 실행')
 
-        # 스타일만 변경
-        elif 'style' in changed_fields and len(changed_fields) == 1:
-            experts_set.add(STYLE_ANALYST)
-            logger.info('  → style_analyst만 실행')
+    #     # 스타일만 변경
+    #     elif 'style' in changed_fields and len(changed_fields) == 1:
+    #         experts_set.add(STYLE_ANALYST)
+    #         logger.info('  → style_analyst만 실행')
 
-        # TPO 변경 또는 복합 변경 -> 전체 재평가
-        elif 'tpo' in changed_fields or len(changed_fields) > 1:
-            experts_set.update([COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR])
-            logger.info('  → 전체 전문가 재평가')
-        else:
-            experts_set.update([COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR])
-            logger.info('  → 기본: 전체 전문가 실행')
+    #     # TPO 변경 또는 복합 변경 -> 전체 재평가
+    #     elif 'tpo' in changed_fields or len(changed_fields) > 1:
+    #         experts_set.update([COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR])
+    #         logger.info('  → 전체 전문가 재평가')
+    #     else:
+    #         experts_set.update([COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR])
+    #         logger.info('  → 기본: 전체 전문가 실행')
 
-        experts_to_run = list(experts_set)
-        logger.info(f'  (실행할 전문가 목록: {experts_to_run})')
+    #     experts_to_run = list(experts_set)
+    #     logger.info(f'  (실행할 전문가 목록: {experts_to_run})')
 
-        return {
-            StateName.EXPERTS_TO_RUN: experts_to_run,
-        }
+    #     return {
+    #         StateName.EXPERTS_TO_RUN: experts_to_run,
+    #     }

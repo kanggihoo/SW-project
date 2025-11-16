@@ -1,0 +1,5 @@
+from .product import TOOL_DEFINITION as PRODUCT_TOOL_DEFINITION
+
+__all__ = [
+    'PRODUCT_TOOL_DEFINITION',
+]

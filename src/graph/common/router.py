@@ -17,7 +17,7 @@ def master_router(state: State):
     logger.debug('---\n--- 라우팅: master_router ---')
     if state.get(StateName.PRODUCT_ID):
         logger.debug('- 라우팅: product_info_agent_node로 이동')
-        return RouterReturnNames.PRODUCT_INFO_AGENT
+        return RouterReturnNames.CUSTOM_PRE_MODEL_NODE
     elif state.get(StateName.IS_PREDEFINED_TEMPLATE):
         logger.debug('- 라우팅: prepare_template_search_node로 이동 (템플릿 처리 준비)')
         return RouterReturnNames.PREPARE_TEMPLATE_SEARCH
@@ -37,7 +37,6 @@ def route_after_gathering(state: State):
         return END
 
 
-# TODO : 여기서의 else 구문이 필요한지??
 def route_after_classification(state: State):
     """의도 분류 결과에 따라 다음 노드를 결정
     state에 담긴 intent 와 is_info_gathering_complete 를 사용하여 라우팅 결정
@@ -50,11 +49,16 @@ def route_after_classification(state: State):
     intent = state[StateName.INTENT.value]
     is_info_gathering_complete = state.get(StateName.IS_INFO_GATHERING_COMPLETE, False)
 
-    if not is_info_gathering_complete and intent == IntentTypes.DIRECT_SEARCH:
-        logger.debug('- 라우팅: information_gathering_node로 이동 (초기 수집)')
+    if not is_info_gathering_complete and intent in [IntentTypes.DIRECT_SEARCH, IntentTypes.SEARCH_REFINEMENT]:
+        if intent == IntentTypes.SEARCH_REFINEMENT:
+            logger.warning(f'- 로직 보정: Gathering 상태에서 {intent}가 감지되어 {RouterReturnNames.INFORMATION_GATHERING}(으)로 보정 라우팅합니다.')
         return RouterReturnNames.INFORMATION_GATHERING
+
     elif is_info_gathering_complete and intent in [IntentTypes.SEARCH_REFINEMENT, IntentTypes.DIRECT_SEARCH]:
-        logger.debug('- 라우팅: information_update_node로 이동 (피드백 수정)')
+        if intent == IntentTypes.DIRECT_SEARCH:
+            logger.warning(
+                f'- 로직 보정: Gathering 완료 상태에서 {intent}가 감지되어 {RouterReturnNames.INFORMATION_UPDATE}(으)로 보정 라우팅합니다.'
+            )
         return RouterReturnNames.INFORMATION_UPDATE
 
     elif intent == IntentTypes.INAPPROPRIATE_QUERY:
@@ -67,7 +71,7 @@ def route_after_classification(state: State):
         logger.debug('- 라우팅: info_qa_node로 이동')
         return RouterReturnNames.INFO_QA
     else:  # unclear 또는 기타
-        logger.debug('- 라우팅: END (분류 실패 또는 추가 처리 불필요)')
+        logger.info('- 라우팅: END (분류 실패 또는 추가 처리 불필요)')
         return END
 
 

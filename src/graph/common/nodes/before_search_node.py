@@ -22,7 +22,18 @@ from graph.constants import (
 )
 from graph.model.api_schema import StatusUpdate
 from graph.model.graph_schemas import ClothSearch, UserIntent
-from graph.prompt import chatbot_prompt, extraction_prompt, generation_prompt, info_qa_prompt, intent_classifier_prompt, update_prompt
+from graph.prompt import (
+    chatbot_prompt_gathering,
+    chatbot_prompt_gathering_unclear,
+    chatbot_prompt_search_ready,
+    chatbot_prompt_search_ready_unclear,
+    extraction_prompt,
+    generation_prompt,
+    info_qa_prompt,
+    intent_prompt_gathering,
+    intent_prompt_refinement,
+    update_prompt,
+)
 from graph.utils.messages import create_message
 from llm import get_llm_model
 
@@ -30,18 +41,19 @@ from llm import get_llm_model
 llm = get_llm_model('google/gemini-2.5-flash-lite')
 
 
-intent_classifier_chain = intent_classifier_prompt | llm.with_structured_output(UserIntent).with_config(tags=[SKIP_STREAM])
-
 extraction_llm = extraction_prompt | llm.with_structured_output(ClothSearch).with_config(tags=[SKIP_STREAM])
 
 generation_llm = generation_prompt | llm
 
 update_llm = update_prompt | llm.with_structured_output(ClothSearch)
 
+intent_classifier_gathering_chain = intent_prompt_gathering | llm.with_structured_output(UserIntent).with_config(tags=[SKIP_STREAM])
+intent_classifier_refinement_chain = intent_prompt_refinement | llm.with_structured_output(UserIntent).with_config(tags=[SKIP_STREAM])
+
 
 async def intent_classify_node(state: State):
     """1, 2단계 의도 분류를 통합하여 한 번에 처리하는 노드"""
-    logger.info('\n--- 노드 실행: unified_classify_node ---')
+    logger.info('\n--- 노드 실행: classify_node ---')
     writer = get_stream_writer()
     writer(
         {
@@ -51,16 +63,28 @@ async def intent_classify_node(state: State):
     )
     user_message = state.get(StateName.USER_MESSAGE)
     is_info_gathering_complete = state.get(StateName.IS_INFO_GATHERING_COMPLETE, False)
+    current_search_info = cast(ClothSearch, state.get(StateName.CLOTH_SEARCH, ClothSearch()))
+
+    if is_info_gathering_complete:
+        logger.info('- 분류 모드: Refinement (정보 수집 완료)')
+        # 입력 데이터에 'cloth_search'를 포함시킵니다.
+        input_data_1 = {
+            StateName.USER_MESSAGE: user_message,
+            StateName.CLOTH_SEARCH: current_search_info.model_dump(),
+            # 'is_info_gathering_complete'는 프롬프트 변수가 아니므로 제거해도 됩니다.
+        }
+        intent_classifier_chain = intent_classifier_refinement_chain
+    else:
+        logger.info('- 분류 모드: Gathering (정보 수집 중)')
+        input_data_1 = {
+            StateName.USER_MESSAGE: user_message,
+        }
+        intent_classifier_chain = intent_classifier_gathering_chain
 
     # 1단계: 빠른 초벌 분류
     result = cast(
         UserIntent,
-        await intent_classifier_chain.ainvoke(
-            {
-                StateName.USER_MESSAGE: user_message,
-                StateName.IS_INFO_GATHERING_COMPLETE: is_info_gathering_complete,
-            }
-        ),
+        await intent_classifier_chain.ainvoke(input_data_1),  # 수정된 input_data_1 사용
     )
     logger.info(f'1차 분류 결과: {result.intent}')
 
@@ -83,16 +107,17 @@ async def intent_classify_node(state: State):
 
         # 대화 히스토리에서 컨텍스트 추출
         context = '\n'.join([msg.pretty_repr() for msg in state['messages'][-context_window:]])
+        if is_info_gathering_complete:
+            input_data_2 = {
+                StateName.USER_MESSAGE: context,  # user_message 대신 context 사용
+                StateName.CLOTH_SEARCH: current_search_info.model_dump(),
+            }
+        else:
+            input_data_2 = {
+                StateName.USER_MESSAGE: context,  # user_message 대신 context 사용
+            }
 
-        result = cast(
-            UserIntent,
-            await intent_classifier_chain.ainvoke(
-                {
-                    StateName.USER_MESSAGE: context,
-                    StateName.IS_INFO_GATHERING_COMPLETE: is_info_gathering_complete,
-                }
-            ),
-        )
+        result = cast(UserIntent, await intent_classifier_chain.ainvoke(input_data_2))
         logger.info(f'2차 분류 결과: {result.intent}')
 
         # 3단계: 여전히 unclear면 chatbot으로 폴백
@@ -104,7 +129,10 @@ async def intent_classify_node(state: State):
             #         'content': StatusUpdate(state=StatusUpdateTypes.END, content='명확화가 필요해요', task_id='intent_classify').model_dump(),
             #     }
             # )
-            return {StateName.INTENT: IntentTypes.CHATBOT}
+            return {
+                StateName.INTENT: IntentTypes.CHATBOT,
+                StateName.IS_UNCLEAR_FALLBACK: True,
+            }
 
     writer(
         {
@@ -133,7 +161,7 @@ async def information_gathering_node(state: State):
     logger.info('\n--- 노드 실행: information_gathering_node ---')
     last_user_message = state.get(StateName.USER_MESSAGE)
 
-    logger.info(f"- LLM (추출) 호출: '{last_user_message}'")
+    logger.info(f"- 정보 추루 LLM 호출: last_user_message: '{last_user_message}'")
     extracted_info = cast(
         ClothSearch,
         await extraction_llm.ainvoke(
@@ -144,7 +172,7 @@ async def information_gathering_node(state: State):
     )
 
     current_search_info = cast(ClothSearch, state.get(StateName.CLOTH_SEARCH, ClothSearch()))
-    logger.info(f'- 추출된 정보: {extracted_info}')
+    # logger.info(f'- 추출된 정보: {extracted_info}')
     logger.info(f'- current_search_info: {current_search_info}')
     updated_data = {k: v for k, v in extracted_info.model_dump().items() if v is not None and v != ''}
     logger.info(f'- updated_data: {updated_data}')
@@ -177,7 +205,6 @@ async def information_gathering_node(state: State):
         generation_response = await generation_llm.ainvoke(
             {
                 'missing_fields': ', '.join(missing_fields),
-                StateName.USER_NAME: state.get(StateName.USER_NAME),
                 'collected_info': collected_info_str,
             }
         )
@@ -283,10 +310,9 @@ async def info_qa_node(state: State):
 
 
 async def chatbot(state: State, config: RunnableConfig) -> dict:
-    """일상 대화 처리 및 검색으로 복귀 유도"""
+    """일상 대화 처리, 검색 복귀 유도, 불명확한 의도 명확화"""
     logger.info('\n--- 노드 실행: chatbot ---')
 
-    # 대화 히스토리 전달 (최근 7개)
     recent_messages = state.get(StateName.MESSAGES, [])[-HISTORY_WINDOW_LARGE:]
 
     # cloth_search 상태도 함께 전달
@@ -295,21 +321,64 @@ async def chatbot(state: State, config: RunnableConfig) -> dict:
 
     is_gathering_complete = state.get(StateName.IS_INFO_GATHERING_COMPLETE, False)
 
-    chain = chatbot_prompt | llm
-    response = await chain.ainvoke(
-        {
-            'messages': recent_messages,
-            StateName.USER_MESSAGE: state.get(StateName.USER_MESSAGE),
-            'cloth_search': cloth_search_info,
-            'is_gathering_complete': is_gathering_complete,
-        },
-    )
-    return {
-        StateName.MESSAGES: [create_message(message_type='ai', content=response.content)],
-    }
+    # 1순위: UNCLEAR 상황인지 먼저 체크
+    is_unclear_fallback = state.get(StateName.IS_UNCLEAR_FALLBACK, False)
+
+    if is_gathering_complete:
+        if is_unclear_fallback:
+            logger.info('UNCLEAR 상화 모드 (Search Ready)')
+            chain = chatbot_prompt_search_ready_unclear | llm
+            input_data = {
+                'messages': recent_messages,
+                StateName.USER_MESSAGE: state.get(StateName.USER_MESSAGE),
+                'cloth_search': cloth_search_info,
+            }
+        else:
+            # ✅ 상황 2: 검색 준비 완료 (2번째 목적)
+            logger.info('검색 준비 완료 모드')
+            chain = chatbot_prompt_search_ready | llm
+            input_data = {
+                'messages': recent_messages,
+                StateName.USER_MESSAGE: state.get(StateName.USER_MESSAGE),
+                'cloth_search': cloth_search_info,
+            }
+    else:
+        missing_fields = [f for f, v in cloth_search_info.items() if v is None] if cloth_search_info else []
+        if is_unclear_fallback:
+            logger.info('UNCLEAR 상황 모드 (Gathering)')
+            chain = chatbot_prompt_gathering_unclear | llm
+            input_data = {
+                'messages': recent_messages,
+                StateName.USER_MESSAGE: state.get(StateName.USER_MESSAGE),
+                'cloth_search': cloth_search_info,
+                'missing_fields': missing_fields,
+            }
+        else:
+            logger.info('정보 수집 중 모드')
+            chain = chatbot_prompt_gathering | llm
+            input_data = {
+                'messages': recent_messages,
+                StateName.USER_MESSAGE: state.get(StateName.USER_MESSAGE),
+                'cloth_search': cloth_search_info,
+                'missing_fields': missing_fields,
+            }
+
+    response = await chain.ainvoke(input_data)
+
+    # 중요: 사용한 fallback 플래그는 응답 후 반드시 초기화
+    if is_unclear_fallback:
+        return {
+            StateName.MESSAGES: [create_message(message_type='ai', content=response.content)],
+            StateName.IS_UNCLEAR_FALLBACK: False,
+        }
+    else:
+        return {
+            StateName.MESSAGES: [create_message(message_type='ai', content=response.content)],
+        }
 
 
 # TODO: 반환할 state 수정 필요 (utils.py의 get_inital_state와 비교해서 수정필요)
+# CHECK : 여기서 미리 만들어진 템플릿으로 부터 필요한 정보를 parsing 해야 한다면 information_gathering_node로 이동해야 하고, 아니면 바로 search_node로 이동가능 ?
 def prepare_template_search_node(state: State) -> dict:
     """미리 정의된 템플릿 검색을 위한 상태를 준비하는 노드"""
     logger.info('\n--- 노드 실행: prepare_template_search_node ---')
@@ -317,3 +386,37 @@ def prepare_template_search_node(state: State) -> dict:
         StateName.IS_INFO_GATHERING_COMPLETE: True,
         StateName.CLOTH_SEARCH: ClothSearch(),  # 빈 ClothSearch 모델로 초기화
     }
+
+
+def prepare_search_message_node(state: State) -> dict:
+    """검색 서브그래프에 진입하기 전, 사용자에게 전달할 메시지를 생성하는 노드"""
+    logger.info('\\n--- 노드 실행: prepare_search_message_node ---')
+
+    last_updated_fields = state.get(StateName.LAST_UPDATED_FIELDS, [])
+
+    # Case 1: "다른거 보여줘" 요청 시 (캐시 활용)
+    if SHOW_CACHED in last_updated_fields:
+        message_content = '네, 다른 코디를 찾아볼게요!'
+        message = create_message(message_type='ai', content=message_content)
+
+    # Case 2: 새로운 검색 또는 조건 변경 시
+    else:
+        cloth_search = state.get(StateName.CLOTH_SEARCH)
+        if cloth_search:
+            # cloth_search 객체에서 사람이 읽기 좋은 형태로 변환
+            criteria = []
+            if cloth_search.tpo:
+                criteria.append(f"'{cloth_search.tpo}' 상황에 어울리는")
+            if cloth_search.style:
+                criteria.append(f"'{cloth_search.style}' 스타일의")
+            if cloth_search.color:
+                criteria.append(f"'{cloth_search.color}' 색상을 활용한")
+
+            criteria_str = ' '.join(criteria)
+            message_content = f'알겠습니다! {criteria_str} 코디를 찾아볼게요. 잠시만 기다려주세요.'
+            message = create_message(message_type='ai', content=message_content)
+        else:
+            # 혹시 모를 예외 상황
+            return {}
+
+    return {StateName.MESSAGES: [message]}

@@ -86,7 +86,10 @@ graph TD
     C --> E[run_expert_evaluation];
     E --> F[vector_search];
     D --> F;
-    F --> G{route_expert_loop};
+    F --> I{decide_retry_or_continue};
+    I -- retry_search --> J[retry_vector_search];
+    I -- continue_loop --> C;
+    J --> G{route_expert_loop};
     G -- continue_loop --> C;
     G -- end_loop --> H[END];
 ```

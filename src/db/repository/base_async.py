@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
+from pymongo.collection import Collection
+
 from db.config.database_async import AsyncDatabaseManager
 from db.query_builders.fashion_queries import FashionQueryBuilder
 
@@ -13,13 +15,12 @@ class BaseAsyncRepository(ABC):
         self.database_name = database_name
         self.collection_name = collection_name
         self.db_manager = AsyncDatabaseManager(connection_string, database_name, collection_name)
-        self.collection = None  # connect() 후에 초기화
         self.query_builder = FashionQueryBuilder()
 
     async def connect(self):
         """DB 연결 및 컬렉션 객체 획득"""
         await self.db_manager.connect()
-        self.collection = self.db_manager.get_collection()
+        self.collection: Collection = self.db_manager.get_collection()
 
     async def close(self):
         """DB 연결 종료"""

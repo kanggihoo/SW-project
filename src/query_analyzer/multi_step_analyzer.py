@@ -2,6 +2,7 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableParallel
+from loguru import logger
 
 from llm import ModelT, get_llm_model
 
@@ -21,7 +22,12 @@ class MultiStepAnalyzer:
     def _get_first_chain(self):
         """Step 1: Identify items and common context from the query."""
         system_prompt = SYSTEMPROMPT1
-        prompt = ChatPromptTemplate.from_messages([SystemMessage(content=system_prompt), ('human', '쿼리: {query}')])
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                SystemMessage(content=system_prompt),
+                ('human', '쿼리: {query}'),
+            ],
+        )
         return (prompt | self.llm1.with_structured_output(InitialAnalysis)).with_config({'tags': ['skip_stream']})
 
     def _get_second_chain(self, item_type: MainCategory):
@@ -30,7 +36,10 @@ class MultiStepAnalyzer:
 
         system_prompt_template = SYSTEMPROMPT2.format(item_type=item_type.value)
         prompt = ChatPromptTemplate.from_messages(
-            [SystemMessage(content=system_prompt_template), ('human', '공통 문맥: {common_context}\n분석할 쿼리: {raw_query}')]
+            [
+                SystemMessage(content=system_prompt_template),
+                ('human', '공통 문맥: {common_context}\n분석할 쿼리: {raw_query}'),
+            ],
         )
         return (prompt | self.llm2.with_structured_output(output_pydantic_model)).with_config({'tags': ['skip_stream']})
 
@@ -40,18 +49,26 @@ class MultiStepAnalyzer:
         bottom_analyzer = self._get_second_chain(MainCategory.BOTTOM)
 
         def dynamic_router(initial_data: InitialAnalysis):
+            # 첫 번째 단계 결과 로깅 (아이템 식별 및 공통 컨텍스트)
+            logger.debug(f'[First LLM Completed] 식별된 아이템 수: {len(initial_data.items)}, 공통 컨텍스트: {initial_data.common_context}')
+            for idx, item in enumerate(initial_data.items):
+                logger.debug(f"[First LLM] Identified Item #{idx + 1}: Type={item.item_type.value}, Query='{item.raw_query}'")
+
             branches = {}
             for idx, item in enumerate(initial_data.items):
-                analyzer = top_analyzer if item.item_type == MainCategory.TOP else bottom_analyzer
+                item_type = item.item_type.value
+                analyzer = top_analyzer if item_type == MainCategory.TOP.value else bottom_analyzer
 
                 selector = RunnableLambda(
                     lambda data, current_item=item: {'common_context': data.common_context, 'raw_query': current_item.raw_query},
                     name=f'SelectItem_{idx}',
                 )
-                key = f'{item.item_type.value}_{idx}'
+                key = f'{item_type}_{idx}'
                 branches[key] = selector | analyzer
 
+            # TODO : 여기처리를 ?? 음 branches 가 만들어지지 않는 경우에 동작을 어떻게 할지?
             if not branches:
+                logger.debug('[Step 1] 식별된 아이템이 없어 빈 결과 반환')
                 return RunnableLambda(lambda x: {{}})
 
             return RunnableParallel(**branches)
@@ -64,8 +81,11 @@ class MultiStepAnalyzer:
         Analyzes the user query asynchronously and returns a dictionary of structured results,
         with each key corresponding to an identified item.
         """
+        logger.debug(f"[MultiStepAnalyzer] 쿼리 분석 시작: '{query}'")
         chain = self._create_full_chain()
-        return await chain.ainvoke({'query': query})
+        result = await chain.ainvoke({'query': query})
+        logger.debug(f'[MultiStepAnalyzer] 쿼리 분석 완료: {len(result)}개 아이템 분석됨')
+        return result
 
     async def analyze_and_format(self, query: str) -> list[dict]:
         """
@@ -105,4 +125,5 @@ class MultiStepAnalyzer:
             formatted_item = {'main_category': item_type, **analysis_result}
             formatted_result.append(formatted_item)
 
+        logger.debug(f'[MultiStepAnalyzer] 포맷팅 완료: {len(formatted_result)}개 아이템')
         return formatted_result

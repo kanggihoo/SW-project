@@ -124,6 +124,8 @@ jobs:
             POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
             OPENROUTER_API_KEY="${{ secrets.OPENROUTER_API_KEY }}"
             OPENROUTER_BASE_URL="${{ secrets.OPENROUTER_BASE_URL }}"
+            REDIS_HOST="${{ secrets.REDIS_HOST }}"
+            REDIS_PORT="${{ secrets.REDIS_PORT }}"
 
             DB_ENV=${{env.DB_ENV}}
             POSTGRES_USER=${{env.POSTGRES_USER}}

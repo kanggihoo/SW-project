@@ -23,7 +23,7 @@ class GeminiEmbedding:
         texts: str | list[str],
         output_dimension: int = 3072,
         task_type: str = 'RETRIEVAL_DOCUMENT',
-    ) -> list[float]:
+    ) -> list[list[float]]:
         """Gemini Embedding 모델을 사용하여 텍스트를 임베딩하는 함수
 
         Args:
@@ -34,12 +34,14 @@ class GeminiEmbedding:
             list[float]: _description_
         """
 
-        result = await self.client.aio.models.embed_content(
+        result: types.EmbedContentResponse = await self.client.aio.models.embed_content(
             model=self.model_name,
             contents=texts,
             config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=output_dimension),
         )
-        return [emb.values for emb in result.embeddings]
+        if not result.embeddings:
+            raise ValueError('Embedding generation failed')
+        return [emb.values for emb in result.embeddings if emb.values]
 
 
 gemini_embedding = GeminiEmbedding()
@@ -50,13 +52,19 @@ gemini_embedding = GeminiEmbedding()
 
 
 # async def main():
-#     # embedding = await gemini_embedding.get_embedding(texts=['Hello, world!'], output_dimension=768)
-#     # # normalized_embedding = normalize_vector(embedding[0])
-#     # # print(norm(normalized_embedding))
-#     # # print(norm(embedding[0]))
-#     # print(len(embedding[0]), len(embedding))
+#     embedding = await gemini_embedding.get_embedding(texts=['Hello, world!', 'sdsd'], output_dimension=768)
+#     # normalized_embedding = normalize_vector(embedding[0])
+#     # print(norm(normalized_embedding))
+#     # print(norm(embedding[0]))
+#     print(len(embedding[0]), len(embedding))
+#     print(type(embedding), type(embedding[0]))
 
 
 # # 비동기 함수 실행
 # if __name__ == '__main__':
+#     import asyncio
+
+#     from dotenv import load_dotenv
+
+#     load_dotenv()
 #     asyncio.run(main())

@@ -29,6 +29,7 @@ class OpenRouterModelName(StrEnum):
     OPENROUTER_GPT_4O = 'openai/gpt-4.1-mini'
     OPENROUTER_GEMINI_20_FLASH_LITE = 'google/gemini-2.0-flash-lite-001'
     OPENROUTER_GEMINI_25_FLASH_LITE = 'google/gemini-2.5-flash-lite'
+    OPENROUTER_GEMINI_25_FLASH = 'google/gemini-2.5-flash'
 
 
 type AllModelEnum = GoogleModelName | OpenAIModelName | OpenRouterModelName

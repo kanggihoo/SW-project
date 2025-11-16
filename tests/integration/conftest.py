@@ -1,20 +1,20 @@
 import sys
 
-import httpx
 import pytest
-import pytest_asyncio
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from loguru import logger
 
 from graph.model.graph_schemas import ClothSearch
 
-
-@pytest_asyncio.fixture(scope='session')
-async def http_client():
-    """Real httpx AsyncClient fixture with proper resource management."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        yield client
+# @pytest.fixture(scope='session')
+# def event_loop():
+#     """
+#     pytest-asyncio가 세션 전체에서 단일 이벤트 루프를 사용하도록 강제합니다.
+#     """
+#     loop = asyncio.get_event_loop_policy().new_event_loop()
+#     yield loop
+#     loop.close()
 
 
 @pytest.fixture(scope='session')

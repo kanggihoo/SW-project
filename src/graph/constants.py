@@ -83,6 +83,8 @@ class NodeName(StrEnum):
     INFORMATION_GATHERING = 'information_gathering'
     INFORMATION_UPDATE = 'information_update'
 
+    # 검색 메시지 준비 관련 노드
+    PREPARE_SEARCH_MESSAGE = 'prepare_search_message'
     # search_subgraph 관련 노드
     SEARCH_NODE = 'search_node'
 
@@ -100,6 +102,9 @@ class NodeName(StrEnum):
 
     # 테스트 관련 노드
     TEST_SEARCH_NODE = 'test_search_node'
+
+    # 상품 정보 조회 관련 노드
+    CUSTOM_PRE_MODEL_NODE = 'custom_pre_model_node'
 
 
 class StateName(StrEnum):
@@ -121,12 +126,13 @@ class StateName(StrEnum):
 
     USER_NAME = 'user_name'
     IS_PREDEFINED_TEMPLATE = 'is_predefined_template'
+    IS_UNCLEAR_FALLBACK = 'is_unclear_fallback'
 
 
 class RouterReturnNames(StrEnum):
     # master router에서 사용
     CLASSIFY_INTENT = 'classify_intent'
-    PRODUCT_INFO_AGENT = 'product_info_agent'
+    CUSTOM_PRE_MODEL_NODE = 'custom_pre_model_node'
     PREPARE_TEMPLATE_SEARCH = 'prepare_template_search'
 
     INFORMATION_GATHERING = 'information_gathering'
@@ -140,6 +146,9 @@ class RouterReturnNames(StrEnum):
     GET_CACHED_ITEM = 'get_cached_item'
     RUN_EXPERT_EVALUATION = 'run_expert_evaluation'
     SEND_REFINEMENT_PROMPT = 'send_refinement_prompt'
+
+    # 검색 메시지 준비 라우팅
+    PREPARE_SEARCH_MESSAGE = 'prepare_search_message'
 
     # search_subgraph 에서 초기 라우팅
     PREPARE_CACHE_CYCLE = 'prepare_cache_cycle'

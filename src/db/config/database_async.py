@@ -1,5 +1,6 @@
 from loguru import logger
 from pymongo import AsyncMongoClient
+from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from pymongo.server_api import ServerApi
@@ -69,7 +70,7 @@ class AsyncDatabaseManager:
         except (ConnectionFailure, ServerSelectionTimeoutError) as e:
             raise ConnectionError(f'Connection verification failed (async): {e}')
 
-    def get_collection(self):
+    def get_collection(self) -> Collection:
         if self._db is None:
             raise ConnectionError('Database connection not established (async)')
         return self._db[self.collection_name]

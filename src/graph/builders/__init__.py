@@ -5,7 +5,6 @@ from loguru import logger
 
 from graph.constants import GraphName
 
-from .before_search_builder import build_before_search_graph
 from .fashion_search_builder import build_fashion_search_graph
 from .llm_search_builder import build_llm_search_graph
 from .llm_search_once_builder import build_llm_search_once_graph
@@ -19,7 +18,7 @@ agents = {
     GraphName.LLM_SEARCH: build_llm_search_graph,
     GraphName.LLM_SEARCH_ONCE: build_llm_search_once_graph,
     GraphName.FASHION_SEARCH: build_fashion_search_graph,
-    GraphName.BEFORE_SEARCH: build_before_search_graph,
+    # GraphName.BEFORE_SEARCH: build_before_search_graph,
 }
 
 # def get_graph_builder(agent_name:str)->Callable[[httpx.AsyncClient | None],CompiledStateGraph]:
@@ -33,16 +32,21 @@ def get_agent(agent_name: str, **kwargs) -> CompiledStateGraph:
     """Get an agent by name"""
     if agent_name not in agents:
         raise ValueError(f'Agent {agent_name} not found')
-    if 'client' not in kwargs:
-        raise ValueError('AsnycClient is not given as a keyword argument')
 
     builder_func = agents[agent_name]
-    client = kwargs['client']
     sig = inspect.signature(builder_func)
-    if 'client' in sig.parameters:
-        logger.info(f"Building agent '{agent_name}' with HTTP client...")
-        return builder_func(client=client)
-    return builder_func()
+
+    # kwargs에서 필요한 파라미터들만 필터링
+    filtered_kwargs = {}
+    for param_name in sig.parameters:
+        if param_name in kwargs:
+            filtered_kwargs[param_name] = kwargs[param_name]
+        else:
+            raise ValueError(f"Required parameter '{param_name}' not found in kwargs for agent '{agent_name}'")
+
+    # 필터링된 파라미터들로 함수 호출
+    logger.info(f"Building agent '{agent_name}' with parameters: {list(filtered_kwargs.keys())}")
+    return builder_func(**filtered_kwargs)
 
 
 def get_all_agent_info() -> list[str]:

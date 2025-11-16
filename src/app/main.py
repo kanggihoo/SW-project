@@ -15,11 +15,29 @@ from graph.builders import get_agent, get_all_agent_info
 from graph.memory import initialize_database
 from graph.settings import DatabaseType, MonitoringType, settings
 
+# Redis 관련 import
+from redis_cache.client import RedisCacheClient
+
+# TaskQueue 관련 import
+from taskqueue.client import TaskQueueClient
+
 from .api import api_router
 from .api_docs import TAGS_METADATA
 from .config.dependencies import get_async_repo_provider, get_aws_manager
 from .config.exceptions import http_exception_handler, validation_exception_handler
 from .services.musinsa import MusinsaAPIWrapper
+
+EXCLUDED_ENDPOINTS = ['/health']
+
+
+# Loguru 필터 함수 정의
+def endpoint_filter(record):
+    if record['name'] == 'logging':
+        message = record['message']
+        for endpoint in EXCLUDED_ENDPOINTS:
+            if endpoint in message:
+                return False
+    return True  # 그 외 모든 로그는 포함 (True 반환)
 
 
 # Configure logger when module is imported (for uvicorn worker processes)
@@ -36,6 +54,7 @@ def setup_app_logger():
         ),
         level=log_level,
         colorize=True,
+        filter=endpoint_filter,
     )
 
     # Redirect uvicorn and FastAPI logs to loguru
@@ -96,8 +115,20 @@ async def lifespan(app: FastAPI):
         #     logger.error(f"Jina Embedding initialization error: {e}")
         #     app.state.jina_embedding = None
 
-        app.state.musinsa_api_wrapper = MusinsaAPIWrapper()
+        app.state.musinsa_api_wrapper = MusinsaAPIWrapper(http_session)
         logger.info('Musinsa API Wrapper initialized.')
+
+        # Redis 클라이언트 초기화
+        redis_client = RedisCacheClient()
+        await redis_client.connect()
+        app.state.redis_client = redis_client
+        logger.info('Redis client initialized.')
+
+        # TaskQueue Client 초기화
+        taskqueue_client = TaskQueueClient()
+        await taskqueue_client.connect()
+        app.state.taskqueue_client = taskqueue_client
+        logger.info('TaskQueue Client initialized.')
     except Exception as e:
         logger.error(f'fastapi lifespan initialization error: {e}')
         raise e from e
@@ -115,7 +146,14 @@ async def lifespan(app: FastAPI):
             agent_names = get_all_agent_info()
             agents = {}
             for agent_name in agent_names:
-                agent = get_agent(agent_name, client=app.state.http_session)
+                agent = get_agent(
+                    agent_name,
+                    client=app.state.http_session,
+                    musinsa_api_wrapper=app.state.musinsa_api_wrapper,
+                    cache_client=app.state.redis_client,
+                    task_queue_client=app.state.taskqueue_client,
+                    db_repository=app.state.db_repo,
+                )
                 # if agent_name == "llm_search":
                 #     agent = builder(app.state.http_session, app.state.db_repo)
                 # else:
@@ -144,6 +182,14 @@ async def lifespan(app: FastAPI):
     if app.state.http_session:
         await app.state.http_session.aclose()
         logger.info('httpx.AsyncClient closed.')
+
+    if hasattr(app.state, 'redis_client') and app.state.redis_client:
+        await app.state.redis_client.close()
+        logger.info('Redis client closed.')
+
+    if hasattr(app.state, 'taskqueue_client') and app.state.taskqueue_client:
+        await app.state.taskqueue_client.close()
+        logger.info('TaskQueue Client closed.')
 
 
 app = FastAPI(

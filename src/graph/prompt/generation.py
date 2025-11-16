@@ -32,7 +32,6 @@ Generate a friendly response that confirms collected info and naturally asks for
 """
 
 USER_PROMPT = """
-User Name: {user_name}
 Collected Information So Far: {collected_info}
 Missing Fields: {missing_fields}
 """

@@ -12,25 +12,38 @@ from graph.model.graph_schemas import ClothSearch
 # ======================================================================
 # 여기에서의 Field의 유효성 검사나 default , default_factory는 실제로 동작하지 않음.
 class State(TypedDict):
+    # ----------------------------------------- 맨 처음 API 요청시 업데이트 되는 state -----------------------------------------
     messages: Annotated[list[BaseMessage], add_messages]
+    user_message: str
+    is_predefined_template: Annotated[bool, Field(description='미리 정의된 템플릿 클릭 여부. True: 템플릿, False: 직접 입력')]
+    product_id: str
+    user_name: str
+
+    # ----------------------------------------- 의도 분류 노드에서 업데이트 되는 state -----------------------------------------
+    intent: str
+    # chatbot fallback 플래그
+    is_unclear_fallback: Annotated[bool, Field(description='UNCLEAR 상황에서 chatbot으로 폴백되었는지 여부', default=False)]
+
+    # ----------------------------------------- 정보 수집 노드에서 업데이트 되는 state -----------------------------------------
     cloth_search: ClothSearch
     is_info_gathering_complete: bool
-    product_id: str
-    intent: str
-    user_message: str
 
-    # ----------------------------------------- 유저 정보
-    user_name: str
-    is_predefined_template: Annotated[bool, Field(description='미리 정의된 템플릿 클릭 여부. True: 템플릿, False: 직접 입력')]
-
-    # -----------------------------------------
+    # ----------------------------------------- 정보 업데이트 노드에서 업데이트 되는 state -----------------------------------------
     last_updated_fields: Annotated[list[str], Field(description='마지막으로 업데이트된 필드')]
+
+    # ----------------------------------------- prepare_search_cycle / prepare_cache_cycle / pop_next_expert 노드에서 업데이트 되는 state -----------------------------------------
     experts_to_run: Annotated[list[str], Field(description='실행할 전문가 목록')]
-    current_expert: Annotated[str, Field(description='현재 실행중인 전문가')]
-    expert_opinions: Annotated[dict[str, str], Field(description='전문가별 의견 저장. {"expert_name": "expert_opinion"}')]
+
+    # ----------------------------------------- prepare_cache_cycle 노드에서 업데이트 되는 state -----------------------------------------
     cache_cyclable: Annotated[bool, Field(description='캐시 순환 가능 여부')]
 
-    # --- ▼ [추가] 캐시 순환 로직을 위한 상태 ---
+    # ----------------------------------------- pop_next_expert 노드에서 업데이트 되는 state -----------------------------------------
+    current_expert: Annotated[str, Field(description='현재 실행중인 전문가')]
+
+    # ----------------------------------------- run_expert_evaluation 노드에서 업데이트 되는 state -----------------------------------------
+    expert_opinions: Annotated[dict[str, str], Field(description='전문가별 의견 저장. {"expert_name": "expert_opinion"}')]
+
+    # ----------------------------------------- search 노드에서 업데이트 되는 state -----------------------------------------
     # 벡터 검색 결과를 전문가별로 저장할 딕셔너리입니다.
     expert_search_cache: Annotated[
         dict[str, dict[str, list[str]]],

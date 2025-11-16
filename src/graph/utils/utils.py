@@ -1,37 +1,24 @@
 # ruff: noqa: E501
+import asyncio
 import json
 from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, ToolMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.runnables import RunnableConfig
 from langfuse.langchain import CallbackHandler  # type: ignore[import-untyped]
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 from loguru import logger
 
-from graph.constants import (
-    COLOR_EXPERT,
-    FITTING_COORDINATOR,
-    SHOW_CACHED,
-    SKIP_STREAM,
-    STYLE_ANALYST,
-    GraphName,
-    SSETypes,
-    StateName,
-)
+from graph.constants import COLOR_EXPERT, FITTING_COORDINATOR, SHOW_CACHED, SKIP_STREAM, STYLE_ANALYST, GraphName, NodeName, SSETypes, StateName
 from graph.model.api_schema import ChatMessage, StreamInput, UserInput
+from graph.model.graph_schemas import ClothSearch
 from graph.settings import MonitoringType, settings
 
-from .messages import (
-    convert_message_content_to_string,
-    create_ai_message,
-    create_message,
-    langchain_to_chat_message,
-    remove_tool_calls,
-)
+from .messages import convert_message_content_to_string, create_ai_message, create_message, langchain_to_chat_message, remove_tool_calls
 
 
 def _get_search_subgraph_initial_state(user_input: UserInput, current_state: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -246,17 +233,29 @@ def get_initial_state(agent: CompiledStateGraph, user_input: UserInput, current_
         user_input: 사용자 입력
         current_state: 현재 그래프의 state (있으면 병합, 없으면 새로 생성)
     """
+    if (product_id := user_input.product_id) and len(product_id.split('_')) >= 2:
+        user_input.product_id = product_id.split('_')[0]
     if agent.name == GraphName.SEARCH_SUBGRAPH:
         return _get_search_subgraph_initial_state(user_input, current_state)
+    elif agent.name == GraphName.BEFORE_SEARCH or agent.name == GraphName.FASHION_SEARCH:
+        return {
+            StateName.MESSAGES: create_message(message_type='human', content=user_input.message),
+            StateName.USER_MESSAGE: user_input.message,
+            # StateName.USER_NAME: 'kkh',
+            StateName.IS_PREDEFINED_TEMPLATE: user_input.is_predefined_template,
+            StateName.PRODUCT_ID: user_input.product_id,
+            StateName.CLOTH_SEARCH: current_state.get(StateName.CLOTH_SEARCH, ClothSearch()),
+        }
     else:
         return {
             StateName.MESSAGES: create_message(message_type='human', content=user_input.message),
             StateName.USER_MESSAGE: user_input.message,
             StateName.EXPERTS_TO_RUN: [COLOR_EXPERT, STYLE_ANALYST, FITTING_COORDINATOR],
             StateName.CURRENT_EXPERT: COLOR_EXPERT,
-            StateName.USER_NAME: 'kkh',
+            # StateName.USER_NAME: 'kkh',
             StateName.IS_PREDEFINED_TEMPLATE: user_input.is_predefined_template,
             StateName.PRODUCT_ID: user_input.product_id,
+            StateName.SHOWN_IN_PRODUCT_IDS: set(),
         }
     # elif agent.name == GraphName.SEARCH_SUBGRAPH:
     #     return _get_search_subgraph_initial_state(user_input, current_state)
@@ -370,14 +369,12 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
         kwargs, run_id = await handle_user_input(user_input, agent, **kwargs)
 
     except Exception as e:
-        logger.error(f'Failed to handle user input: {e}')
+        logger.exception(f'Failed to handle user input: {e}')
         yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Failed to process user input: {str(e)}"})}\n\n'
         return
 
     try:
-        logger.debug(f'kwargs: {kwargs}')
         async for stream_event in agent.astream(**kwargs, stream_mode=['updates', 'custom', 'messages'], subgraphs=True):
-            logger.debug(f'stream_event: {stream_event}')
             if not isinstance(stream_event, tuple):
                 continue
 
@@ -391,15 +388,23 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
             filtered_messages = []  # "updates" 모드에서 특정 노드의 결과를 포함할 메세지 리스트
 
             if stream_mode_type == 'updates':
+                node_name = next(iter(data.keys()))
+                if node_name in (NodeName.PRODUCT_INFO_AGENT, NodeName.CUSTOM_PRE_MODEL_NODE, NodeName.SEARCH_NODE):
+                    logger.info(f'{node_name} 노드 메세지 skip')
+                    continue
                 # ===============================================================================================================
                 # stream_mode == "updates" 인 경우 , data에는 특정 노드에서 업데이트 된 모든 정보를 dict로 담고 있음
                 # => 여기서는 해당 dict로 부터 "messages" 키에 있는 메세지 리스트 만을 추출해서 처리
                 # ===============================================================================================================
+                # logger.info('stream_mode_type이 updates 인 경우 처리')
+
                 if not isinstance(data, dict):
                     logger.warning(f'Expected dict for updates data, got {type(data)}')
                     continue
 
                 for node_name, updates in data.items():
+                    logger.info(f'state updated!\n node_name: {node_name}, updates: {updates}')
+                    # subgraph의 prodcut_info_agent 노드 , custom_pre_model_node 노드애서의 업데이트 결과는 제외
                     # 특정 노드에서 업데이트 된 딕셔너리로 부터 messages 키에 있는 메세지 리스트 추출
                     if not isinstance(updates, dict):
                         logger.warning(f'Expected dict for node updates, got {type(updates)} for node {node_name}')
@@ -408,14 +413,12 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                     updated_messages = updates.get('messages', [])
 
                     # node_name 이름에 따라 처리 (supervisor 노드의 도구 호출 결과가 필요한 경우만 처리, 나머지 중간노드 결과는 pass)
-                    if node_name == 'supervisor':
-                        updated_messages = (
-                            [updated_messages[-1]] if updated_messages and isinstance(updated_messages[-1], ToolMessage) else []
-                        )  # tool 메세지만 필요
+                    # if node_name == 'supervisor':
+                    #     updated_messages = (
+                    #         [updated_messages[-1]] if updated_messages and isinstance(updated_messages[-1], ToolMessage) else []
+                    #     )  # tool 메세지만 필요
 
-                    if node_name in ('research_expert', 'math_expert'):
-                        # 중간 노드 메세지 제거
-                        updated_messages = []
+                    # updated_messages = []
 
                     filtered_messages.extend(updated_messages)
 
@@ -434,11 +437,11 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                             try:
                                 processed_messages.append(create_ai_message(current_message))
                             except Exception as e:
-                                logger.error(f'Error creating AI message from parts: {e}, parts: {current_message}', exc_info=True)
+                                logger.exception(f'Error creating AI message from parts: {e}, parts: {current_message}')
                             current_message = {}
                         processed_messages.append(message)
                 except Exception as e:
-                    logger.error(f'Error processing message: {e}, message: {message}', exc_info=True)
+                    logger.exception(f'Error processing message: {e}, message: {message}')
                     continue
 
                 # Add any remaining message parts
@@ -446,7 +449,7 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                     try:
                         processed_messages.append(create_ai_message(current_message))
                     except Exception as e:
-                        logger.error(f'Error creating final AI message from parts: {e}, parts: {current_message}', exc_info=True)
+                        logger.exception(f'Error creating final AI message from parts: {e}, parts: {current_message}')
 
             # ===============================================================================================================
             # SSE 응답에 대한 처리 (stream_mode_type == "updates" 인 경우) => {"type": "message", "content": ChatMessage}
@@ -466,7 +469,7 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                         }
                         chat_message = ChatMessage.model_validate(d)
                 except Exception as e:
-                    logger.error(f'Error parsing message: {e}, message: {message}', exc_info=True)
+                    logger.exception(f'Error parsing message: {e}, message: {message}')
                     yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Error parsing message: {str(e)}"})}\n\n'
                     continue
 
@@ -503,7 +506,7 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                         logger.info(f'SSE response => type : {SSETypes.TOKEN}, content : {content}')
                         yield f'data: {json.dumps({"type": SSETypes.TOKEN, "content": content})}\n\n'
                 except Exception as e:
-                    logger.error(f'Error processing messages stream: {e}', exc_info=True)
+                    logger.exception(f'Error processing messages stream: {e}')
                     yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Error processing messages: {str(e)}"})}\n\n'
 
             # ===============================================================================================================
@@ -530,7 +533,9 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
                 except Exception as e:
                     logger.exception(f'Error processing custom stream: {e}')
                     yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Error processing custom stream: {str(e)}"})}\n\n'
-
+    except asyncio.CancelledError:
+        logger.info('Message generation cancelled by client')
+        raise
     except Exception as e:
         logger.exception(f'Critical error in message generator: {e}')
         yield f'data: {json.dumps({"type": SSETypes.ERROR, "content": f"Critical error: {str(e)}"})}\n\n'
@@ -571,8 +576,9 @@ async def show_graph_stream(
                         logger.warning(f'Expected dict for node updates, got {type(updates)} for node {node_name}')
                         continue
 
-                    if return_result and node_name == 'external_streaming_llm':
-                        return updates.get('expert_opinions', '')
+                    if return_result and node_name == 'run_expert_evaluation':
+                        current_expert = input.get('current_expert', '')
+                        return updates.get('expert_opinions', '').get(current_expert, '')
 
                     updated_messages = updates.get('messages', [])
                     filtered_messages.extend(updated_messages)
@@ -592,11 +598,11 @@ async def show_graph_stream(
                             try:
                                 processed_messages.append(create_ai_message(current_message))
                             except Exception as e:
-                                logger.error(f'Error creating AI message from parts: {e}, parts: {current_message}', exc_info=True)
+                                logger.exception(f'Error creating AI message from parts: {e}, parts: {current_message}')
                             current_message = {}
                         processed_messages.append(message)
                 except Exception as e:
-                    logger.error(f'Error processing message: {e}, message: {message}', exc_info=True)
+                    logger.exception(f'Error processing message: {e}, message: {message}')
                     continue
 
                 # Add any remaining message parts
@@ -604,7 +610,7 @@ async def show_graph_stream(
                     try:
                         processed_messages.append(create_ai_message(current_message))
                     except Exception as e:
-                        logger.error(f'Error creating final AI message from parts: {e}, parts: {current_message}', exc_info=True)
+                        logger.exception(f'Error creating final AI message from parts: {e}, parts: {current_message}')
 
             # ===============================================================================================================
             # SSE 응답에 대한 처리 (stream_mode_type == "updates" 인 경우) => {"type": "message", "content": ChatMessage}
@@ -628,6 +634,7 @@ async def show_graph_stream(
                     continue
 
                 # 사용자가 입력한 메세지를 다시 전송하는 것을 방지
+                print()
                 if chat_message.type == 'human' and chat_message.content == user_input.message:
                     continue
                 logger.info(f'data: {json.dumps({"type": SSETypes.MESSAGE.value, "content": chat_message.model_dump()})}\n\n')
@@ -793,7 +800,7 @@ async def test_message_generator(agent: CompiledStateGraph, input: dict, config:
                         }
                         chat_message = ChatMessage.model_validate(data)
                 except Exception as e:
-                    logger.error(f'Error parsing message: {e}, message: {message}', exc_info=True)
+                    logger.exception(f'Error parsing message: {e}, message: {message}')
                     yield f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Error parsing message: {str(e)}"})}\n\n'
                     continue
 
@@ -829,7 +836,7 @@ async def test_message_generator(agent: CompiledStateGraph, input: dict, config:
                         logger.info(f'type: {SSETypes.TOKEN} , content: {data}')
                         yield f'data: {json.dumps({"type": SSETypes.TOKEN.value, "content": data})}\n\n'
                 except Exception as e:
-                    logger.error(f'Error processing messages stream | content : {msg} ,  error: {e}', exc_info=True)
+                    logger.exception(f'Error processing messages stream | content : {msg} ,  error: {e}')
                     yield f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Error processing messages: {str(e)}"})}\n\n'
 
             # ===============================================================================================================
@@ -855,11 +862,11 @@ async def test_message_generator(agent: CompiledStateGraph, input: dict, config:
                         case _:
                             logger.warning(f'Unknown custom type: {type} , content: {content}')
                 except Exception as e:
-                    logger.error(f'Error processing custom stream | content : {content} , error: {e}', exc_info=True)
+                    logger.exception(f'Error processing custom stream | content : {content} , error: {e}')
                     yield f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Error processing custom stream: {str(e)}"})}\n\n'
 
     except Exception as e:
-        logger.error(f'Critical error in message generator: {e}', exc_info=True)
+        logger.exception(f'Critical error in message generator: {e}')
         yield f'data: {json.dumps({"type": SSETypes.ERROR.value, "content": f"Critical error: {str(e)}"})}\n\n'
     finally:
         logger.info('Message generation completed')

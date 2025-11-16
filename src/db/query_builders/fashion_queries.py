@@ -83,7 +83,10 @@ class FashionQueryBuilder:
             main_category = pre_filter.get('main_category')
             color_name = pre_filter.get('color')
             main_category = 'TOP' if main_category == '상의' else 'BOTTOM'
-            vector_search_stage['filter'] = {'product_skus.main_category': main_category, 'product_skus.color_name': color_name}
+            if color_name:
+                vector_search_stage['filter'] = {'product_skus.main_category': main_category, 'product_skus.color_name': color_name}
+            else:
+                vector_search_stage['filter'] = {'product_skus.main_category': main_category}
 
         pipeline.append({'$vectorSearch': vector_search_stage})
 

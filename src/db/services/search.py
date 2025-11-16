@@ -1,7 +1,7 @@
 # from app.config.dependencies import S3ManagerDep , RepositoryDep
 import asyncio
 import time
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 from fastapi import HTTPException
 from loguru import logger
@@ -26,6 +26,8 @@ class SearchResultItem(TypedDict):
     data: list[SearchResult]
     total_count: int
     message: str
+    embeddings: NotRequired[list[list[float]]]
+    pre_filter_list: NotRequired[list[dict]]
 
 
 class SearchService:
@@ -39,25 +41,19 @@ class SearchService:
         self.embedding = embedding
         self.query_analyzer = query_analyzer
 
-    async def search_by_query(self, query: str, limit: int = 1) -> SearchResultItem:
+    async def search_by_query(self, query: str, limit: int = 1, relax_color: bool = False) -> SearchResultItem:
         """
         쿼리를 분석하고, 분석된 결과를 기반으로 벡터 검색을 수행합니다.
         """
         try:
-            # TODO: 에러 처리?
             # 1. Query Analyzer를 이용한 쿼리 분석
             start_time = time.perf_counter()
             analyzed_results = await self.query_analyzer.analyze_and_format(query)
             logger.info(f'쿼리 분석결과 analyzed_results: {analyzed_results}')
             logger.info(f'쿼리 분석결과 소요시간: {time.perf_counter() - start_time}')
 
-            if analyzed_results:
-                rewritten_query_list = [item['rewritten_query'] for item in analyzed_results]
-                pre_filter_list = [{k: v for k, v in item.items() if k != 'rewritten_query' and v is not None and v} for item in analyzed_results]
-            else:
-                # 분석 결과가 없으면 원래 쿼리로 검색
-                rewritten_query_list = [query]
-                pre_filter_list = [None]
+            rewritten_query_list = [item['rewritten_query'] for item in analyzed_results]
+            pre_filter_list = [{k: v for k, v in item.items() if k != 'rewritten_query' and v is not None and v} for item in analyzed_results]
 
             logger.info(f'rewritten_query_list: {rewritten_query_list}')
             logger.info(f'pre_filter_list: {pre_filter_list}')
@@ -91,13 +87,15 @@ class SearchService:
                 'data': processed_results,
                 'total_count': len(processed_results),
                 'message': 'Search completed successfully',
+                'embeddings': embeddings,
+                'pre_filter_list': pre_filter_list,
             }
 
         except Exception as e:
             logger.error(f'Error in search_by_query: {e}')
             raise HTTPException(status_code=500, detail=f'An unexpected error occurred during search: {e}') from e
 
-    async def search_by_single_query_skip_query_analysis(self, query: str, limit: int, filter: dict) -> dict:
+    async def search_by_single_query_skip_query_analysis(self, query: str, limit: int, filter: dict) -> SearchResultItem:
         try:
             rewritten_query_list = [query]
             pre_filter_list = [filter]
@@ -127,7 +125,49 @@ class SearchService:
             logger.error(f'Error in search_by_single_query_skip_query_analysis: {e}')
             raise HTTPException(status_code=500, detail=f'An unexpected error occurred during search: {e}') from e
 
-    def _parse_vector_search_result(self, vector_search_results: list[dict]) -> list[SearchResult]:
+    async def search_by_previous_embeddings_with_relaxed_filters(
+        self,
+        embeddings: list[list[float]],
+        pre_filters: list[dict | None],
+        limit: int,
+    ) -> SearchResultItem:
+        """이전 검색에서 사용한 임베딩과 필터를 재사용하여 재검색 수행
+
+        - 기존 필터로 부터 main_category 만 유지하여 재검색
+        - 임베딩 재생성이나 쿼리 분석을 다시 수행하지 않음
+        """
+        try:
+
+            def _only_main_category(pf: dict | None) -> dict | None:
+                if not pf:
+                    return None
+                main_cat = pf.get('main_category')
+                return {'main_category': main_cat} if main_cat else None
+
+            effective_filters = [_only_main_category(pf) for pf in pre_filters]
+
+            tasks = []
+            for i, (emd, pf) in enumerate(zip(embeddings, effective_filters, strict=False)):
+                logger.info(f'[재검색] (reuse) idx={i} filter={pf} limit={limit}')
+                task = self.repository.vector_search(embedding=emd, limit=limit, pre_filter=pf)
+                tasks.append(task)
+
+            vector_search_results = await asyncio.gather(*tasks)
+            processed_results: list[SearchResult] = self._parse_vector_search_result(vector_search_results)
+            return {
+                'query': 'retry_with_relaxed_filters',
+                'data': processed_results,
+                'total_count': len(processed_results),
+                'message': 'Retry (reuse embeddings, relaxed filters)',
+            }
+        except Exception as e:
+            logger.error(f'Error in search_by_previous_embeddings_with_relaxed_filters: {e}')
+            raise HTTPException(status_code=500, detail=f'An unexpected error occurred during retry search: {e}') from e
+
+    def _parse_vector_search_result(
+        self,
+        vector_search_results: list[dict],
+    ) -> list[SearchResult]:
         processed_results = []
         for vector_search_result in vector_search_results:  # 각 임베딩에 대한 벡터 검색결과 순환
             for item in vector_search_result:  # 벡터 검색으로 변환된 limit 만큼의 결과 순환

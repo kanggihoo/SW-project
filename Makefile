@@ -1,4 +1,4 @@
-.PHONY: run-servers start-docker stop-docker start-cli stop-cli start-streamlit stop-streamlit
+.PHONY: run-servers start-docker stop-docker start-cli stop-cli start-streamlit stop-streamlit start-t
 
 VENV_PYTHON:= .venv/bin/python3
 
@@ -82,23 +82,25 @@ stop-cli:
 	@echo "✅ CLI application stopped"
 
 # Streamlit 서버 관련 명령어
+# 사용법: make start-streamlit [SERVER_TYPE=production|local]
 start-streamlit:
 	@echo "🚀 Starting Streamlit server in new iTerm window..."
-	@osascript \
-		-e 'tell application "iTerm"' \
-		-e 'set newWindow to (create window with default profile)' \
-		-e 'tell current session of newWindow' \
-		-e 'write text "cd $(PWD)"' \
-		-e 'write text ". ./.venv/bin/activate"' \
-		-e 'write text "export PYTHONPATH=\"$$PYTHONPATH:$(PWD)\""' \
-		-e 'write text "streamlit run gui/streamlit_app.py"' \
-		-e 'end tell' \
-		-e 'return id of newWindow' \
-		-e 'end tell' > /tmp/streamlit_window_id.txt 2>&1
+	@SERVER_TYPE=$${SERVER_TYPE:-local}; \
+	osascript \
+		-e "tell application \"iTerm\"" \
+		-e "set newWindow to (create window with default profile)" \
+		-e "tell current session of newWindow" \
+		-e "write text \"cd $(PWD)\"" \
+		-e "write text \". ./.venv/bin/activate\"" \
+		-e "write text \"export PYTHONPATH=\\\"$$$$PYTHONPATH:$(PWD)\\\"\"" \
+		-e "write text \"streamlit run gui/streamlit_app.py $$SERVER_TYPE\"" \
+		-e "end tell" \
+		-e "return id of newWindow" \
+		-e "end tell" > /tmp/streamlit_window_id.txt 2>&1
 	@WINDOW_ID=$$(cat /tmp/streamlit_window_id.txt 2>/dev/null | tr -d '\n\r' | grep -o '[0-9]*' | head -1); \
 	if [ -n "$$WINDOW_ID" ]; then \
 		echo "$$WINDOW_ID" > /tmp/streamlit_window_id.txt; \
-		echo "✅ Streamlit server started in iTerm window (ID: $$WINDOW_ID)"; \
+		echo "✅ Streamlit server started in iTerm window (ID: $$WINDOW_ID) with server type: $$SERVER_TYPE"; \
 	else \
 		echo "⚠️  Streamlit server started but could not capture window ID"; \
 	fi
