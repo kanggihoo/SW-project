@@ -7,7 +7,6 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.config.dependencies import (
-    HTTPClientDep,
     MusinsaAPIWrapperDep,
     RedisClientDep,
     RepositoryDep,
@@ -74,7 +73,6 @@ PRODUCT_ID_REGEX = r'^[0-9]+_[가-힣]+$'
 async def search_product(
     s3_manager: S3ManagerDep,
     repository: RepositoryDep,
-    http_client: HTTPClientDep,
     musinsa_api_wrapper: MusinsaAPIWrapperDep,
     redis_client: RedisClientDep,
     taskqueue_client: TaskQueueClientDep,
