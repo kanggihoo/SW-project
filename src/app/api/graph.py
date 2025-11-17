@@ -124,7 +124,7 @@ async def get_history(
     logger.info(f'agent_name: {agent_name}')
     try:
         state_snapshot = await agent.aget_state(config=RunnableConfig(configurable={'thread_id': thread_id}))
-        messages: list[AnyMessage] = state_snapshot.values['messages']
+        messages: list[AnyMessage] = state_snapshot.values.get('messages', [])
         chat_messages: list[ChatMessage] = [langchain_to_chat_message(m) for m in messages]
         return ChatHistory(messages=chat_messages)
     except Exception as e:

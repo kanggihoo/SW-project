@@ -84,7 +84,8 @@ tmp.py
 test_runner_example.py
 langgraph_test.py
 gemini_models.json
-
+tsconfig.json 
+web_gui/
 
 # cache file
 .pytest_cache/

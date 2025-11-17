@@ -7,7 +7,6 @@ from graph.common.state import State
 from graph.constants import (
     SHOW_CACHED,
     IntentTypes,
-    NodeName,
     RouterReturnNames,
     StateName,
 )
@@ -31,7 +30,7 @@ def route_after_gathering(state: State):
     logger.debug('\n--- 라우팅: route_after_gathering ---')
     if state.get(StateName.IS_INFO_GATHERING_COMPLETE):
         logger.debug('- 라우팅: search_node로 이동')
-        return NodeName.SEARCH_NODE
+        return RouterReturnNames.PREPARE_SEARCH_MESSAGE
     else:
         logger.debug('- 라우팅: END (추가 사용자 입력 대기)')
         return END

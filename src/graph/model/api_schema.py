@@ -84,6 +84,7 @@ class StreamInput(UserInput):
                     'user_id': '847c6285-8fc9-4560-a83f-4e6285809254',
                     'agent_config': {'spicy_level': 0.8},
                     'stream_tokens': True,
+                    'product_id': '4255016_블루',
                 }
             ]
         }

@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI
 from fastapi.exceptions import HTTPException, RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from langfuse import get_client
 from loguru import logger
 
@@ -101,9 +102,14 @@ async def lifespan(app: FastAPI):
     logger.info('Lifespan started: Initializing resources...')
     if settings.LANGFUSE_TRACING and settings.MONITORING_TYPE == MonitoringType.LANGFUSE:
         try:
+            # Langfuse 클라이언트 초기화 시 설정값 명시적으로 전달
+            if not settings.LANGFUSE_PUBLIC_KEY or not settings.LANGFUSE_SECRET_KEY:
+                raise ValueError('Langfuse credentials are missing. Please set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY environment variables.')
+
+            logger.info('Initializing Langfuse client')
             langfuse = get_client()
             if langfuse.auth_check():
-                logger.info('Langfuse initialized.')
+                logger.info('Langfuse initialized successfully.')
             else:
                 raise ValueError('Langfuse authentication failed')
         except Exception as e:
@@ -211,6 +217,15 @@ app = FastAPI(
     exception_handlers={RequestValidationError: validation_exception_handler, HTTPException: http_exception_handler},
     openapi_tags=TAGS_METADATA,
     root_path='/langgraph',
+)
+
+# CORS 미들웨어 추가
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],  # 개발 환경에서는 모든 origin 허용 (프로덕션에서는 특정 origin만 허용)
+    allow_credentials=False,  # allow_origins=['*']일 때는 False로 설정해야 함
+    allow_methods=['*'],  # 모든 HTTP 메서드 허용
+    allow_headers=['*'],  # 모든 헤더 허용
 )
 
 # app.include_router(websocket.router)

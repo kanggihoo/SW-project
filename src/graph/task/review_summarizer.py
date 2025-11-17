@@ -3,6 +3,7 @@
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
+from graph.constants import SKIP_STREAM
 from llm import ModelT, get_llm_model
 
 # --- 1. 리뷰 요약에 사용할 프롬프트를 정의합니다. ---
@@ -38,7 +39,7 @@ class ReviewSummarizer:
         except ValueError as e:
             raise ValueError(f'Invalid model name: {model_str}') from e
 
-        self.chain = ChatPromptTemplate.from_template(SUMMARY_PROMPT_TEMPLATE) | self.llm | StrOutputParser()
+        self.chain = (ChatPromptTemplate.from_template(SUMMARY_PROMPT_TEMPLATE) | self.llm | StrOutputParser()).with_config(tags=[SKIP_STREAM])
 
     async def summarize(self, reviews: list[dict]) -> str:
         """리뷰 목록을 받아 요약문을 비동기적으로 생성합니다."""

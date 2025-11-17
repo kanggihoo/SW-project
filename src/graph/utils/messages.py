@@ -195,7 +195,6 @@ def langchain_to_chat_message(message: BaseMessage) -> ChatMessage:
                         ai_message.tool_calls = message.tool_calls
                     # if hasattr(message, 'response_metadata') and message.response_metadata:
                     #     ai_message.response_metadata = message.response_metadata
-                    logger.debug(f'Converted AIMessage to ChatMessage: {content[:100]}...')
                     return ai_message
                 except Exception as e:
                     logger.error(f'Error converting AIMessage: {e}, content: {message.content}')
@@ -208,9 +207,9 @@ def langchain_to_chat_message(message: BaseMessage) -> ChatMessage:
                         type='tool',
                         content=content,
                         tool_call_id=getattr(message, 'tool_call_id', None),
-                        additional_kwargs=message.additional_kwargs or {},
+                        additional_kwargs={},
+                        # additional_kwargs=message.additional_kwargs or {},
                     )
-                    logger.debug(f'Converted ToolMessage to ChatMessage: {content[:100]}...')
                     return tool_message
                 except Exception as e:
                     logger.error(f'Error converting ToolMessage: {e}, content: {message.content}')
