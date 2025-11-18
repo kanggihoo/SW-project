@@ -598,57 +598,57 @@ class MusinsaAPIWrapper:
                 'error_details': {**error_context, 'error_type': ErrorType.NO_DATA},
             }
 
-    # @handle_api_errors(ErrorType.API_ERROR)
-    # async def get_product_option_stock(
-    #     self,
-    #     product_id: str | int,
-    # ) -> dict[str, Any]:
-    #     product_id_str = str(product_id)
-    #     params = {'goodsSaleType': 'SALE', 'optKindCd': 'CLOTHES'}
-    #     response = await self.client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/options', params=params, headers=self.headers)
-    #     response.raise_for_status()
-    #     raw_data = response.json()
-    #     if raw_data.get('data'):
-    #         data = raw_data['data']
-    #         option_filters = []
-    #         for option_filter in sorted(data.get('basic', []), key=lambda x: x['sequence']):
-    #             option_filters.append(
-    #                 {
-    #                     'name': option_filter.get('name'),
-    #                     'display_type': option_filter.get('displayType'),
-    #                     'values': [
-    #                         {'id': val.get('no'), 'name': val.get('name'), 'code': val.get('code')} for val in option_filter.get('optionValues', [])
-    #                     ],
-    #                 }
-    #             )
-    #         stock_by_options = []
-    #         for item in sorted(data.get('optionItems', []), key=lambda x: x['no']):
-    #             stock_by_options.append(
-    #                 {
-    #                     'option_combination': [val.get('name') for val in item.get('optionValues', [])],
-    #                     'option_ids': [val.get('no') for val in item.get('optionValues', [])],
-    #                     'is_sold_out': item.get('isSoldOut', True),
-    #                     'is_out_of_stock': item.get('outOfStock', True),
-    #                     'is_deleted': item.get('isDeleted', True),
-    #                 }
-    #             )
-    #         result_data = [
-    #             {
-    #                 'product_id': product_id_str,
-    #                 'option_count': len(option_filters),
-    #                 'option_filters': option_filters,
-    #                 'stock_by_options': stock_by_options,
-    #             }
-    #         ]
-    #         return {'success': True, 'data': result_data, 'message': '제품 옵션 및 재고 정보를 성공적으로 조회했습니다.'}
-    #     else:
-    #         error_context = {'product_id': product_id_str}
-    #         return {
-    #             'success': False,
-    #             'data': [],
-    #             'message': f'제품(ID: {product_id_str})의 옵션 정보를 찾을 수 없습니다.',
-    #             'error_details': {**error_context, 'error_type': ErrorType.NO_DATA},
-    #         }
+    @handle_api_errors(ErrorType.API_ERROR)
+    async def get_product_option_stock(
+        self,
+        product_id: str | int,
+    ) -> dict[str, Any]:
+        product_id_str = str(product_id)
+        params = {'goodsSaleType': 'SALE', 'optKindCd': 'CLOTHES'}
+        response = await self.client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/options', params=params, headers=self.headers)
+        response.raise_for_status()
+        raw_data = response.json()
+        if raw_data.get('data'):
+            data = raw_data['data']
+            option_filters = []
+            for option_filter in sorted(data.get('basic', []), key=lambda x: x['sequence']):
+                option_filters.append(
+                    {
+                        'name': option_filter.get('name'),
+                        'display_type': option_filter.get('displayType'),
+                        'values': [
+                            {'id': val.get('no'), 'name': val.get('name'), 'code': val.get('code')} for val in option_filter.get('optionValues', [])
+                        ],
+                    }
+                )
+            stock_by_options = []
+            for item in sorted(data.get('optionItems', []), key=lambda x: x['no']):
+                stock_by_options.append(
+                    {
+                        'option_combination': [val.get('name') for val in item.get('optionValues', [])],
+                        'option_ids': [val.get('no') for val in item.get('optionValues', [])],
+                        'is_sold_out': item.get('isSoldOut', True),
+                        'is_out_of_stock': item.get('outOfStock', True),
+                        'is_deleted': item.get('isDeleted', True),
+                    }
+                )
+            result_data = [
+                {
+                    'product_id': product_id_str,
+                    'option_count': len(option_filters),
+                    'option_filters': option_filters,
+                    'stock_by_options': stock_by_options,
+                }
+            ]
+            return {'success': True, 'data': result_data, 'message': '제품 옵션 및 재고 정보를 성공적으로 조회했습니다.'}
+        else:
+            error_context = {'product_id': product_id_str}
+            return {
+                'success': False,
+                'data': [],
+                'message': f'제품(ID: {product_id_str})의 옵션 정보를 찾을 수 없습니다.',
+                'error_details': {**error_context, 'error_type': ErrorType.NO_DATA},
+            }
 
     # ============================================== 리뷰 관련 메서드 ===============================================
     # get_review_summary : 제품에 대한 리뷰 요약 정보를 조회합니다.

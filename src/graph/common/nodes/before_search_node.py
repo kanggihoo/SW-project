@@ -45,7 +45,7 @@ extraction_llm = extraction_prompt | llm.with_structured_output(ClothSearch).wit
 
 generation_llm = generation_prompt | llm
 
-update_llm = update_prompt | llm.with_structured_output(ClothSearch)
+update_llm = (update_prompt | llm.with_structured_output(ClothSearch)).with_config(tags=[SKIP_STREAM])
 
 intent_classifier_gathering_chain = intent_prompt_gathering | llm.with_structured_output(UserIntent).with_config(tags=[SKIP_STREAM])
 intent_classifier_refinement_chain = intent_prompt_refinement | llm.with_structured_output(UserIntent).with_config(tags=[SKIP_STREAM])

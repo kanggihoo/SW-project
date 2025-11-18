@@ -86,6 +86,7 @@ langgraph_test.py
 gemini_models.json
 tsconfig.json 
 web_gui/
+web_gui_claude/
 
 # cache file
 .pytest_cache/

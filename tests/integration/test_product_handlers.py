@@ -90,7 +90,7 @@ class TestSingleMethodHandlers:
     """개별 Service & Adapter 메서드를 호출하는 핸들러 테스트 클래스"""
 
     # 테스트용 상품 ID (실제 무신사 상품 ID로 변경 필요)
-    TEST_PRODUCT_ID = '4149670'  # 선택 옵션 2개
+    TEST_PRODUCT_ID = '2479983'  # 선택 옵션 2개
 
     @pytest.mark.asyncio
     async def test_handle_get_size_recommend(self, product_handlers: ProductToolHandlers) -> None:
@@ -116,17 +116,17 @@ class TestSingleMethodHandlers:
         except Exception as e:
             print(f'예외 발생: {str(e)}')
 
-    # @pytest.mark.asyncio
-    # async def test_handle_get_option_stock(self, product_handlers: ProductToolHandlers) -> None:
-    #     """제품 옵션 및 재고 정보 핸들러 테스트"""
-    #     print('\n=== 제품 옵션 및 재고 정보 핸들러 테스트 ===')
-    #     try:
-    #         result = await product_handlers.handle_get_option_stock(product_id=self.TEST_PRODUCT_ID)
-    #         print('결과:')
-    #         print(result)
-    #         print('---')
-    #     except Exception as e:
-    #         print(f'예외 발생: {str(e)}')
+    @pytest.mark.asyncio
+    async def test_handle_get_option_stock(self, product_handlers: ProductToolHandlers) -> None:
+        """제품 옵션 및 재고 정보 핸들러 테스트"""
+        print('\n=== 제품 옵션 및 재고 정보 핸들러 테스트 ===')
+        try:
+            result = await product_handlers.handle_get_option_stock(product_id=self.TEST_PRODUCT_ID)
+            print('결과:')
+            print(result)
+            print('---')
+        except Exception as e:
+            print(f'예외 발생: {str(e)}')
 
     @pytest.mark.asyncio
     async def test_handle_get_size_details(self, product_handlers: ProductToolHandlers) -> None:
@@ -253,7 +253,7 @@ class TestIntegratedHandlers:
     """여러 메서드를 동시 호출하거나 복잡한 로직을 포함하는 통합 핸들러 테스트 클래스"""
 
     # 테스트용 상품 ID (실제 무신사 상품 ID로 변경 필요)
-    TEST_PRODUCT_ID = '4149670'  # 선택 옵션 2개
+    TEST_PRODUCT_ID = '2479983'  # 선택 옵션 2개
 
     @pytest.mark.asyncio
     async def test_handle_get_product_details(self, product_handlers: ProductToolHandlers) -> None:

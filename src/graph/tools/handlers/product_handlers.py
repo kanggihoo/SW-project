@@ -122,18 +122,18 @@ class ProductToolHandlers:
         adapted_result = ProductAdapter.adapt_selection_info(raw_data)
         return adapted_result
 
-    # async def handle_get_option_stock(self, product_id: int | str) -> dict[str, Any] | str:
-    #     """상품의 각 옵션별 재고 상태를 조회합니다.
+    async def handle_get_option_stock(self, product_id: int | str) -> dict[str, Any] | str:
+        """상품의 각 옵션별 재고 상태를 조회합니다.
 
-    #     Args:
-    #         product_id: 상품 고유 ID
+        Args:
+            product_id: 상품 고유 ID
 
-    #     Returns:
-    #         dict | str: 옵션 종류 + 재고 상태 맵
-    #     """
-    #     raw_data = await self.service.get_product_option_stock(product_id)
-    #     adapted_result = ProductAdapter.adapt_option_stock(raw_data)
-    #     return adapted_result
+        Returns:
+            dict | str: 옵션 종류 + 재고 상태 맵
+        """
+        raw_data = await self.service.get_product_option_stock(product_id)
+        adapted_result = ProductAdapter.adapt_option_stock(raw_data)
+        return adapted_result
 
     async def handle_get_size_details(self, product_id: int | str) -> list[dict[str, Any]] | str:
         """상품의 사이즈별 상세 실측 정보(총장, 어깨너비 등)를 조회합니다. 각 사이즈 이름과 측정치 딕셔너리를 포함하는 객체 리스트 형태로 반환

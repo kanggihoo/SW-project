@@ -212,6 +212,7 @@ async def search_product(
                 'is_on_sale': is_on_sale,
                 'comprehensive_description': docs.get('products', {}).get('captions', {}).get('comprehensive_description'),
                 'image_urls': image_urls,
+                'image_url': s3_url,
                 'main_category': main_category,
                 'sub_category': sub_category,
                 'style_tags': docs.get('product_skus', {}).get('style_tags'),
