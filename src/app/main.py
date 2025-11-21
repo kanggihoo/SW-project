@@ -33,11 +33,26 @@ EXCLUDED_ENDPOINTS = ['/health']
 
 # Loguru 필터 함수 정의
 def endpoint_filter(record):
-    if record['name'] == 'logging':
-        message = record['message']
+    message = record['message']
+
+    # ALB Health Check 필터링 (User-Agent에 ELB-HealthChecker 포함)
+    if 'ELB-HealthChecker' in message or 'HealthChecker' in message:
+        return False
+
+    # 기존 uvicorn access 로그 필터링 (IP:port - "METHOD /path HTTP/version" status)
+    # ALB Health Check로 추정되는 "GET / HTTP/1.1" 로그 필터링 추가
+    if '"GET / HTTP/1.1" 200' in message:
+        return False
+
+    if ' - "GET /' in message and '" ' in message and (' - "GET / ' in message or ' - "GET / HTTP' in message):
+        return False
+
+    # 기존 endpoint 필터링
+    if record['name'].startswith('logging'):
         for endpoint in EXCLUDED_ENDPOINTS:
             if endpoint in message:
                 return False
+
     return True  # 그 외 모든 로그는 포함 (True 반환)
 
 
