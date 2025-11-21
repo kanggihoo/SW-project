@@ -6,7 +6,6 @@ from langgraph.graph.state import CompiledStateGraph
 from graph.common.nodes.before_search_node import (
     chatbot,
     handle_inappropriate_node,
-    info_qa_node,
     information_gathering_node,
     information_update_node,
     intent_classify_node,
@@ -18,6 +17,7 @@ from graph.common.router import master_router, route_after_classification, route
 from graph.common.state import State
 from graph.constants import GraphName, NodeName, RouterReturnNames
 from graph.subgraph.build_product_info_agent import build_product_info_agent_subgraph
+from graph.subgraph.info_qa import info_qa_agent_subgraph
 from graph.subgraph.search import search_subgraph
 
 
@@ -28,7 +28,7 @@ def build_fashion_search_graph(musinsa_api_wrapper, cache_client, task_queue_cli
     graph_builder.add_node(NodeName.CLASSIFY_INTENT, intent_classify_node)
     graph_builder.add_node(NodeName.HANDLE_INAPPROPRIATE, handle_inappropriate_node)
     graph_builder.add_node(NodeName.CHATBOT, chatbot)
-    graph_builder.add_node(NodeName.INFO_QA, info_qa_node)
+    graph_builder.add_node(NodeName.INFO_QA, info_qa_agent_subgraph)
     graph_builder.add_node(NodeName.INFORMATION_GATHERING, information_gathering_node)
     graph_builder.add_node(NodeName.INFORMATION_UPDATE, information_update_node)
     graph_builder.add_node(NodeName.PREPARE_TEMPLATE_SEARCH, prepare_template_search_node)

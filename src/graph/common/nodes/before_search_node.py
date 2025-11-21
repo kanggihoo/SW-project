@@ -281,10 +281,19 @@ async def information_update_node(state: State):
     }
 
 
-def handle_inappropriate_node(state: State):
+async def handle_inappropriate_node(state: State, config: RunnableConfig):
     """부적절한 질문 처리 노드"""
     logger.info('\n--- 노드 실행: handle_inappropriate_node ---')
+    writer = get_stream_writer()
     response = '죄송합니다. 해당 질문에는 답변해 드릴 수 없습니다. 의류 추천과 관련하여 도움이 필요하시면 말씀해주세요.'
+
+    # content를 청크 단위로 나누어 토큰 스트리밍
+    chunk_size = 8
+    for i in range(0, len(response), chunk_size):
+        chunk = response[i : i + chunk_size]
+        writer({'type': SSETypes.TOKEN, 'content': chunk})
+        await asyncio.sleep(0.1)  # 0.1초 대기
+
     return {
         StateName.MESSAGES: [create_message(message_type='ai', content=response)],
     }

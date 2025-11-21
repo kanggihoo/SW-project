@@ -129,6 +129,7 @@ jobs:
             MONITORING_TYPE="${{ secrets.MONITORING_TYPE }}"
             LANGFUSE_PUBLIC_KEY="${{ secrets.LANGFUSE_PUBLIC_KEY }}"
             LANGFUSE_SECRET_KEY="${{ secrets.LANGFUSE_SECRET_KEY }}"
+            TAVILY_API_KEY="${{ secrets.TAVILY_API_KEY }}"
 
             DB_ENV=${{env.DB_ENV}}
             POSTGRES_USER=${{env.POSTGRES_USER}}

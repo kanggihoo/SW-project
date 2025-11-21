@@ -215,7 +215,7 @@ class MusinsaAPIWrapper:
         product_id_str = str(product_id)
         error_context = {'product_id': product_id_str}
         try:
-            response = await self.client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/stat')
+            response = await self.client.get(f'https://goods-detail.musinsa.com/api2/goods/{product_id_str}/stat', headers=self.headers)
             response.raise_for_status()
             raw_data = response.json()
             if raw_data.get('data') and raw_data.get('meta', {}).get('result') == 'SUCCESS':

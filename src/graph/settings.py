@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: SecretStr | None = None
     OPENROUTER_API_KEY: SecretStr | None = None
 
+    # tavily api key
+    TAVILY_API_KEY: SecretStr | None = None
+
     # 기본적으로 사용할 LLM 모델 및 사용 가능한 LLM 모델 집합
     # DEFAULT_LLM_MODEL : AllModelEnum  = OpenRouterModelName.GEMINI_20_FLASH_LITE
     DEFAULT_LLM_MODEL: AllModelEnum = OpenRouterModelName.OPENROUTER_GEMINI_20_FLASH_LITE
@@ -76,7 +79,7 @@ class Settings(BaseSettings):
     LANGSMITH_API_KEY: SecretStr | None = None
 
     # Langfuse
-    LANGFUSE_TRACING: bool = False
+    LANGFUSE_TRACING: bool = True
     # LANGFUSE_HOST: Annotated[str, BeforeValidator(check_str_is_http)] = 'https://cloud.langfuse.com'
     LANGFUSE_PUBLIC_KEY: SecretStr | None = None
     LANGFUSE_SECRET_KEY: SecretStr | None = None

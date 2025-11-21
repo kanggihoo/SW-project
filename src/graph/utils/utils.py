@@ -389,7 +389,7 @@ async def message_generator(user_input: StreamInput, agent: CompiledStateGraph, 
 
             if stream_mode_type == 'updates':
                 node_name = next(iter(data.keys()))
-                if node_name in (NodeName.PRODUCT_INFO_AGENT, NodeName.CUSTOM_PRE_MODEL_NODE, NodeName.SEARCH_NODE):
+                if node_name in (NodeName.PRODUCT_INFO_AGENT, NodeName.CUSTOM_PRE_MODEL_NODE, NodeName.SEARCH_NODE, NodeName.INFO_QA):
                     logger.info(f'{node_name} 노드 메세지 skip')
                     continue
                 # ===============================================================================================================

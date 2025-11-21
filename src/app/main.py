@@ -59,16 +59,16 @@ def setup_app_logger():
     )
 
     # # INFO level logs to file with rotation, retention, and compression
-    # logger.add(
-    #     'logs/info.log',
-    #     format=('{time:YYYY-MM-DD HH:mm:ss} | {level: <5} | {name}:{function}:{line} | {message}'),
-    #     level='INFO',
-    #     rotation='10 MB',  # Rotate when file size reaches 10MB
-    #     retention='30 days',  # Keep logs for 30 days
-    #     compression='zip',  # Compress rotated files
-    #     encoding='utf-8',
-    #     filter=endpoint_filter,
-    # )
+    logger.add(
+        'logs/info.log',
+        format=('{time:YYYY-MM-DD HH:mm:ss} | {level: <5} | {name}:{function}:{line} | {message}'),
+        level='INFO',
+        rotation='10 MB',  # Rotate when file size reaches 10MB
+        retention='30 days',  # Keep logs for 30 days
+        compression='zip',  # Compress rotated files
+        encoding='utf-8',
+        filter=endpoint_filter,
+    )
 
     # ERROR level logs to file with rotation, retention, and compression
     logger.add(
