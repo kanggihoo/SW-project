@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.runnables import RunnableConfig
+from langfuse.langchain import CallbackHandler
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 from loguru import logger
@@ -15,6 +16,7 @@ from loguru import logger
 from graph.constants import COLOR_EXPERT, FITTING_COORDINATOR, SHOW_CACHED, SKIP_STREAM, STYLE_ANALYST, GraphName, NodeName, SSETypes, StateName
 from graph.model.api_schema import ChatMessage, StreamInput, UserInput
 from graph.model.graph_schemas import ClothSearch
+from graph.settings import MonitoringType, settings
 
 from .messages import convert_message_content_to_string, create_ai_message, create_message, langchain_to_chat_message, remove_tool_calls
 
@@ -307,11 +309,11 @@ async def handle_user_input(user_input: UserInput, agent: CompiledStateGraph, **
         callbacks = []
 
         # Initialize Langfuse CallbackHandler for Langchain (tracing)
-        # if settings.MONITORING_TYPE == MonitoringType.LANGFUSE and settings.LANGFUSE_TRACING:
-        #     langfuse_handler = CallbackHandler()
-        #     callbacks.append(langfuse_handler)
-        #     # langfuse_user_id , langfuse_session_id , langfuse_tags ,
-        #     configurable.update({'metadata': {'langfuse_user_id': 'test'}})
+        if settings.MONITORING_TYPE == MonitoringType.LANGFUSE and settings.LANGFUSE_TRACING:
+            langfuse_handler = CallbackHandler()
+            callbacks.append(langfuse_handler)
+            # langfuse_user_id , langfuse_session_id , langfuse_tags ,
+            configurable.update({'metadata': {'langfuse_user_id': 'test'}})
         # elif settings.MONITORING_TYPE == MonitoringType.LANGSMITH and settings.LANGSMITH_TRACING:
         #     # Initialize Langsmith CallbackHandler for Langchain (tracing)
         #     langsmith_handler = LangsmithCallbackHandler()

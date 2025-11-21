@@ -19,7 +19,7 @@ def get_llm_model(model_name: ModelT, max_tokens: int | None = None) -> BaseChat
     if not model_name_str:
         raise ValueError(f'Invalid model name: {model_name}')
     kwargs = {
-        'temperature': 0.0,
+        'temperature': 0.7,
         'streaming': True,
         'max_tokens': max_tokens,
         'model': model_name_str,

@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from langchain_core.runnables import RunnableConfig
@@ -288,6 +289,7 @@ async def get_cached_item_node(state: State) -> dict:
     - 범위 내: 유효한 쌍 존재 → 이미지 표시
     - 범위 밖: 캐시 소진 → 텍스트만 표시
     """
+    writer = get_stream_writer()
     current_expert = state[StateName.CURRENT_EXPERT.value]
     expert_cache = state.get(StateName.EXPERT_SEARCH_CACHE.value, {})
     expert_offsets = state.get(StateName.EXPERT_OFFSETS.value, {})
@@ -322,6 +324,14 @@ async def get_cached_item_node(state: State) -> dict:
         metadata = {'type': 'refer', 'expert_type': current_expert, 'product_ids': [top_product_id, bottom_product_id]}
 
         content = expert_opinions.get(current_expert, '')
+
+        # content를 청크 단위로 나누어 토큰 스트리밍
+        chunk_size = 10
+        for i in range(0, len(content), chunk_size):
+            chunk = content[i : i + chunk_size]
+            writer({'type': SSETypes.TOKEN, 'content': chunk})
+            await asyncio.sleep(0.1)  # 0.1초 대기
+
         response = create_message(message_type='ai', content=content, metadata=metadata)
 
         return {
@@ -342,6 +352,13 @@ async def get_cached_item_node(state: State) -> dict:
         # TODO : 여기에 보여줄 message의 content를 어떻게 정할지??
         content = f'{current_expert} 전문가 조건에 맞는 추가 상품을 모두 확인하셨어요.'
 
+        # content를 청크 단위로 나누어 토큰 스트리밍
+        chunk_size = 5
+        for i in range(0, len(content), chunk_size):
+            chunk = content[i : i + chunk_size]
+            writer({'type': SSETypes.TOKEN, 'content': chunk})
+            await asyncio.sleep(0.1)  # 0.1초 대기
+
         response = create_message(message_type='ai', content=content, metadata={'expert_type': current_expert})
 
         return {
@@ -349,12 +366,22 @@ async def get_cached_item_node(state: State) -> dict:
         }
 
 
-def send_refinement_prompt_node(state: State) -> dict:
+async def send_refinement_prompt_node(state: State) -> dict:
     """더 이상 보여줄 캐시 아이템이 없을 때 사용자에게 안내 메시지를 보내는 노드"""
     logger.debug('\n--- 노드 실행: send_refinement_prompt_node ---')
+    writer = get_stream_writer()
+    content = '추천해 드릴 만한 다른 상품을 모두 보여드렸어요. 원하시는 스타일이 있다면 더 자세히 알려주시겠어요? 새로운 조건으로 다시 찾아볼게요!'
+
+    # content를 청크 단위로 나누어 토큰 스트리밍
+    chunk_size = 10
+    for i in range(0, len(content), chunk_size):
+        chunk = content[i : i + chunk_size]
+        writer({'type': SSETypes.TOKEN, 'content': chunk})
+        await asyncio.sleep(0.1)  # 0.1초 대기
+
     message = create_message(
         message_type='ai',
-        content='추천해 드릴 만한 다른 상품을 모두 보여드렸어요. 원하시는 스타일이 있다면 더 자세히 알려주시겠어요? 새로운 조건으로 다시 찾아볼게요!',
+        content=content,
     )
     return {StateName.MESSAGES: [message]}
 

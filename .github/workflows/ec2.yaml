@@ -126,6 +126,9 @@ jobs:
             OPENROUTER_BASE_URL="${{ secrets.OPENROUTER_BASE_URL }}"
             REDIS_HOST="${{ secrets.REDIS_HOST }}"
             REDIS_PORT="${{ secrets.REDIS_PORT }}"
+            MONITORING_TYPE="${{ secrets.MONITORING_TYPE }}"
+            LANGFUSE_PUBLIC_KEY="${{ secrets.LANGFUSE_PUBLIC_KEY }}"
+            LANGFUSE_SECRET_KEY="${{ secrets.LANGFUSE_SECRET_KEY }}"
 
             DB_ENV=${{env.DB_ENV}}
             POSTGRES_USER=${{env.POSTGRES_USER}}

@@ -1,4 +1,5 @@
 # Separated nodes from llm_search.py and external_llm.py
+import asyncio
 from typing import cast
 
 from langchain_core.runnables import RunnableConfig
@@ -388,15 +389,24 @@ def prepare_template_search_node(state: State) -> dict:
     }
 
 
-def prepare_search_message_node(state: State) -> dict:
+async def prepare_search_message_node(state: State) -> dict:
     """검색 서브그래프에 진입하기 전, 사용자에게 전달할 메시지를 생성하는 노드"""
-    logger.info('\\n--- 노드 실행: prepare_search_message_node ---')
+    logger.info('\n--- 노드 실행: prepare_search_message_node ---')
+    writer = get_stream_writer()
 
     last_updated_fields = state.get(StateName.LAST_UPDATED_FIELDS, [])
 
     # Case 1: "다른거 보여줘" 요청 시 (캐시 활용)
     if SHOW_CACHED in last_updated_fields:
         message_content = '네, 다른 코디를 찾아볼게요!'
+
+        # content를 청크 단위로 나누어 토큰 스트리밍
+        chunk_size = 5
+        for i in range(0, len(message_content), chunk_size):
+            chunk = message_content[i : i + chunk_size]
+            writer({'type': SSETypes.TOKEN, 'content': chunk})
+            await asyncio.sleep(0.1)  # 0.1초 대기
+
         message = create_message(message_type='ai', content=message_content)
 
     # Case 2: 새로운 검색 또는 조건 변경 시
@@ -414,6 +424,14 @@ def prepare_search_message_node(state: State) -> dict:
 
             criteria_str = ' '.join(criteria)
             message_content = f'알겠습니다! {criteria_str} 코디를 찾아볼게요. 잠시만 기다려주세요.'
+
+            # content를 청크 단위로 나누어 토큰 스트리밍
+            chunk_size = 10
+            for i in range(0, len(message_content), chunk_size):
+                chunk = message_content[i : i + chunk_size]
+                writer({'type': SSETypes.TOKEN, 'content': chunk})
+                await asyncio.sleep(0.1)  # 0.1초 대기
+
             message = create_message(message_type='ai', content=message_content)
         else:
             # 혹시 모를 예외 상황
